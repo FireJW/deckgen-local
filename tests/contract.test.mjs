@@ -78,6 +78,13 @@ test('validateDeckContract accepts a valid deck contract', () => {
   assert.deepEqual(validateDeckContract({ ...validContract(), outputs: ['html', 'pptx'] }), { ok: true });
 });
 
+test('validateDeckContract rejects unexpected top-level keys', () => {
+  const result = validateDeckContract({ ...validContract(), unexpected: 'field' });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /unexpected top-level key/);
+});
+
 test('validateDeckContract rejects malformed data without throwing', () => {
   for (const [name, makeContract] of malformedContracts) {
     let result;

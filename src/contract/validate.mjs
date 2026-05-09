@@ -9,6 +9,7 @@ const isObject = (value) => value !== null && typeof value === 'object' && !Arra
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 const fail = (error) => ({ ok: false, error });
+const allowedContractKeys = new Set(requiredContractKeys);
 
 export function validateDeckContract(contract) {
   try {
@@ -27,6 +28,12 @@ function validateDeckContractInternal(contract) {
   for (const key of requiredContractKeys) {
     if (!Object.hasOwn(contract, key)) {
       return fail(`missing required key: ${key}`);
+    }
+  }
+
+  for (const key of Object.keys(contract)) {
+    if (!allowedContractKeys.has(key)) {
+      return fail(`unexpected top-level key: ${key}`);
     }
   }
 
