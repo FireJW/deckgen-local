@@ -25,6 +25,13 @@ test('unsupported command exits non-zero with stderr', () => {
   assert.match(result.stderr, /unsupported command|usage/i);
 });
 
+test('unsupported command with help exits non-zero with stderr', () => {
+  const result = runCli(['preview', '--help']);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /unsupported command|usage/i);
+});
+
 test('generate exits non-zero when source is missing', () => {
   const result = runCli(['generate', '--source', 'missing.md', '--profile', 'briefing', '--output', 'html']);
 

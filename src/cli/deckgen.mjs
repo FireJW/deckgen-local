@@ -1,22 +1,18 @@
 #!/usr/bin/env node
-import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync, statSync } from 'node:fs';
 import { buildGenericMarkdownPackage } from '../adapters/generic-markdown.mjs';
 import { allowedCliOutputModes, allowedProfiles } from '../contract/schema.mjs';
-import { validateDeckContract } from '../contract/validate.mjs';
-import { buildQcReport } from '../qc/report.mjs';
-import { renderHtmlDeck } from '../renderers/html-guizang/render.mjs';
+import {
+  DeckgenUserError,
+  failIfPptxRequested,
+  normalizeOutputs,
+  writeGenerateBundle
+} from './generate.mjs';
 
 const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--workdir <path>]`;
 const args = process.argv.slice(2);
-
-if (args.includes('--help') || args.includes('-h')) {
-  process.stdout.write(help + '\n');
-  process.exit(0);
-}
-
 const [command] = args;
+const isHelpFlag = (token) => token === '--help' || token === '-h';
 
 const fail = (message) => {
   process.stderr.write(`${message}\nUsage: ${help}\n`);
@@ -52,17 +48,6 @@ const parseGenerateFlags = (tokens) => {
   return options;
 };
 
-const normalizeOutputs = (output) => output === 'both' ? ['html', 'pptx'] : [output];
-
-const timestampRunId = () => {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  return `${timestamp}-${randomUUID().slice(0, 8)}`;
-};
-
-const writeJson = (filePath, value) => {
-  writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-};
-
 const commandGenerate = (tokens) => {
   const options = parseGenerateFlags(tokens);
 
@@ -91,6 +76,16 @@ const commandGenerate = (tokens) => {
 
   const markdown = readFileSync(options.source, 'utf8');
   const concreteOutputs = normalizeOutputs(options.output);
+  try {
+    failIfPptxRequested(concreteOutputs);
+  } catch (error) {
+    if (error instanceof DeckgenUserError) {
+      fail(error.message);
+    }
+
+    throw error;
+  }
+
   const deckPackage = buildGenericMarkdownPackage({
     sourcePath: options.source,
     markdown,
@@ -100,11 +95,6 @@ const commandGenerate = (tokens) => {
     ...deckPackage.contract,
     outputs: concreteOutputs
   };
-  const validation = validateDeckContract(contract);
-
-  const runDir = path.resolve(options.workdir, '.tmp', 'deckgen', timestampRunId());
-  mkdirSync(runDir, { recursive: true });
-
   const request = {
     command: 'generate',
     source: options.source,
@@ -121,37 +111,40 @@ const commandGenerate = (tokens) => {
     }
   };
 
-  writeJson(path.join(runDir, 'request.json'), request);
-  writeJson(path.join(runDir, 'source_manifest.json'), sourceManifest);
-  writeFileSync(path.join(runDir, 'content.md'), deckPackage.content, 'utf8');
-  writeJson(path.join(runDir, 'deck_contract.json'), contract);
+  try {
+    const { runDir } = writeGenerateBundle({
+      workdir: options.workdir,
+      request,
+      sourceManifest,
+      content: deckPackage.content,
+      contract,
+      sourcePath: options.source
+    });
+    process.stdout.write(`written ${runDir}\n`);
+  } catch (error) {
+    if (error instanceof DeckgenUserError) {
+      fail(error.message);
+    }
 
-  let htmlPath = '';
-  if (concreteOutputs.includes('html')) {
-    const htmlDir = path.join(runDir, 'html');
-    mkdirSync(htmlDir, { recursive: true });
-    htmlPath = path.join(htmlDir, 'index.html');
-    writeFileSync(htmlPath, renderHtmlDeck(contract), 'utf8');
+    throw error;
   }
-
-  writeFileSync(path.join(runDir, 'qc_report.md'), buildQcReport({
-    sourcePath: options.source,
-    validation,
-    htmlPath
-  }), 'utf8');
-
-  if (!validation.ok) {
-    fail(`Deck contract validation failed: ${validation.error}`);
-  }
-
-  process.stdout.write(`written ${runDir}\n`);
 };
 
-if (!command) {
+if (!command || isHelpFlag(command)) {
+  if (isHelpFlag(command)) {
+    process.stdout.write(help + '\n');
+    process.exit(0);
+  }
+
   fail('Missing command.');
 }
 
 if (command === 'generate') {
+  if (args.slice(1).some(isHelpFlag)) {
+    process.stdout.write(help + '\n');
+    process.exit(0);
+  }
+
   commandGenerate(args.slice(1));
   process.exit(0);
 }

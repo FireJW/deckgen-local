@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -8,19 +8,119 @@ import test from 'node:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'src', 'cli', 'deckgen.mjs');
+const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
+
+const runGenerate = (args) => spawnSync(process.execPath, [cli, 'generate', ...args], { encoding: 'utf8' });
+
+const writtenRunDir = (stdout) => stdout.match(/written (.+)$/m)?.[1]?.trim();
 
 test('generate writes a run bundle with html and qc report', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
-  const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
-  const run = spawnSync(process.execPath, [cli, 'generate', '--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp], { encoding: 'utf8' });
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);
 
   assert.equal(run.status, 0, run.stderr);
   assert.match(run.stdout, /written/);
-  const runDir = run.stdout.match(/written (.+)$/m)[1].trim();
+  const runDir = writtenRunDir(run.stdout);
   const report = readFileSync(path.join(runDir, 'qc_report.md'), 'utf8');
   assert.match(report, /validation: PASS/);
   assert.ok(existsSync(path.join(runDir, 'request.json')));
   assert.ok(existsSync(path.join(runDir, 'content.md')));
   assert.ok(existsSync(path.join(runDir, 'deck_contract.json')));
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+});
+
+test('generate fails closed for pptx output until ppt-master wrapper exists', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp]);
+
+  assert.notEqual(run.status, 0);
+  assert.doesNotMatch(run.stdout, /written/);
+  assert.match(run.stderr, /PPTX.*not implemented|ppt-master wrapper/i);
+});
+
+test('generate fails closed for both output until ppt-master wrapper exists', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'both', '--workdir', tmp]);
+
+  assert.notEqual(run.status, 0);
+  assert.doesNotMatch(run.stdout, /written/);
+  assert.match(run.stderr, /PPTX.*not implemented|ppt-master wrapper/i);
+});
+
+test('generate uses unique run directories for two html runs under one workdir', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const first = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);
+  const second = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);
+
+  assert.equal(first.status, 0, first.stderr);
+  assert.equal(second.status, 0, second.stderr);
+
+  const firstRunDir = writtenRunDir(first.stdout);
+  const secondRunDir = writtenRunDir(second.stdout);
+  assert.notEqual(firstRunDir, secondRunDir);
+  assert.ok(existsSync(firstRunDir));
+  assert.ok(existsSync(secondRunDir));
+});
+
+test('bundle writing validates contract before creating run artifacts', async () => {
+  const { writeGenerateBundle } = await import('../src/cli/generate.mjs').catch((error) => {
+    assert.fail(`generate runtime export unavailable: ${error.message}`);
+  });
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const invalidContract = {
+    schema_version: 'deck-contract/v1',
+    title: 'Invalid deck',
+    audience: 'internal briefing',
+    profile: 'briefing',
+    duration_minutes: 2,
+    target_slide_count: 2,
+    language: 'zh-CN',
+    source_refs: [],
+    hard_constraints: [],
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [{
+      id: 's01',
+      role: 'cover',
+      headline: 'Invalid deck',
+      body: 'internal briefing',
+      evidence_refs: [],
+      layout_intent: 'hero_dark'
+    }],
+    outputs: ['html']
+  };
+
+  assert.throws(() => writeGenerateBundle({
+    workdir: tmp,
+    request: { command: 'generate' },
+    sourceManifest: { primary: { path: source, bytes: 1, modified_at: new Date(0).toISOString() } },
+    content: '# Invalid deck',
+    contract: invalidContract,
+    sourcePath: source
+  }), /Deck contract validation failed/);
+  assert.equal(existsSync(path.join(tmp, '.tmp', 'deckgen')), false);
+});
+
+test('run directory creation uses full uuid and retries exclusive-create collisions', async () => {
+  const { createRunDirectory } = await import('../src/cli/generate.mjs').catch((error) => {
+    assert.fail(`generate runtime export unavailable: ${error.message}`);
+  });
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const timestamp = new Date('2026-05-10T00:00:00.000Z');
+  const firstUuid = '11111111-1111-4111-8111-111111111111';
+  const secondUuid = '22222222-2222-4222-8222-222222222222';
+  const firstRunId = `2026-05-10T00-00-00-000Z-${firstUuid}`;
+  mkdirSync(path.join(tmp, '.tmp', 'deckgen', firstRunId), { recursive: true });
+  let uuidCalls = 0;
+
+  const created = createRunDirectory(tmp, {
+    now: () => timestamp,
+    randomUUID: () => {
+      uuidCalls += 1;
+      return uuidCalls === 1 ? firstUuid : secondUuid;
+    }
+  });
+
+  assert.equal(uuidCalls, 2);
+  assert.equal(path.basename(created.runDir), `2026-05-10T00-00-00-000Z-${secondUuid}`);
+  assert.ok(existsSync(created.runDir));
 });
