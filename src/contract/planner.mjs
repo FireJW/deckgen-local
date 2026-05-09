@@ -1,7 +1,10 @@
-import { deckContractSchemaVersion } from './schema.mjs';
+import { allowedProfiles, deckContractSchemaVersion } from './schema.mjs';
 
-const splitSourceText = (sourceText = '') =>
-  String(sourceText)
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
+
+const splitSourceText = (sourceText) =>
+  sourceText
     .split(/\n{2,}/)
     .map((section) => section.trim())
     .filter(Boolean)
@@ -13,7 +16,31 @@ const summarizeHeadline = (section, index) => {
   return normalized || `Key point ${index + 1}`;
 };
 
-export function buildDeckPlan({ title, audience, profile, sourceText }) {
+export function buildDeckPlan(input) {
+  if (!isObject(input)) {
+    throw new TypeError('buildDeckPlan options object is required');
+  }
+
+  const { title, audience, profile, sourceText } = input;
+
+  if (!isNonEmptyString(title)) {
+    throw new TypeError('title must be a non-empty string');
+  }
+
+  if (!isNonEmptyString(audience)) {
+    throw new TypeError('audience must be a non-empty string');
+  }
+
+  if (!allowedProfiles.includes(profile)) {
+    throw new TypeError('profile must be one of briefing, learning, article');
+  }
+
+  if (typeof sourceText !== 'string') {
+    throw new TypeError('sourceText must be a string');
+  }
+
+  const normalizedTitle = title.trim();
+  const normalizedAudience = audience.trim();
   const contentLayout = profile === 'learning' ? 'text_split' : 'evidence';
   const contentSlides = splitSourceText(sourceText).map((section, index) => ({
     id: `s${String(index + 2).padStart(2, '0')}`,
@@ -28,8 +55,8 @@ export function buildDeckPlan({ title, audience, profile, sourceText }) {
     {
       id: 's01',
       role: 'cover',
-      headline: title,
-      body: audience,
+      headline: normalizedTitle,
+      body: normalizedAudience,
       evidence_refs: [],
       layout_intent: 'hero_dark'
     },
@@ -38,8 +65,8 @@ export function buildDeckPlan({ title, audience, profile, sourceText }) {
 
   return {
     schema_version: deckContractSchemaVersion,
-    title,
-    audience,
+    title: normalizedTitle,
+    audience: normalizedAudience,
     profile,
     duration_minutes: Math.max(1, slides.length * 2),
     target_slide_count: slides.length,

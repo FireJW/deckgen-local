@@ -1,48 +1,125 @@
 import { strict as assert } from 'node:assert';
-import { validateDeckContract } from '../src/contract/validate.mjs';
+import test from 'node:test';
 import { buildDeckPlan } from '../src/contract/planner.mjs';
+import * as schema from '../src/contract/schema.mjs';
+import { validateDeckContract } from '../src/contract/validate.mjs';
 
-const valid = {
+const validSlide = () => ({
+  id: 's01',
+  role: 'cover',
+  headline: 'Main claim',
+  body: 'Frame',
+  evidence_refs: [],
+  layout_intent: 'hero_dark'
+});
+
+const validContract = () => ({
   schema_version: 'deck-contract/v1',
   title: 'Sample deck',
   audience: 'internal briefing',
   profile: 'briefing',
   duration_minutes: 12,
-  target_slide_count: 3,
+  target_slide_count: 1,
   language: 'zh-CN',
   source_refs: [],
   hard_constraints: [],
   theme: { renderer_hint: 'indigo_porcelain', tone: 'research / AI / technology' },
-  slides: [
-    { id: 's01', role: 'cover', headline: 'Main claim', body: 'Frame', evidence_refs: [], layout_intent: 'hero_dark' }
-  ],
+  slides: [validSlide()],
   outputs: ['html']
-};
-
-assert.equal(validateDeckContract(valid).ok, true);
-assert.equal(validateDeckContract(null).ok, false);
-assert.equal(validateDeckContract({ ...valid, schema_version: 'deck-contract/v0' }).ok, false);
-assert.equal(validateDeckContract({ ...valid, outputs: ['pdf'] }).ok, false);
-assert.equal(validateDeckContract({ ...valid, slides: [] }).ok, false);
-assert.equal(validateDeckContract({ ...valid, slides: 'not slides' }).ok, false);
-
-const missingTitle = { ...valid };
-delete missingTitle.title;
-assert.equal(validateDeckContract(missingTitle).ok, false);
-
-const plan = buildDeckPlan({
-  title: 'Planned deck',
-  audience: 'engineering',
-  profile: 'learning',
-  sourceText: ['# One', '# Two', '# Three', '# Four', '# Five', '# Six', '# Seven'].join('\n\n')
 });
 
-assert.equal(validateDeckContract(plan).ok, true);
-assert.equal(plan.slides.length, 7);
-assert.equal(plan.target_slide_count, 7);
-assert.equal(plan.slides[0].role, 'cover');
-assert.equal(plan.slides[1].layout_intent, 'text_split');
-assert.equal(
-  buildDeckPlan({ title: 'Briefing', audience: 'leadership', profile: 'briefing', sourceText: 'Point' }).slides[1].layout_intent,
-  'evidence'
-);
+const malformedContracts = [
+  ['null contract', () => null],
+  ['symbol schema_version', () => ({ ...validContract(), schema_version: Symbol('deck-contract/v1') })],
+  ['empty schema_version', () => ({ ...validContract(), schema_version: '' })],
+  ['empty title', () => ({ ...validContract(), title: '   ' })],
+  ['non-string audience', () => ({ ...validContract(), audience: 42 })],
+  ['invalid profile', () => ({ ...validContract(), profile: 'sales' })],
+  ['empty language', () => ({ ...validContract(), language: '' })],
+  ['non-integer duration_minutes', () => ({ ...validContract(), duration_minutes: 1.5 })],
+  ['zero duration_minutes', () => ({ ...validContract(), duration_minutes: 0 })],
+  ['non-integer target_slide_count', () => ({ ...validContract(), target_slide_count: 1.5 })],
+  ['target_slide_count mismatch', () => ({ ...validContract(), target_slide_count: 2 })],
+  ['source_refs is not an array', () => ({ ...validContract(), source_refs: {} })],
+  ['hard_constraints is not an array', () => ({ ...validContract(), hard_constraints: 'none' })],
+  ['theme is null', () => ({ ...validContract(), theme: null })],
+  ['theme renderer_hint is empty', () => ({ ...validContract(), theme: { renderer_hint: ' ' } })],
+  ['theme tone is not a string', () => ({ ...validContract(), theme: { renderer_hint: 'clean', tone: 3 } })],
+  ['outputs is empty', () => ({ ...validContract(), outputs: [] })],
+  ['outputs contains both', () => ({ ...validContract(), outputs: ['both'] })],
+  ['outputs contains duplicates', () => ({ ...validContract(), outputs: ['html', 'html'] })],
+  ['outputs contains unknown mode', () => ({ ...validContract(), outputs: ['pdf'] })],
+  ['slides is empty', () => ({ ...validContract(), target_slide_count: 0, slides: [] })],
+  ['slide is null', () => ({ ...validContract(), slides: [null] })],
+  ['slide id is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), id: '' }] })],
+  ['slide role is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), role: 1 }] })],
+  ['slide headline is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), headline: ' ' }] })],
+  ['slide layout_intent is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), layout_intent: '' }] })],
+  ['slide body is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), body: 7 }] })],
+  ['slide evidence_refs is not an array', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: null }] })]
+];
+
+const invalidPlannerInputs = [
+  ['undefined input', undefined, /options object/i],
+  ['empty title', { title: ' ', audience: 'leadership', profile: 'briefing', sourceText: 'Point' }, /title/i],
+  ['empty audience', { title: 'Briefing', audience: '', profile: 'briefing', sourceText: 'Point' }, /audience/i],
+  ['invalid profile', { title: 'Briefing', audience: 'leadership', profile: 'sales', sourceText: 'Point' }, /profile/i],
+  ['missing sourceText', { title: 'Briefing', audience: 'leadership', profile: 'briefing' }, /sourceText/i],
+  ['non-string sourceText', { title: 'Briefing', audience: 'leadership', profile: 'briefing', sourceText: ['Point'] }, /sourceText/i]
+];
+
+test('schema exports contract outputs and CLI output modes separately', () => {
+  assert.deepEqual(schema.allowedOutputs, ['html', 'pptx']);
+  assert.deepEqual(schema.allowedCliOutputModes, ['html', 'pptx', 'both']);
+});
+
+test('validateDeckContract accepts a valid deck contract', () => {
+  assert.deepEqual(validateDeckContract(validContract()), { ok: true });
+  assert.deepEqual(validateDeckContract({ ...validContract(), outputs: ['html', 'pptx'] }), { ok: true });
+});
+
+test('validateDeckContract rejects malformed data without throwing', () => {
+  for (const [name, makeContract] of malformedContracts) {
+    let result;
+
+    assert.doesNotThrow(() => {
+      result = validateDeckContract(makeContract());
+    }, name);
+
+    assert.equal(result.ok, false, name);
+    assert.equal(typeof result.error, 'string', name);
+    assert.notEqual(result.error.trim(), '', name);
+  }
+});
+
+test('buildDeckPlan creates a valid plan from valid input', () => {
+  const plan = buildDeckPlan({
+    title: 'Planned deck',
+    audience: 'engineering',
+    profile: 'learning',
+    sourceText: ['# One', '# Two', '# Three', '# Four', '# Five', '# Six', '# Seven'].join('\n\n')
+  });
+
+  assert.equal(validateDeckContract(plan).ok, true);
+  assert.equal(plan.slides.length, 7);
+  assert.equal(plan.target_slide_count, 7);
+  assert.equal(plan.slides[0].role, 'cover');
+  assert.equal(plan.slides[1].layout_intent, 'text_split');
+});
+
+test('buildDeckPlan uses evidence layout for briefing profile', () => {
+  const plan = buildDeckPlan({
+    title: 'Briefing',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: 'Point'
+  });
+
+  assert.equal(plan.slides[1].layout_intent, 'evidence');
+});
+
+test('buildDeckPlan rejects invalid inputs with clear errors', () => {
+  for (const [name, input, message] of invalidPlannerInputs) {
+    assert.throws(() => buildDeckPlan(input), message, name);
+  }
+});
