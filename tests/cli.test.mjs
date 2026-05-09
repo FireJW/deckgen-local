@@ -25,9 +25,9 @@ test('unsupported command exits non-zero with stderr', () => {
   assert.match(result.stderr, /unsupported command|usage/i);
 });
 
-test('generate exits non-zero until implemented', () => {
+test('generate exits non-zero when source is missing', () => {
   const result = runCli(['generate', '--source', 'missing.md', '--profile', 'briefing', '--output', 'html']);
 
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /not implemented/i);
+  assert.match(result.stderr, /source file not found/i);
 });
