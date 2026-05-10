@@ -63,6 +63,11 @@ function validateDeckContractInternal(contract) {
     return fail('source_refs must be an array');
   }
 
+  const sourceRefsValidation = validateSourceRefs(contract.source_refs);
+  if (!sourceRefsValidation.ok) {
+    return sourceRefsValidation;
+  }
+
   if (!Array.isArray(contract.hard_constraints)) {
     return fail('hard_constraints must be an array');
   }
@@ -121,6 +126,60 @@ function validateDeckContractInternal(contract) {
 
     if (!Array.isArray(slide.evidence_refs)) {
       return fail(`${prefix}.evidence_refs must be an array`);
+    }
+
+    const evidenceRefsValidation = validateEvidenceRefs(slide.evidence_refs, `${prefix}.evidence_refs`);
+    if (!evidenceRefsValidation.ok) {
+      return evidenceRefsValidation;
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateSourceRefs(sourceRefs) {
+  for (const [index, sourceRef] of sourceRefs.entries()) {
+    const prefix = `source_refs[${index}]`;
+
+    if (!isObject(sourceRef)) {
+      return fail(`${prefix} must be an object`);
+    }
+
+    for (const key of ['type', 'path', 'role']) {
+      if (!isNonEmptyString(sourceRef[key])) {
+        return fail(`${prefix}.${key} must be a non-empty string`);
+      }
+    }
+
+    if (Object.hasOwn(sourceRef, 'id') && !isNonEmptyString(sourceRef.id)) {
+      return fail(`${prefix}.id must be a non-empty string when present`);
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateEvidenceRefs(evidenceRefs, prefix) {
+  for (const [index, evidenceRef] of evidenceRefs.entries()) {
+    const itemPrefix = `${prefix}[${index}]`;
+
+    if (typeof evidenceRef === 'string') {
+      if (!isNonEmptyString(evidenceRef)) {
+        return fail(`${itemPrefix} must be a non-empty string`);
+      }
+      continue;
+    }
+
+    if (!isObject(evidenceRef)) {
+      return fail(`${itemPrefix} must be a non-empty string or object`);
+    }
+
+    if (!isNonEmptyString(evidenceRef.id)) {
+      return fail(`${itemPrefix}.id must be a non-empty string`);
+    }
+
+    if (Object.hasOwn(evidenceRef, 'source_ref') && !isNonEmptyString(evidenceRef.source_ref)) {
+      return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
     }
   }
 

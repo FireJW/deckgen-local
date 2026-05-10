@@ -41,6 +41,10 @@ const malformedContracts = [
   ['non-integer target_slide_count', () => ({ ...validContract(), target_slide_count: 1.5 })],
   ['target_slide_count mismatch', () => ({ ...validContract(), target_slide_count: 2 })],
   ['source_refs is not an array', () => ({ ...validContract(), source_refs: {} })],
+  ['source_refs item is null', () => ({ ...validContract(), source_refs: [null] })],
+  ['source_refs item type is empty', () => ({ ...validContract(), source_refs: [{ type: ' ', path: 'D:/source.md', role: 'primary' }] })],
+  ['source_refs item path is empty', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: '', role: 'primary' }] })],
+  ['source_refs item role is not a string', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 3 }] })],
   ['hard_constraints is not an array', () => ({ ...validContract(), hard_constraints: 'none' })],
   ['theme is null', () => ({ ...validContract(), theme: null })],
   ['theme renderer_hint is empty', () => ({ ...validContract(), theme: { renderer_hint: ' ' } })],
@@ -56,7 +60,9 @@ const malformedContracts = [
   ['slide headline is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), headline: ' ' }] })],
   ['slide layout_intent is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), layout_intent: '' }] })],
   ['slide body is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), body: 7 }] })],
-  ['slide evidence_refs is not an array', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: null }] })]
+  ['slide evidence_refs is not an array', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: null }] })],
+  ['slide evidence_refs item is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [' '] }] })],
+  ['slide evidence_refs object item is missing id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ source_ref: 'primary' }] }] })]
 ];
 
 const invalidPlannerInputs = [
@@ -76,6 +82,11 @@ test('schema exports contract outputs and CLI output modes separately', () => {
 test('validateDeckContract accepts a valid deck contract', () => {
   assert.deepEqual(validateDeckContract(validContract()), { ok: true });
   assert.deepEqual(validateDeckContract({ ...validContract(), outputs: ['html', 'pptx'] }), { ok: true });
+  assert.deepEqual(validateDeckContract({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{ ...validSlide(), evidence_refs: ['primary', { id: 'primary' }] }]
+  }), { ok: true });
 });
 
 test('validateDeckContract rejects unexpected top-level keys', () => {
