@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { mkdirSync, mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -10,9 +10,27 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'src', 'cli', 'deckgen.mjs');
 const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 
-const runGenerate = (args) => spawnSync(process.execPath, [cli, 'generate', ...args], { encoding: 'utf8' });
+const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'generate', ...args], {
+  encoding: 'utf8',
+  env: { ...process.env, ...options.env }
+});
 
 const writtenRunDir = (stdout) => stdout.match(/written (.+)$/m)?.[1]?.trim();
+
+const makeFakePptMaster = () => {
+  const rootDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-fake-ppt-master-'));
+  const scriptDir = path.join(rootDir, 'skills', 'ppt-master', 'scripts');
+  mkdirSync(scriptDir, { recursive: true });
+  writeFileSync(path.join(scriptDir, 'svg_to_pptx.py'), `
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.writeFileSync(path.join(exportsDir, 'cli-fake.pptx'), 'pptx');
+`, 'utf8');
+  return rootDir;
+};
 
 test('generate writes a run bundle with html and qc report', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
@@ -35,7 +53,7 @@ test('generate fails closed for pptx output until ppt-master wrapper exists', ()
 
   assert.notEqual(run.status, 0);
   assert.doesNotMatch(run.stdout, /written/);
-  assert.match(run.stderr, /PPTX.*not implemented|ppt-master wrapper/i);
+  assert.match(run.stderr, /pptMasterPath|ppt-master/i);
 });
 
 test('generate fails closed for both output until ppt-master wrapper exists', () => {
@@ -44,7 +62,36 @@ test('generate fails closed for both output until ppt-master wrapper exists', ()
 
   assert.notEqual(run.status, 0);
   assert.doesNotMatch(run.stdout, /written/);
-  assert.match(run.stderr, /PPTX.*not implemented|ppt-master wrapper/i);
+  assert.match(run.stderr, /pptMasterPath|ppt-master/i);
+});
+
+test('generate writes pptx output only when ppt-master creates an artifact', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const pptMasterPath = makeFakePptMaster();
+  const run = runGenerate(
+    ['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
+    { env: { DECKGEN_PPT_MASTER_PYTHON: process.execPath } }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  assert.ok(existsSync(path.join(runDir, 'ppt-master', 'exports', 'cli-fake.pptx')));
+  assert.ok(existsSync(path.join(runDir, 'ppt-master', 'deck_contract.json')));
+  assert.equal(existsSync(path.join(runDir, 'html', 'index.html')), false);
+});
+
+test('generate writes sibling html and pptx outputs for both mode', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const pptMasterPath = makeFakePptMaster();
+  const run = runGenerate(
+    ['--source', source, '--profile', 'briefing', '--output', 'both', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
+    { env: { DECKGEN_PPT_MASTER_PYTHON: process.execPath } }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+  assert.ok(existsSync(path.join(runDir, 'ppt-master', 'exports', 'cli-fake.pptx')));
 });
 
 test('generate uses unique run directories for two html runs under one workdir', () => {

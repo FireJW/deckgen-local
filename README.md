@@ -10,6 +10,10 @@ HTML preview output is available now:
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
 ```
 
-Editable PPTX export is not implemented in Phase 1. CLI requests for `--output pptx` or `--output both` intentionally fail closed until the `ppt-master` wrapper is wired to a real local checkout.
+Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 
-The `pptMasterPath` key in `deckgen.config.example.json` is the future integration point for that local `ppt-master` checkout.
+Configure the checkout with `--ppt-master-path`, `DECKGEN_PPT_MASTER_PATH`, or a sibling directory named `../ppt-master` from the repo root. The wrapper calls `skills/ppt-master/scripts/svg_to_pptx.py` and verifies `ppt-master/exports/*.pptx` before reporting success.
+
+```bash
+node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output pptx --ppt-master-path D:/Users/rickylu/dev/ppt-master
+```

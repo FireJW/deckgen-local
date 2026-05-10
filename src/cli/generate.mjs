@@ -1,9 +1,10 @@
 import { randomUUID as defaultRandomUUID } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { validateDeckContract } from '../contract/validate.mjs';
 import { buildQcReport } from '../qc/report.mjs';
 import { renderHtmlDeck } from '../renderers/html-guizang/render.mjs';
+import { getPptMasterExporterPath, renderPptMasterDeck } from '../renderers/ppt-master/render.mjs';
 
 export class DeckgenUserError extends Error {
   constructor(message) {
@@ -14,9 +15,16 @@ export class DeckgenUserError extends Error {
 
 export const normalizeOutputs = (output) => output === 'both' ? ['html', 'pptx'] : [output];
 
-export const failIfPptxRequested = (outputs) => {
+export const failIfPptxRequested = (outputs, config = {}) => {
   if (outputs.includes('pptx')) {
-    throw new DeckgenUserError('PPTX output is not implemented in Phase 1; requires ppt-master wrapper.');
+    if (typeof config.pptMasterPath !== 'string' || config.pptMasterPath.trim() === '') {
+      throw new DeckgenUserError('pptMasterPath is required for PPTX output. Set --ppt-master-path or DECKGEN_PPT_MASTER_PATH.');
+    }
+
+    const exporterPath = getPptMasterExporterPath(path.resolve(config.pptMasterPath));
+    if (!existsSync(exporterPath)) {
+      throw new DeckgenUserError(`ppt-master exporter not found: ${exporterPath}`);
+    }
   }
 };
 
@@ -61,14 +69,15 @@ export const writeGenerateBundle = ({
   sourceManifest,
   content,
   contract,
-  sourcePath
+  sourcePath,
+  config = {}
 }) => {
   const validation = validateDeckContract(contract);
   if (!validation.ok) {
     throw new DeckgenUserError(`Deck contract validation failed: ${validation.error}`);
   }
 
-  failIfPptxRequested(contract.outputs);
+  failIfPptxRequested(contract.outputs, config);
 
   const { runDir } = createRunDirectory(workdir);
 
@@ -78,6 +87,7 @@ export const writeGenerateBundle = ({
   writeJson(path.join(runDir, 'deck_contract.json'), contract);
 
   let htmlPath = '';
+  let pptxPaths = [];
   if (contract.outputs.includes('html')) {
     const htmlDir = path.join(runDir, 'html');
     mkdirSync(htmlDir);
@@ -85,11 +95,26 @@ export const writeGenerateBundle = ({
     writeFileSync(htmlPath, renderHtmlDeck(contract), 'utf8');
   }
 
+  if (contract.outputs.includes('pptx')) {
+    try {
+      const pptxResult = renderPptMasterDeck({
+        contract,
+        content,
+        config,
+        outputDir: path.join(runDir, 'ppt-master')
+      });
+      pptxPaths = pptxResult.pptxPaths;
+    } catch (error) {
+      throw new DeckgenUserError(error.message);
+    }
+  }
+
   writeFileSync(path.join(runDir, 'qc_report.md'), buildQcReport({
     sourcePath,
     validation,
-    htmlPath
+    htmlPath,
+    pptxPaths
   }), 'utf8');
 
-  return { runDir, validation, htmlPath };
+  return { runDir, validation, htmlPath, pptxPaths };
 };

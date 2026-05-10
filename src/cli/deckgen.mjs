@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
 import { buildGenericMarkdownPackage } from '../adapters/generic-markdown.mjs';
 import { allowedCliOutputModes, allowedProfiles } from '../contract/schema.mjs';
 import {
@@ -9,7 +10,7 @@ import {
   writeGenerateBundle
 } from './generate.mjs';
 
-const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--workdir <path>]`;
+const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--workdir <path>] [--ppt-master-path <path>]`;
 const args = process.argv.slice(2);
 const [command] = args;
 const isHelpFlag = (token) => token === '--help' || token === '-h';
@@ -25,6 +26,13 @@ const parseGenerateFlags = (tokens) => {
     output: 'html',
     workdir: process.cwd()
   };
+  const flagMap = new Map([
+    ['--source', 'source'],
+    ['--profile', 'profile'],
+    ['--output', 'output'],
+    ['--workdir', 'workdir'],
+    ['--ppt-master-path', 'pptMasterPath']
+  ]);
 
   for (let index = 0; index < tokens.length; index += 2) {
     const flag = tokens[index];
@@ -38,14 +46,31 @@ const parseGenerateFlags = (tokens) => {
       fail(`Missing value for ${flag}.`);
     }
 
-    if (!['--source', '--profile', '--output', '--workdir'].includes(flag)) {
+    const optionKey = flagMap.get(flag);
+    if (!optionKey) {
       fail(`Unsupported option: ${flag}`);
     }
 
-    options[flag.slice(2)] = value;
+    options[optionKey] = value;
   }
 
   return options;
+};
+
+const resolvePptMasterPath = (options) => {
+  if (options.pptMasterPath) {
+    return path.resolve(options.pptMasterPath);
+  }
+
+  if (process.env.DECKGEN_PPT_MASTER_PATH) {
+    return path.resolve(process.env.DECKGEN_PPT_MASTER_PATH);
+  }
+
+  const candidates = [
+    path.resolve(process.cwd(), '..', 'ppt-master'),
+    path.resolve(process.cwd(), 'ppt-master')
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? '';
 };
 
 const commandGenerate = (tokens) => {
@@ -76,8 +101,13 @@ const commandGenerate = (tokens) => {
 
   const markdown = readFileSync(options.source, 'utf8');
   const concreteOutputs = normalizeOutputs(options.output);
+  const pptMasterPath = resolvePptMasterPath(options);
+  const config = {
+    pptMasterPath,
+    pythonPath: process.env.DECKGEN_PPT_MASTER_PYTHON
+  };
   try {
-    failIfPptxRequested(concreteOutputs);
+    failIfPptxRequested(concreteOutputs, config);
   } catch (error) {
     if (error instanceof DeckgenUserError) {
       fail(error.message);
@@ -101,7 +131,8 @@ const commandGenerate = (tokens) => {
     profile: options.profile,
     output: options.output,
     outputs: concreteOutputs,
-    workdir: options.workdir
+    workdir: options.workdir,
+    pptMasterPath
   };
   const sourceManifest = {
     primary: {
@@ -118,7 +149,8 @@ const commandGenerate = (tokens) => {
       sourceManifest,
       content: deckPackage.content,
       contract,
-      sourcePath: options.source
+      sourcePath: options.source,
+      config
     });
     process.stdout.write(`written ${runDir}\n`);
   } catch (error) {

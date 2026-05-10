@@ -54,9 +54,23 @@ The Phase 1 bundle shape is:
 validated renderer contract. `html/index.html` is the current browser preview
 output. `qc_report.md` records validation and output checks.
 
-Future editable PowerPoint exports will add a `ppt-master/` subtree after a
-real local `ppt-master` checkout is wired. That subtree is not produced by
-Phase 1 HTML-only runs.
+Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
+real local `ppt-master` checkout is configured and produces a `.pptx`:
+
+```text
+.tmp/deckgen/<run-id>/
+  ppt-master/
+    deck_contract.json
+    content.md
+    design_spec.md
+    notes/
+    svg_output/
+    svg_final/
+    exports/
+      <deck>.pptx
+```
+
+That subtree is not produced by HTML-only runs.
 
 ## Current HTML Command
 
@@ -69,23 +83,29 @@ node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md
 The command writes a new `.tmp/deckgen/<run-id>/` bundle in the current working
 directory unless `--workdir <path>` is supplied.
 
-## PPTX Phase 1 Boundary
+## PPTX Boundary
 
-`--output pptx` and `--output both` intentionally fail closed in Phase 1. They
-must not silently emit partial artifacts or fake editable exports.
+`--output pptx` and `--output both` intentionally fail closed unless the
+configured `ppt-master` checkout has the expected exporter script and that
+exporter writes at least one real `.pptx` file.
 
-Editable PPTX support requires wiring a real local `ppt-master` checkout. The
-future integration point is `pptMasterPath` in
-`deckgen.config.example.json`:
+The integration point is a real local `ppt-master` checkout, configured in this
+order:
 
-```json
-{
-  "pptMasterPath": "D:/path/to/ppt-master"
-}
+1. `--ppt-master-path <path>`
+2. `DECKGEN_PPT_MASTER_PATH`
+3. An existing sibling checkout at `../ppt-master` from the repo root
+
+The wrapper expects this upstream entrypoint:
+
+```text
+skills/ppt-master/scripts/svg_to_pptx.py
 ```
 
-Until that path is connected to a real wrapper, CLI requests for PPTX output
-should continue to fail with an explicit implementation error.
+The deckgen renderer converts `deck_contract.json` into a ppt-master project by
+writing `notes/`, `svg_output/`, `svg_final/`, `design_spec.md`, and source
+copies. It then calls the upstream exporter and verifies
+`ppt-master/exports/*.pptx` before the CLI reports success.
 
 ## Output Model
 
