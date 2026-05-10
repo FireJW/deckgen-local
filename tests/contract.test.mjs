@@ -160,6 +160,30 @@ test('buildDeckPlan uses evidence layout for briefing profile', () => {
   assert.equal(plan.slides[1].layout_intent, 'evidence');
 });
 
+test('buildDeckPlan splits Windows CRLF markdown sections into separate slides', () => {
+  const plan = buildDeckPlan({
+    title: 'Windows report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: [
+      '# Executive Summary',
+      '- one',
+      '',
+      '## Signals',
+      '- two',
+      '',
+      '## Actions',
+      '- three'
+    ].join('\r\n')
+  });
+
+  assert.equal(plan.target_slide_count, 4);
+  assert.deepEqual(
+    plan.slides.slice(1).map((slide) => slide.headline),
+    ['Executive Summary', 'Signals', 'Actions']
+  );
+});
+
 test('buildDeckPlan rejects invalid inputs with clear errors', () => {
   for (const [name, input, message] of invalidPlannerInputs) {
     assert.throws(() => buildDeckPlan(input), message, name);

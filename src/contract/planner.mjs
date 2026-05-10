@@ -5,7 +5,9 @@ const isNonEmptyString = (value) => typeof value === 'string' && value.trim().le
 
 const splitSourceText = (sourceText) =>
   sourceText
-    .split(/\n{2,}/)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split(/\n[ \t]*\n/)
     .map((section) => section.trim())
     .filter(Boolean)
     .slice(0, 6);

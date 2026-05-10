@@ -71,6 +71,12 @@ accepts a directory containing `agent-reading-lab.json` with schema
 `obsidian-reading-lab` source with the `learning` profile, using the package
 source title and chapter as the deck title when present.
 
+General report workflows commonly emit a run directory with `report.md`. When
+none of the more specific package markers exists, the loader accepts that file
+as a `research-report` source with the `briefing` profile. This keeps report
+directory support explicit on the artifact filename, not on the parent
+directory name.
+
 ## Run Directory
 
 Each run writes artifacts under:

@@ -48,6 +48,9 @@ directory contains `agent-reading-lab.json` with `schema:
 "agent_reading_lab/v1"` and an `index.md`. This path is treated as a
 `learning` source.
 
+Report run directories can be passed directly when they contain `report.md`.
+This path is treated as a `research-report` source with the `briefing` profile.
+
 Run the browser/screenshot smoke against a generated `html/index.html` when
 layout regressions matter. The repo does not vendor Playwright, so pass a local
 or bundled `node_modules` directory that contains `playwright`; if Playwright's

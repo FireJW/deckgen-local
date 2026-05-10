@@ -11,6 +11,7 @@ const sourceManifestName = 'deckgen.source.json';
 const publishPackageName = 'publish-package.json';
 const readingLabPackageName = 'agent-reading-lab.json';
 const readingLabIndexName = 'index.md';
+const reportFileName = 'report.md';
 const typedProfiles = {
   'article-package': 'article',
   'research-report': 'briefing',
@@ -133,7 +134,12 @@ const loadImplicitSourceDirectory = ({ source, explicitProfile, manifestPath }) 
     return loadReadingLabDirectory({ source, explicitProfile, readingLabPath });
   }
 
-  throw new DeckgenUserError(`Directory sources must include ${sourceManifestName}, ${publishPackageName}, or ${readingLabPackageName}: ${manifestPath}`);
+  const reportPath = path.join(source, reportFileName);
+  if (existsSync(reportPath)) {
+    return loadReportDirectory({ source, explicitProfile, reportPath });
+  }
+
+  throw new DeckgenUserError(`Directory sources must include ${sourceManifestName}, ${publishPackageName}, ${readingLabPackageName}, or ${reportFileName}: ${manifestPath}`);
 };
 
 const loadPublishPackageDirectory = ({ source, explicitProfile, packagePath }) => {
@@ -223,6 +229,41 @@ const loadReadingLabDirectory = ({ source, explicitProfile, readingLabPath }) =>
       root: source,
       manifest: fileManifestEntry(readingLabPath),
       primary: fileManifestEntry(indexPath)
+    }
+  };
+};
+
+const loadReportDirectory = ({ source, explicitProfile, reportPath }) => {
+  let reportStat;
+  try {
+    reportStat = statSync(reportPath);
+  } catch {
+    throw new DeckgenUserError(`Report directory must include ${reportFileName}: ${reportPath}`);
+  }
+
+  if (!reportStat.isFile()) {
+    throw new DeckgenUserError(`Report source is not a file: ${reportPath}`);
+  }
+
+  const sourceType = 'research-report';
+  const profile = 'briefing';
+  assertProfileCompatible({ explicitProfile, profile, sourceType });
+
+  const markdown = readFileSync(reportPath, 'utf8');
+  const deckPackage = buildResearchReportDeck({
+    sourcePath: reportPath,
+    markdown
+  });
+
+  return {
+    ...deckPackage,
+    sourceType,
+    sourcePath: reportPath,
+    profile,
+    sourceManifest: {
+      type: sourceType,
+      root: source,
+      primary: fileManifestEntry(reportPath)
     }
   };
 };

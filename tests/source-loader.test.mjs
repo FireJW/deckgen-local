@@ -11,6 +11,7 @@ const markdownSource = path.join(root, 'fixtures', 'generic-markdown', 'briefing
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 const publishPackageSource = path.join(root, 'fixtures', 'source-packages', 'publish-package', 'basic');
 const obsidianReadingLabSource = path.join(root, 'fixtures', 'source-packages', 'obsidian-reading-lab', 'basic');
+const reportDirectorySource = path.join(root, 'fixtures', 'source-packages', 'report-directory', 'basic');
 
 test('loadSourcePackage preserves markdown file fallback behavior', () => {
   const loaded = loadSourcePackage({ source: markdownSource, profile: 'learning' });
@@ -63,6 +64,18 @@ test('loadSourcePackage detects Obsidian reading-lab preview packages', () => {
   assert.match(loaded.content, /Read Thought, Action, and Observation as a grounded loop/);
 });
 
+test('loadSourcePackage detects report.md directories as research reports', () => {
+  const loaded = loadSourcePackage({ source: reportDirectorySource });
+
+  assert.equal(loaded.sourceType, 'research-report');
+  assert.equal(loaded.profile, 'briefing');
+  assert.equal(loaded.contract.profile, 'briefing');
+  assert.equal(loaded.contract.title, 'Research Report Sample');
+  assert.equal(loaded.sourceManifest.type, 'research-report');
+  assert.equal(loaded.sourceManifest.primary.path, path.join(reportDirectorySource, 'report.md'));
+  assert.match(loaded.content, /grounded Markdown report/);
+});
+
 test('loadSourcePackage rejects explicit profile conflicts for publish packages', () => {
   assert.throws(
     () => loadSourcePackage({ source: publishPackageSource, profile: 'briefing' }),
@@ -74,6 +87,13 @@ test('loadSourcePackage rejects explicit profile conflicts for Obsidian reading-
   assert.throws(
     () => loadSourcePackage({ source: obsidianReadingLabSource, profile: 'article' }),
     /profile article conflicts with obsidian-reading-lab profile learning/i
+  );
+});
+
+test('loadSourcePackage rejects explicit profile conflicts for report.md directories', () => {
+  assert.throws(
+    () => loadSourcePackage({ source: reportDirectorySource, profile: 'learning' }),
+    /profile learning conflicts with research-report profile briefing/i
   );
 });
 
