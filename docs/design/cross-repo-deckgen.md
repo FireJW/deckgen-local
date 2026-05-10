@@ -83,6 +83,25 @@ node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md
 The command writes a new `.tmp/deckgen/<run-id>/` bundle in the current working
 directory unless `--workdir <path>` is supplied.
 
+## HTML Renderer Boundary
+
+The HTML renderer is a local guizang-compatible implementation rather than a
+vendored copy of `op7418/guizang-ppt-skill/assets/template.html`. It keeps the
+single-file, horizontal swipe deck shape, fixed theme presets, keyboard
+navigation, and slide-dot navigation, while reading only `deck_contract.json`.
+
+The renderer currently adapts the upstream MIT theme palette values for:
+
+- `ink-classic`
+- `indigo-porcelain`
+- `forest-ink`
+- `kraft-paper`
+- `dune`
+
+No upstream JavaScript, HTML template, image, or motion asset is copied into the
+repo in this slice. If later work vendors upstream template code or assets, it
+must preserve the upstream MIT notice in `third_party/NOTICE.md`.
+
 ## PPTX Boundary
 
 `--output pptx` and `--output both` intentionally fail closed unless the

@@ -4,7 +4,10 @@ Local cross-repo deck generation for Markdown, research packages, and learning n
 
 ## Current Usage
 
-HTML preview output is available now:
+HTML preview output is available now. The HTML renderer uses a local
+guizang-compatible horizontal swipe shell with fixed theme presets; it does not
+convert HTML into PPTX and does not vendor the upstream guizang template or
+motion assets.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
