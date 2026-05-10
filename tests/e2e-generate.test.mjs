@@ -17,17 +17,56 @@ const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'g
 
 const writtenRunDir = (stdout) => stdout.match(/written (.+)$/m)?.[1]?.trim();
 
+const createMinimalPptxBytes = () => {
+  const entries = ['[Content_Types].xml', 'ppt/presentation.xml'];
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const entryName of entries) {
+    const name = Buffer.from(entryName, 'utf8');
+    const local = Buffer.alloc(30 + name.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(name.length, 26);
+    name.copy(local, 30);
+    localParts.push(local);
+
+    const central = Buffer.alloc(46 + name.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt32LE(offset, 42);
+    name.copy(central, 46);
+    centralParts.push(central);
+    offset += local.length;
+  }
+
+  const centralDir = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralDir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  return Buffer.concat([...localParts, centralDir, eocd]);
+};
+
 const makeFakePptMaster = () => {
   const rootDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-fake-ppt-master-'));
   const scriptDir = path.join(rootDir, 'skills', 'ppt-master', 'scripts');
   mkdirSync(scriptDir, { recursive: true });
+  writeFileSync(path.join(rootDir, 'fixture.pptx'), createMinimalPptxBytes());
   writeFileSync(path.join(scriptDir, 'svg_to_pptx.py'), `
 const fs = require('fs');
 const path = require('path');
 const projectDir = process.argv[2];
 const exportsDir = path.join(projectDir, 'exports');
 fs.mkdirSync(exportsDir, { recursive: true });
-fs.writeFileSync(path.join(exportsDir, 'cli-fake.pptx'), 'pptx');
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'cli-fake.pptx'));
 `, 'utf8');
   return rootDir;
 };

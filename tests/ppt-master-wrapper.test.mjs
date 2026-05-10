@@ -28,10 +28,49 @@ const sampleContract = {
   ]
 };
 
+const createMinimalPptxBytes = () => {
+  const entries = ['[Content_Types].xml', 'ppt/presentation.xml'];
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  for (const entryName of entries) {
+    const name = Buffer.from(entryName, 'utf8');
+    const local = Buffer.alloc(30 + name.length);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(name.length, 26);
+    name.copy(local, 30);
+    localParts.push(local);
+
+    const central = Buffer.alloc(46 + name.length);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt32LE(offset, 42);
+    name.copy(central, 46);
+    centralParts.push(central);
+    offset += local.length;
+  }
+
+  const centralDir = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(entries.length, 8);
+  eocd.writeUInt16LE(entries.length, 10);
+  eocd.writeUInt32LE(centralDir.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  return Buffer.concat([...localParts, centralDir, eocd]);
+};
+
 const makeFakePptMaster = (scriptBody) => {
   const root = path.join(os.tmpdir(), `deckgen-ppt-master-${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const scriptDir = path.join(root, 'skills', 'ppt-master', 'scripts');
   mkdirSync(scriptDir, { recursive: true });
+  writeFileSync(path.join(root, 'fixture.pptx'), createMinimalPptxBytes());
   writeFileSync(path.join(scriptDir, 'svg_to_pptx.py'), scriptBody, 'utf8');
   return root;
 };
@@ -50,7 +89,7 @@ const path = require('path');
 const projectDir = process.argv[2];
 const exportsDir = path.join(projectDir, 'exports');
 fs.mkdirSync(exportsDir, { recursive: true });
-fs.writeFileSync(path.join(exportsDir, 'fake.pptx'), 'pptx');
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
 fs.writeFileSync(path.join(projectDir, 'exporter-args.json'), JSON.stringify(process.argv.slice(2), null, 2));
 `);
   const outputDir = path.join(os.tmpdir(), `deckgen-ppt-project-${Date.now()}`);
@@ -88,6 +127,28 @@ test('renderPptMasterDeck fails if exporter does not create a pptx artifact', ()
       config: { pptMasterPath, pythonPath: process.execPath },
       outputDir
     }),
-    /did not create a PPTX artifact/i
+    /PPTX artifact/i
+  );
+});
+
+test('renderPptMasterDeck rejects invalid pptx artifacts', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.writeFileSync(path.join(exportsDir, 'invalid.pptx'), 'not a pptx package');
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-invalid-ppt-project-${Date.now()}`);
+
+  assert.throws(
+    () => renderPptMasterDeck({
+      contract: sampleContract,
+      content: '# Quarterly Briefing',
+      config: { pptMasterPath, pythonPath: process.execPath },
+      outputDir
+    }),
+    /valid PPTX artifact/i
   );
 });

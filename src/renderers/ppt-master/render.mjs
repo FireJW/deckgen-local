@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
+  readFileSync,
   readdirSync,
   statSync,
   writeFileSync
@@ -132,6 +133,53 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
   return { exportsDir };
 };
 
+const findEndOfCentralDirectory = (buffer) => {
+  const earliestOffset = Math.max(0, buffer.length - 22 - 0xffff);
+  for (let offset = buffer.length - 22; offset >= earliestOffset; offset -= 1) {
+    if (buffer.readUInt32LE(offset) === 0x06054b50) {
+      return offset;
+    }
+  }
+
+  return -1;
+};
+
+const isPptxPackage = (filePath) => {
+  try {
+    const buffer = readFileSync(filePath);
+    const eocdOffset = findEndOfCentralDirectory(buffer);
+    if (eocdOffset < 0 || eocdOffset + 22 > buffer.length) {
+      return false;
+    }
+
+    const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+    let cursor = buffer.readUInt32LE(eocdOffset + 16);
+    const names = new Set();
+
+    for (let index = 0; index < entryCount; index += 1) {
+      if (cursor + 46 > buffer.length || buffer.readUInt32LE(cursor) !== 0x02014b50) {
+        return false;
+      }
+
+      const nameLength = buffer.readUInt16LE(cursor + 28);
+      const extraLength = buffer.readUInt16LE(cursor + 30);
+      const commentLength = buffer.readUInt16LE(cursor + 32);
+      const nameStart = cursor + 46;
+      const nameEnd = nameStart + nameLength;
+      if (nameEnd > buffer.length) {
+        return false;
+      }
+
+      names.add(buffer.toString('utf8', nameStart, nameEnd).replaceAll('\\', '/'));
+      cursor = nameEnd + extraLength + commentLength;
+    }
+
+    return names.has('[Content_Types].xml') && names.has('ppt/presentation.xml');
+  } catch {
+    return false;
+  }
+};
+
 const findPptxArtifacts = (exportsDir) => {
   if (!existsSync(exportsDir)) {
     return [];
@@ -140,7 +188,8 @@ const findPptxArtifacts = (exportsDir) => {
   return readdirSync(exportsDir)
     .filter((entry) => entry.toLowerCase().endsWith('.pptx'))
     .map((entry) => path.join(exportsDir, entry))
-    .filter((entryPath) => statSync(entryPath).isFile());
+    .filter((entryPath) => statSync(entryPath).isFile())
+    .filter((entryPath) => isPptxPackage(entryPath));
 };
 
 const trimProcessOutput = (value) => String(value ?? '').trim().slice(0, 2000);
@@ -186,7 +235,7 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
 
   const pptxPaths = findPptxArtifacts(exportsDir);
   if (pptxPaths.length === 0) {
-    throw new Error(`ppt-master exporter did not create a PPTX artifact in ${exportsDir}`);
+    throw new Error(`ppt-master exporter did not create a valid PPTX artifact in ${exportsDir}`);
   }
 
   return {
