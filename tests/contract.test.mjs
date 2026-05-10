@@ -46,6 +46,20 @@ const malformedContracts = [
   ['source_refs item path is empty', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: '', role: 'primary' }] })],
   ['source_refs item role is not a string', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 3 }] })],
   ['source_refs item has unexpected key', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', extra: true }] })],
+  ['source_refs item has duplicate id', () => ({
+    ...validContract(),
+    source_refs: [
+      { type: 'local_file', path: 'D:/source-a.md', role: 'primary', id: 'main' },
+      { type: 'local_file', path: 'D:/source-b.md', role: 'supporting', id: 'main' }
+    ]
+  })],
+  ['source_refs item has duplicate path', () => ({
+    ...validContract(),
+    source_refs: [
+      { type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'main' },
+      { type: 'local_file', path: 'D:/source.md', role: 'supporting', id: 'supporting' }
+    ]
+  })],
   ['hard_constraints is not an array', () => ({ ...validContract(), hard_constraints: 'none' })],
   ['theme is null', () => ({ ...validContract(), theme: null })],
   ['theme renderer_hint is empty', () => ({ ...validContract(), theme: { renderer_hint: ' ' } })],
@@ -65,6 +79,9 @@ const malformedContracts = [
   ['slide evidence_refs item is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [' '] }] })],
   ['slide evidence_refs object item is missing id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ source_ref: 'primary' }] }] })],
   ['slide evidence_refs object item has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', extra: true }] }] })],
+  ['slide evidence_refs object item has duplicate id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }, { id: 'ev1' }] }] })],
+  ['slide evidence_refs object locator is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', locator: ' ' }] }] })],
+  ['slide evidence_refs object quote is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', quote: 3 }] }] })],
   ['slide evidence_refs object source_ref is unknown', () => ({
     ...validContract(),
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
@@ -92,7 +109,7 @@ test('validateDeckContract accepts a valid deck contract', () => {
   assert.deepEqual(validateDeckContract({
     ...validContract(),
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
-    slides: [{ ...validSlide(), evidence_refs: ['primary', { id: 'ev1', source_ref: 'primary' }] }]
+    slides: [{ ...validSlide(), evidence_refs: ['primary', { id: 'ev1', source_ref: 'primary', locator: 'p. 2', quote: 'Verified claim.' }] }]
   }), { ok: true });
 });
 

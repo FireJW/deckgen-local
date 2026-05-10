@@ -199,8 +199,13 @@ without treating one output as the source for the other.
 ## Reference Item Validation
 
 `source_refs[]` items are strict objects with `type`, `path`, `role`, and
-optional `id`. `slides[].evidence_refs[]` may still be a non-empty string for
-legacy adapter compatibility, or an object with `id` and optional `source_ref`.
-When object-form `source_ref` is present, it must match a declared source ref
-`id`, `role`, or `path`. Unknown keys are rejected so downstream renderers do
-not silently accept drifted evidence contracts.
+optional `id`. Source ref `path` values must be unique, and optional `id`
+values must be unique when present.
+
+`slides[].evidence_refs[]` may still be a non-empty string for legacy adapter
+compatibility, or an object with `id` and optional `source_ref`, `locator`, and
+`quote`. Object evidence `id` values must be unique within the slide. When
+object-form `source_ref` is present, it must match a declared source ref `id`,
+`role`, or `path`. Optional `locator` and `quote` values must be non-empty
+strings when present. Unknown keys are rejected so downstream renderers do not
+silently accept drifted evidence contracts.

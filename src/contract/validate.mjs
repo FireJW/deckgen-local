@@ -11,7 +11,7 @@ const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
-const allowedEvidenceRefKeys = new Set(['id', 'source_ref']);
+const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
 
 export function validateDeckContract(contract) {
   try {
@@ -141,6 +141,9 @@ function validateDeckContractInternal(contract) {
 }
 
 function validateSourceRefs(sourceRefs) {
+  const seenIds = new Set();
+  const seenPaths = new Set();
+
   for (const [index, sourceRef] of sourceRefs.entries()) {
     const prefix = `source_refs[${index}]`;
 
@@ -163,6 +166,20 @@ function validateSourceRefs(sourceRefs) {
     if (Object.hasOwn(sourceRef, 'id') && !isNonEmptyString(sourceRef.id)) {
       return fail(`${prefix}.id must be a non-empty string when present`);
     }
+
+    if (Object.hasOwn(sourceRef, 'id')) {
+      const id = sourceRef.id.trim();
+      if (seenIds.has(id)) {
+        return fail(`${prefix}.id must be unique`);
+      }
+      seenIds.add(id);
+    }
+
+    const path = sourceRef.path.trim();
+    if (seenPaths.has(path)) {
+      return fail(`${prefix}.path must be unique`);
+    }
+    seenPaths.add(path);
   }
 
   return { ok: true };
@@ -183,6 +200,8 @@ function collectSourceRefKeys(sourceRefs) {
 }
 
 function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
+  const seenObjectIds = new Set();
+
   for (const [index, evidenceRef] of evidenceRefs.entries()) {
     const itemPrefix = `${prefix}[${index}]`;
 
@@ -207,8 +226,20 @@ function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
       return fail(`${itemPrefix}.id must be a non-empty string`);
     }
 
+    const id = evidenceRef.id.trim();
+    if (seenObjectIds.has(id)) {
+      return fail(`${itemPrefix}.id must be unique within the slide`);
+    }
+    seenObjectIds.add(id);
+
     if (Object.hasOwn(evidenceRef, 'source_ref') && !isNonEmptyString(evidenceRef.source_ref)) {
       return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
+    }
+
+    for (const key of ['locator', 'quote']) {
+      if (Object.hasOwn(evidenceRef, key) && !isNonEmptyString(evidenceRef[key])) {
+        return fail(`${itemPrefix}.${key} must be a non-empty string when present`);
+      }
     }
 
     if (
