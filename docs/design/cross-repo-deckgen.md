@@ -153,3 +153,12 @@ format: the HTML renderer reads it to produce `html/index.html`, and the future
 PPTX renderer will read the same contract to produce editable PowerPoint files
 under `ppt-master/`. This keeps preview rendering and editable export aligned
 without treating one output as the source for the other.
+
+## Reference Item Validation
+
+`source_refs[]` items are strict objects with `type`, `path`, `role`, and
+optional `id`. `slides[].evidence_refs[]` may still be a non-empty string for
+legacy adapter compatibility, or an object with `id` and optional `source_ref`.
+When object-form `source_ref` is present, it must match a declared source ref
+`id`, `role`, or `path`. Unknown keys are rejected so downstream renderers do
+not silently accept drifted evidence contracts.

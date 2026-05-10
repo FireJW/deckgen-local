@@ -10,6 +10,8 @@ const isNonEmptyString = (value) => typeof value === 'string' && value.trim().le
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
+const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
+const allowedEvidenceRefKeys = new Set(['id', 'source_ref']);
 
 export function validateDeckContract(contract) {
   try {
@@ -67,6 +69,7 @@ function validateDeckContractInternal(contract) {
   if (!sourceRefsValidation.ok) {
     return sourceRefsValidation;
   }
+  const knownSourceRefKeys = collectSourceRefKeys(contract.source_refs);
 
   if (!Array.isArray(contract.hard_constraints)) {
     return fail('hard_constraints must be an array');
@@ -128,7 +131,7 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix}.evidence_refs must be an array`);
     }
 
-    const evidenceRefsValidation = validateEvidenceRefs(slide.evidence_refs, `${prefix}.evidence_refs`);
+    const evidenceRefsValidation = validateEvidenceRefs(slide.evidence_refs, `${prefix}.evidence_refs`, knownSourceRefKeys);
     if (!evidenceRefsValidation.ok) {
       return evidenceRefsValidation;
     }
@@ -145,6 +148,12 @@ function validateSourceRefs(sourceRefs) {
       return fail(`${prefix} must be an object`);
     }
 
+    for (const key of Object.keys(sourceRef)) {
+      if (!allowedSourceRefKeys.has(key)) {
+        return fail(`${prefix} has unexpected key: ${key}`);
+      }
+    }
+
     for (const key of ['type', 'path', 'role']) {
       if (!isNonEmptyString(sourceRef[key])) {
         return fail(`${prefix}.${key} must be a non-empty string`);
@@ -159,7 +168,21 @@ function validateSourceRefs(sourceRefs) {
   return { ok: true };
 }
 
-function validateEvidenceRefs(evidenceRefs, prefix) {
+function collectSourceRefKeys(sourceRefs) {
+  const keys = new Set();
+
+  for (const sourceRef of sourceRefs) {
+    for (const key of ['id', 'role', 'path']) {
+      if (isNonEmptyString(sourceRef[key])) {
+        keys.add(sourceRef[key]);
+      }
+    }
+  }
+
+  return keys;
+}
+
+function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
   for (const [index, evidenceRef] of evidenceRefs.entries()) {
     const itemPrefix = `${prefix}[${index}]`;
 
@@ -174,12 +197,26 @@ function validateEvidenceRefs(evidenceRefs, prefix) {
       return fail(`${itemPrefix} must be a non-empty string or object`);
     }
 
+    for (const key of Object.keys(evidenceRef)) {
+      if (!allowedEvidenceRefKeys.has(key)) {
+        return fail(`${itemPrefix} has unexpected key: ${key}`);
+      }
+    }
+
     if (!isNonEmptyString(evidenceRef.id)) {
       return fail(`${itemPrefix}.id must be a non-empty string`);
     }
 
     if (Object.hasOwn(evidenceRef, 'source_ref') && !isNonEmptyString(evidenceRef.source_ref)) {
       return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
+    }
+
+    if (
+      Object.hasOwn(evidenceRef, 'source_ref') &&
+      isNonEmptyString(evidenceRef.source_ref) &&
+      !knownSourceRefKeys.has(evidenceRef.source_ref)
+    ) {
+      return fail(`${itemPrefix}.source_ref must match a source_refs id, role, or path`);
     }
   }
 
