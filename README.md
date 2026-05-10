@@ -43,6 +43,11 @@ directly when the directory contains `publish-package.json` with
 This path is treated as an `article` source. `deckgen.source.json` still takes
 precedence when both files are present.
 
+Obsidian `reading-lab` preview packages can also be passed directly when the
+directory contains `agent-reading-lab.json` with `schema:
+"agent_reading_lab/v1"` and an `index.md`. This path is treated as a
+`learning` source.
+
 Run the browser/screenshot smoke against a generated `html/index.html` when
 layout regressions matter. The repo does not vendor Playwright, so pass a local
 or bundled `node_modules` directory that contains `playwright`; if Playwright's

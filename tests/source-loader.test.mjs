@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const markdownSource = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 const publishPackageSource = path.join(root, 'fixtures', 'source-packages', 'publish-package', 'basic');
+const obsidianReadingLabSource = path.join(root, 'fixtures', 'source-packages', 'obsidian-reading-lab', 'basic');
 
 test('loadSourcePackage preserves markdown file fallback behavior', () => {
   const loaded = loadSourcePackage({ source: markdownSource, profile: 'learning' });
@@ -48,10 +49,31 @@ test('loadSourcePackage detects publish-package/v1 directories from publish-pack
   assert.match(loaded.content, /Ready article packages already contain grounded Markdown/);
 });
 
+test('loadSourcePackage detects Obsidian reading-lab preview packages', () => {
+  const loaded = loadSourcePackage({ source: obsidianReadingLabSource });
+
+  assert.equal(loaded.sourceType, 'obsidian-reading-lab');
+  assert.equal(loaded.profile, 'learning');
+  assert.equal(loaded.contract.profile, 'learning');
+  assert.equal(loaded.contract.title, 'hello-agents - Chapter 4: ReAct');
+  assert.equal(loaded.sourceManifest.type, 'obsidian-reading-lab');
+  assert.equal(loaded.sourceManifest.schema, 'agent_reading_lab/v1');
+  assert.equal(loaded.sourceManifest.primary.path, path.join(obsidianReadingLabSource, 'index.md'));
+  assert.equal(loaded.sourceManifest.manifest.path, path.join(obsidianReadingLabSource, 'agent-reading-lab.json'));
+  assert.match(loaded.content, /Read Thought, Action, and Observation as a grounded loop/);
+});
+
 test('loadSourcePackage rejects explicit profile conflicts for publish packages', () => {
   assert.throws(
     () => loadSourcePackage({ source: publishPackageSource, profile: 'briefing' }),
     /profile briefing conflicts with publish-package profile article/i
+  );
+});
+
+test('loadSourcePackage rejects explicit profile conflicts for Obsidian reading-lab packages', () => {
+  assert.throws(
+    () => loadSourcePackage({ source: obsidianReadingLabSource, profile: 'article' }),
+    /profile article conflicts with obsidian-reading-lab profile learning/i
   );
 });
 

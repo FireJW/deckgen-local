@@ -64,6 +64,13 @@ the loader accepts this artifact only if `contract_version` is
 `publish-package` source with the `article` profile. If both files are present,
 `deckgen.source.json` remains the explicit override.
 
+The Obsidian learning workflows emit preview packages from `reading-lab.mjs`.
+When neither `deckgen.source.json` nor `publish-package.json` exists, the loader
+accepts a directory containing `agent-reading-lab.json` with schema
+`agent_reading_lab/v1` plus `index.md`. It is normalized as an
+`obsidian-reading-lab` source with the `learning` profile, using the package
+source title and chapter as the deck title when present.
+
 ## Run Directory
 
 Each run writes artifacts under:

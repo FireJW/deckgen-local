@@ -12,6 +12,7 @@ const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 const learningSource = path.join(root, 'fixtures', 'generic-markdown', 'learning.md');
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 const publishPackageSource = path.join(root, 'fixtures', 'source-packages', 'publish-package', 'basic');
+const obsidianReadingLabSource = path.join(root, 'fixtures', 'source-packages', 'obsidian-reading-lab', 'basic');
 
 const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'generate', ...args], {
   encoding: 'utf8',
@@ -128,6 +129,23 @@ test('generate auto-detects publish-package/v1 directory sources', () => {
   assert.equal(manifest.type, 'publish-package');
   assert.equal(manifest.contract_version, 'publish-package/v1');
   assert.equal(contract.title, 'Publish Package Deck');
+  assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+});
+
+test('generate auto-detects Obsidian reading-lab directory sources', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', obsidianReadingLabSource, '--output', 'html', '--workdir', tmp]);
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const request = JSON.parse(readFileSync(path.join(runDir, 'request.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(path.join(runDir, 'source_manifest.json'), 'utf8'));
+  const contract = JSON.parse(readFileSync(path.join(runDir, 'deck_contract.json'), 'utf8'));
+  assert.equal(request.source_type, 'obsidian-reading-lab');
+  assert.equal(request.profile, 'learning');
+  assert.equal(manifest.type, 'obsidian-reading-lab');
+  assert.equal(manifest.schema, 'agent_reading_lab/v1');
+  assert.equal(contract.title, 'hello-agents - Chapter 4: ReAct');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
 
