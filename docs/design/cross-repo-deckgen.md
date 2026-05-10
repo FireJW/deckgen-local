@@ -160,12 +160,14 @@ Before any guizang template integration, run:
 
 ```bash
 npm run preflight:guizang -- --source path/to/guizang-ppt-skill
+npm run preflight:guizang -- --source path/to/guizang-ppt-skill-main.zip
 ```
 
-The preflight checks only local source paths. It fails closed when the checkout
-or extracted archive is missing, when no license file is present, or when a
-supported template file cannot be found. Passing this preflight does not copy
-files; it only confirms that the next integration slice has auditable local
+The preflight checks only local source paths. It accepts a checkout, extracted
+archive directory, or `.zip` archive. It fails closed when the source is
+missing, when a zip cannot be inspected, when no license file is present, or
+when a supported template file cannot be found. Passing this preflight does not
+copy files; it only confirms that the next integration slice has auditable local
 source material.
 
 ## HTML Visual QA
