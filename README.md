@@ -83,7 +83,8 @@ Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI req
 Configure the checkout with `--ppt-master-path`, `DECKGEN_PPT_MASTER_PATH`, or a sibling directory named `../ppt-master` from the repo root. The wrapper calls `skills/ppt-master/scripts/svg_to_pptx.py` and verifies `ppt-master/exports/*.pptx` before reporting success.
 Standard Markdown table blocks are mapped into SVG table blocks before the
 upstream exporter runs, so PPTX output does not receive raw pipe-delimited text
-for common report tables.
+for common report tables. Slides with `layout_intent: "text_split"` are mapped
+into two-column SVG blocks before `ppt-master` exports the PPTX.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output pptx --ppt-master-path D:/Users/rickylu/dev/ppt-master

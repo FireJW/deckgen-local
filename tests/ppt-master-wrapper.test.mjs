@@ -178,6 +178,47 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.doesNotMatch(svg, /\| Rank \| Symbol \| Score \|/);
 });
 
+test('renderPptMasterDeck maps text_split slides into pptx two-column svg blocks', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-text-split-ppt-project-${Date.now()}`);
+  const textSplitContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Concept vs Explanation',
+        body: [
+          'Concept frame for the learner.',
+          '',
+          'Detailed explanation with implementation context.'
+        ].join('\n'),
+        layout_intent: 'text_split'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: textSplitContract,
+    content: '# Concept vs Explanation',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-text-split"/);
+  assert.match(svg, />Concept frame for the learner\.</);
+  assert.match(svg, /Detailed explanation/);
+  assert.match(svg, /implementation context\./);
+});
+
 test('renderPptMasterDeck rejects pptx artifacts with the wrong slide count', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

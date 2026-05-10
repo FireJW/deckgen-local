@@ -106,6 +106,55 @@ const parseMarkdownTable = (body) => {
 
 const cleanCellText = (value) => String(value ?? '').replace(/`([^`]*)`/g, '$1');
 
+const splitTextSplitBody = (body) => {
+  const normalized = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  if (paragraphs.length >= 2) {
+    return [paragraphs[0], paragraphs.slice(1).join(' ')];
+  }
+
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length >= 2) {
+    return [lines[0], lines.slice(1).join(' ')];
+  }
+
+  return [paragraphs[0] ?? lines[0] ?? '', ''];
+};
+
+const renderTextSplitSvg = ({ body, x, y, width, bodyColor, accent }) => {
+  const [leftText, rightText] = splitTextSplitBody(body);
+  const gap = 48;
+  const columnWidth = (width - gap) / 2;
+  const panelHeight = 420;
+  const lineHeight = 36;
+  const textY = y + 66;
+  const renderColumnText = (value, columnX) => wrapText(value, 34, 8)
+    .map((line, lineIndex) =>
+      `<text x="${columnX + 34}" y="${textY + lineIndex * lineHeight}" font-family="Arial, sans-serif" font-size="27" fill="${bodyColor}">${escapeXml(line)}</text>`
+    )
+    .join('\n    ');
+
+  return [
+    '<g class="ppt-text-split">',
+    `  <rect x="${x}" y="${y}" width="${columnWidth}" height="${panelHeight}" rx="22" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>`,
+    `  <rect x="${x}" y="${y}" width="8" height="${panelHeight}" rx="4" fill="${accent}"/>`,
+    `  <rect x="${x + columnWidth + gap}" y="${y}" width="${columnWidth}" height="${panelHeight}" rx="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>`,
+    `  ${renderColumnText(leftText, x)}`,
+    `  ${renderColumnText(rightText, x + columnWidth + gap)}`,
+    '</g>'
+  ].join('\n  ');
+};
+
 const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
   const columnCount = Math.max(1, table.headers.length);
   const rowCount = Math.min(5, table.rows.length);
@@ -153,18 +202,24 @@ const renderSlideSvg = (slide, index) => {
   const accent = isCover ? '#38bdf8' : '#2563eb';
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
   const table = isCover ? null : parseMarkdownTable(slide?.body);
-  const bodyLines = table ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
+  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table;
+  const bodyLines = table || textSplit ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
   const headlineSvg = headlineLines.map((line, lineIndex) =>
     `<text x="120" y="${headlineStartY + lineIndex * (isCover ? 76 : 58)}" font-family="Arial, sans-serif" font-size="${isCover ? 64 : 48}" font-weight="700" fill="${headlineColor}">${escapeXml(line)}</text>`
   ).join('\n  ');
-  const bodySvg = table
-    ? renderTableSvg({ table, x: 120, y: bodyStartY, width: 1040, bodyColor, accent })
-    : bodyLines.map((line, lineIndex) =>
+  let bodySvg;
+  if (table) {
+    bodySvg = renderTableSvg({ table, x: 120, y: bodyStartY, width: 1040, bodyColor, accent });
+  } else if (textSplit) {
+    bodySvg = renderTextSplitSvg({ body: slide?.body, x: 120, y: bodyStartY, width: 1040, bodyColor, accent });
+  } else {
+    bodySvg = bodyLines.map((line, lineIndex) =>
       `<text x="120" y="${bodyStartY + lineIndex * 38}" font-family="Arial, sans-serif" font-size="30" fill="${bodyColor}">${escapeXml(line)}</text>`
     ).join('\n  ');
+  }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
   <rect width="1600" height="900" fill="${background}"/>
