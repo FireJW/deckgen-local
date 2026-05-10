@@ -8,6 +8,7 @@ import { allowedProfiles } from '../contract/schema.mjs';
 import { DeckgenUserError } from './generate.mjs';
 
 const sourceManifestName = 'deckgen.source.json';
+const publishPackageName = 'publish-package.json';
 const typedProfiles = {
   'article-package': 'article',
   'research-report': 'briefing',
@@ -43,6 +44,12 @@ const assertAllowedProfile = (profile) => {
   }
 };
 
+const assertProfileCompatible = ({ explicitProfile, profile, sourceType }) => {
+  if (explicitProfile && explicitProfile !== profile) {
+    throw new DeckgenUserError(`profile ${explicitProfile} conflicts with ${sourceType} profile ${profile}`);
+  }
+};
+
 const loadMarkdownFile = ({ source, profile }) => {
   assertAllowedProfile(profile);
   const markdown = readFileSync(source, 'utf8');
@@ -63,7 +70,7 @@ const loadMarkdownFile = ({ source, profile }) => {
 const loadSourceDirectory = ({ source, explicitProfile }) => {
   const manifestPath = path.join(source, sourceManifestName);
   if (!existsSync(manifestPath)) {
-    throw new DeckgenUserError(`Directory sources must include ${sourceManifestName}: ${manifestPath}`);
+    return loadPublishPackageDirectory({ source, explicitProfile, manifestPath });
   }
 
   const manifest = readJson(manifestPath);
@@ -74,9 +81,7 @@ const loadSourceDirectory = ({ source, explicitProfile }) => {
     throw new DeckgenUserError(`Unsupported source package type: ${sourceType ?? ''}`);
   }
 
-  if (explicitProfile && explicitProfile !== profile) {
-    throw new DeckgenUserError(`profile ${explicitProfile} conflicts with ${sourceType} profile ${profile}`);
-  }
+  assertProfileCompatible({ explicitProfile, profile, sourceType });
 
   if (typeof manifest.primary !== 'string' || manifest.primary.trim().length === 0) {
     throw new DeckgenUserError(`${sourceManifestName}.primary must be a non-empty string`);
@@ -111,6 +116,45 @@ const loadSourceDirectory = ({ source, explicitProfile }) => {
       root: source,
       manifest: fileManifestEntry(manifestPath),
       primary: fileManifestEntry(primaryPath)
+    }
+  };
+};
+
+const loadPublishPackageDirectory = ({ source, explicitProfile, manifestPath }) => {
+  const packagePath = path.join(source, publishPackageName);
+  if (!existsSync(packagePath)) {
+    throw new DeckgenUserError(`Directory sources must include ${sourceManifestName} or ${publishPackageName}: ${manifestPath}`);
+  }
+
+  const publishPackage = readJson(packagePath);
+  if (publishPackage.contract_version !== 'publish-package/v1') {
+    throw new DeckgenUserError(`${publishPackageName}.contract_version must be publish-package/v1`);
+  }
+
+  if (typeof publishPackage.content_markdown !== 'string' || publishPackage.content_markdown.trim().length === 0) {
+    throw new DeckgenUserError(`${publishPackageName}.content_markdown must be a non-empty string`);
+  }
+
+  const sourceType = 'publish-package';
+  const profile = 'article';
+  assertProfileCompatible({ explicitProfile, profile, sourceType });
+
+  const deckPackage = buildArticlePackageDeck({
+    title: typeof publishPackage.title === 'string' ? publishPackage.title : undefined,
+    sourcePath: packagePath,
+    markdown: publishPackage.content_markdown
+  });
+
+  return {
+    ...deckPackage,
+    sourceType,
+    sourcePath: packagePath,
+    profile,
+    sourceManifest: {
+      type: sourceType,
+      contract_version: publishPackage.contract_version,
+      root: source,
+      primary: fileManifestEntry(packagePath)
     }
   };
 };

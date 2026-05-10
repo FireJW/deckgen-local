@@ -148,12 +148,14 @@ export function renderHtmlDeck(contract) {
     .slide { position: relative; flex: 0 0 100vw; min-height: 100vh; padding: 64px min(8vw, 96px); display: grid; align-content: center; gap: 30px; scroll-snap-align: start; }
     .surface-paper { background: linear-gradient(135deg, var(--paper) 0%, var(--paper-tint) 100%); color: var(--ink); }
     .surface-ink { background: radial-gradient(circle at 85% 15%, rgba(var(--paper-rgb), 0.18), transparent 34%), var(--ink); color: var(--paper); }
-    .slide-kicker { display: inline-block; font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; opacity: 0.72; }
+    .slide-kicker { display: inline-block; justify-self: start; font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; opacity: 0.72; }
     .slide-copy { max-width: 1060px; display: grid; gap: 28px; }
     .slide h2 { margin: 0; max-width: 1040px; font-family: "Noto Serif SC", "Songti SC", Georgia, serif; font-size: clamp(2.35rem, 7vw, 6.2rem); line-height: 1.02; letter-spacing: 0; overflow-wrap: anywhere; }
     .slide-body { display: grid; gap: 18px; max-width: 820px; }
     .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; overflow-wrap: anywhere; }
     .slide-evidence .slide-copy, .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
+    .slide-content:not(.layout-text-split) .slide-copy, .slide-evidence .slide-copy { align-content: center; }
+    .slide-content:not(.layout-text-split) h2, .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }
     .layout-text-split .slide-copy { max-width: 1180px; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr); align-items: start; column-gap: min(6vw, 84px); }
     .layout-text-split h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
     .layout-text-split .slide-body { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }

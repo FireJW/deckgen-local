@@ -1,0 +1,6 @@
+{
+  "contract_version": "publish-package/v1",
+  "title": "Publish Package Deck",
+  "subtitle": "A ready article package should become an article deck source.",
+  "content_markdown": "# Publish Package Deck\n\n## Thesis\n\nReady article packages already contain grounded Markdown.\n\n## Implication\n\nDeckgen should read the package directly without a deckgen.source.json shim."
+}

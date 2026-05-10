@@ -9,6 +9,7 @@ import { loadSourcePackage } from '../src/cli/source-loader.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const markdownSource = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
+const publishPackageSource = path.join(root, 'fixtures', 'source-packages', 'publish-package', 'basic');
 
 test('loadSourcePackage preserves markdown file fallback behavior', () => {
   const loaded = loadSourcePackage({ source: markdownSource, profile: 'learning' });
@@ -31,6 +32,27 @@ test('loadSourcePackage detects article package directories from deckgen.source.
   assert.equal(loaded.sourceManifest.type, 'article-package');
   assert.equal(loaded.sourceManifest.manifest.path, path.join(articlePackageSource, 'deckgen.source.json'));
   assert.equal(loaded.sourceManifest.primary.path, path.join(articlePackageSource, 'content.md'));
+});
+
+test('loadSourcePackage detects publish-package/v1 directories from publish-package.json', () => {
+  const loaded = loadSourcePackage({ source: publishPackageSource });
+
+  assert.equal(loaded.sourceType, 'publish-package');
+  assert.equal(loaded.profile, 'article');
+  assert.equal(loaded.contract.profile, 'article');
+  assert.equal(loaded.contract.title, 'Publish Package Deck');
+  assert.deepEqual(loaded.contract.outputs, ['html', 'pptx']);
+  assert.equal(loaded.sourceManifest.type, 'publish-package');
+  assert.equal(loaded.sourceManifest.contract_version, 'publish-package/v1');
+  assert.equal(loaded.sourceManifest.primary.path, path.join(publishPackageSource, 'publish-package.json'));
+  assert.match(loaded.content, /Ready article packages already contain grounded Markdown/);
+});
+
+test('loadSourcePackage rejects explicit profile conflicts for publish packages', () => {
+  assert.throws(
+    () => loadSourcePackage({ source: publishPackageSource, profile: 'briefing' }),
+    /profile briefing conflicts with publish-package profile article/i
+  );
 });
 
 test('loadSourcePackage rejects explicit profile conflicts for typed packages', () => {

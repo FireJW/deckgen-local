@@ -72,6 +72,27 @@ test('renderHtmlDeck gives text_split a distinct local layout', () => {
   assert.doesNotMatch(html, /assets\//);
 });
 
+test('renderHtmlDeck bounds long article content layouts', () => {
+  const html = renderHtmlDeck({
+    title: 'Article Layout',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'A very long article headline should stay inside the slide instead of pushing body text outside the viewport',
+        body: 'A supporting paragraph remains visible inside the slide.',
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  });
+
+  assert.match(html, /\.slide-kicker \{[^}]*justify-self: start/);
+  assert.match(html, /\.slide-content:not\(\.layout-text-split\) h2, \.slide-evidence h2 \{[^}]*font-size: clamp\(2rem, 5vw, 4\.6rem\)/);
+  assert.match(html, /\.slide-content:not\(\.layout-text-split\) \.slide-copy, \.slide-evidence \.slide-copy \{[^}]*align-content: center/);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

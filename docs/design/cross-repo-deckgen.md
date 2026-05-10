@@ -57,6 +57,13 @@ For typed packages, a conflicting explicit `--profile` is rejected before the
 run bundle is created. `--output` remains the caller-selected output mode, so a
 typed package never silently requests PPTX.
 
+The financial-services article publishing pipeline also emits a real
+`publish-package.json` artifact. When no `deckgen.source.json` marker exists,
+the loader accepts this artifact only if `contract_version` is
+`publish-package/v1` and `content_markdown` is non-empty. It is normalized as a
+`publish-package` source with the `article` profile. If both files are present,
+`deckgen.source.json` remains the explicit override.
+
 ## Run Directory
 
 Each run writes artifacts under:

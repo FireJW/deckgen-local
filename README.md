@@ -37,6 +37,12 @@ Supported package `type` values are `article-package`, `research-report`, and
 `obsidian-note`; their profiles are inferred as `article`, `briefing`, and
 `learning` respectively. Passing a conflicting `--profile` fails closed.
 
+Article publish outputs from the financial-services repos can also be passed
+directly when the directory contains `publish-package.json` with
+`contract_version: "publish-package/v1"` and non-empty `content_markdown`.
+This path is treated as an `article` source. `deckgen.source.json` still takes
+precedence when both files are present.
+
 Run the browser/screenshot smoke against a generated `html/index.html` when
 layout regressions matter. The repo does not vendor Playwright, so pass a local
 or bundled `node_modules` directory that contains `playwright`; if Playwright's
