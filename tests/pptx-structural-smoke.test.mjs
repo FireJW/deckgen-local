@@ -4,7 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { findLatestPptxArtifact, inspectPptxFile, validatePptxSmokeResult } from '../src/qc/pptx-structural-smoke.mjs';
+import {
+  findLatestPptxArtifact,
+  findLatestPptxArtifactForRunDir,
+  inspectPptxFile,
+  validatePptxSmokeResult
+} from '../src/qc/pptx-structural-smoke.mjs';
 import test from 'node:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -108,6 +113,15 @@ test('findLatestPptxArtifact discovers the newest pptx in an exports directory',
   assert.notEqual(findLatestPptxArtifact(dir), older);
 });
 
+test('findLatestPptxArtifactForRunDir discovers the newest pptx under ppt-master exports', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-run-dir-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  mkdirSync(exportsDir, { recursive: true });
+  const latest = writePptxInDirectory(exportsDir, 'run-latest.pptx', 6, new Date('2026-05-10T00:03:00Z'));
+
+  assert.equal(findLatestPptxArtifactForRunDir(runDir), latest);
+});
+
 test('pptx structural smoke script validates expected slide count', () => {
   const pptxPath = writePptxFixture(4);
   const run = spawnSync(process.execPath, [
@@ -147,4 +161,23 @@ test('pptx structural smoke script accepts an exports directory', () => {
   assert.equal(result.ok, true);
   assert.equal(result.slideCount, 5);
   assert.match(result.path, /latest\.pptx$/);
+});
+
+test('pptx structural smoke script accepts a deckgen run directory', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-run-cli-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  mkdirSync(exportsDir, { recursive: true });
+  writePptxInDirectory(exportsDir, 'run-latest.pptx', 6, new Date('2026-05-10T00:03:00Z'));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--expected-slides', '6'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true);
+  assert.equal(result.slideCount, 6);
+  assert.match(result.path, /run-latest\.pptx$/);
 });

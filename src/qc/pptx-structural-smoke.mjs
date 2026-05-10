@@ -107,6 +107,20 @@ export function findLatestPptxArtifact(exportsDir) {
   return candidates[0].filePath;
 }
 
+export function findLatestPptxArtifactForRunDir(runDir) {
+  const resolvedRunDir = path.resolve(runDir ?? '');
+  if (!existsSync(resolvedRunDir)) {
+    throw new Error(`Deckgen run directory not found: ${resolvedRunDir}`);
+  }
+
+  const stats = statSync(resolvedRunDir);
+  if (!stats.isDirectory()) {
+    throw new Error(`Deckgen run path is not a directory: ${resolvedRunDir}`);
+  }
+
+  return findLatestPptxArtifact(path.join(resolvedRunDir, 'ppt-master', 'exports'));
+}
+
 export function validatePptxSmokeResult(summary = {}, options = {}) {
   const errors = [];
   if (!summary.ok) {

@@ -74,11 +74,12 @@ export artifacts without opening PowerPoint:
 
 ```powershell
 npm run smoke:pptx -- `
-  --exports-dir .tmp\deckgen\<run-id>\ppt-master\exports `
+  --run-dir .tmp\deckgen\<run-id> `
   --expected-slides 7
 ```
 
-`--pptx <path>` still works for a direct file check when needed.
+`--exports-dir <path>` checks the newest `.pptx` under an exports directory,
+and `--pptx <path>` still works for a direct file check.
 
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 
