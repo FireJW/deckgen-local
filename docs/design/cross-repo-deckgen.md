@@ -209,8 +209,9 @@ artifacts outside the generate bundle writer.
 Visual smoke for PPTX output lives in `scripts/pptx-visual-smoke.mjs`. On
 Windows machines with Microsoft PowerPoint available, it reuses the structural
 PPTX checks, opens the deck through PowerPoint automation, exports slide 1 as a
-PNG, and validates that the screenshot file exists and has bytes. It fails
-closed when PowerPoint is unavailable; use `--powerpoint-executable <path>` or
+PNG, and validates that the screenshot file exists, has bytes, has a PNG
+signature, and exposes positive IHDR dimensions. It fails closed when
+PowerPoint is unavailable; use `--powerpoint-executable <path>` or
 `DECKGEN_POWERPOINT_PATH` when the executable is not in the default Office path.
 
 ## PPTX Boundary

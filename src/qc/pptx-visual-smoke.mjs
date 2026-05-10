@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const defaultPowerPointPaths = [
@@ -54,6 +54,34 @@ export function defaultPptxScreenshotPath(pptxPath, cwd = process.cwd()) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const basename = path.basename(pptxPath ?? 'deck.pptx', path.extname(pptxPath ?? 'deck.pptx'));
   return path.resolve(cwd, '.tmp', 'deckgen-pptx-visual-smoke', `${basename}-${stamp}-slide1.png`);
+}
+
+export function inspectPngFile(filePath) {
+  const resolvedPath = path.resolve(filePath ?? '');
+  const buffer = readFileSync(resolvedPath);
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  if (buffer.length < 33 || !buffer.subarray(0, 8).equals(signature)) {
+    throw new Error(`Screenshot is not a PNG file: ${resolvedPath}`);
+  }
+
+  const ihdrLength = buffer.readUInt32BE(8);
+  const chunkType = buffer.toString('ascii', 12, 16);
+  if (ihdrLength !== 13 || chunkType !== 'IHDR') {
+    throw new Error(`Screenshot PNG is missing an IHDR header: ${resolvedPath}`);
+  }
+
+  const imageWidth = buffer.readUInt32BE(16);
+  const imageHeight = buffer.readUInt32BE(20);
+  if (!Number.isInteger(imageWidth) || !Number.isInteger(imageHeight) || imageWidth < 1 || imageHeight < 1) {
+    throw new Error(`Screenshot PNG has invalid dimensions: ${resolvedPath}`);
+  }
+
+  return {
+    screenshotMime: 'image/png',
+    imageWidth,
+    imageHeight
+  };
 }
 
 export function exportFirstSlideWithPowerPoint(options = {}) {
@@ -116,6 +144,8 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
     throw new Error(`PowerPoint visual export created an empty screenshot: ${resolvedScreenshotPath}`);
   }
 
+  const image = inspectPngFile(resolvedScreenshotPath);
+
   return {
     ok: true,
     renderer: 'powerpoint',
@@ -123,6 +153,7 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
     powerPointPath: resolvedPowerPointPath,
     screenshotPath: resolvedScreenshotPath,
     screenshotBytes,
+    ...image,
     width: Number(width),
     height: Number(height)
   };
