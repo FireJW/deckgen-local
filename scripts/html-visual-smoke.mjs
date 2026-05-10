@@ -3,10 +3,15 @@ import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { buildBrowserLaunchOptions, parseViewportOption, validateVisualSmokeResult } from '../src/qc/html-visual-smoke.mjs';
+import {
+  buildBrowserLaunchOptions,
+  findHtmlArtifactForRunDir,
+  parseViewportOption,
+  validateVisualSmokeResult
+} from '../src/qc/html-visual-smoke.mjs';
 
 const usage = [
-  'html-visual-smoke --html <path> [--expected-title <title>] [--expected-slides <n>]',
+  'html-visual-smoke --html <path> | --run-dir <dir> [--expected-title <title>] [--expected-slides <n>]',
   '                  [--screenshot-out <path>] [--module-dir <node_modules>]',
   '                  [--browser-executable <path>] [--viewport <width>x<height>]'
 ].join('\n');
@@ -20,6 +25,7 @@ const parseArgs = (tokens) => {
   const options = {};
   const flagMap = new Map([
     ['--html', 'htmlPath'],
+    ['--run-dir', 'runDir'],
     ['--expected-title', 'expectedTitle'],
     ['--expected-slides', 'expectedSlides'],
     ['--screenshot-out', 'screenshotOut'],
@@ -53,8 +59,14 @@ const parseArgs = (tokens) => {
     options[key] = value;
   }
 
-  if (!options.htmlPath) {
-    fail('Missing required option: --html.');
+  const targetCount = [options.htmlPath, options.runDir]
+    .filter((value) => value !== undefined).length;
+  if (targetCount === 0) {
+    fail('Missing required option: --html or --run-dir.');
+  }
+
+  if (targetCount > 1) {
+    fail('Pass only one of --html or --run-dir.');
   }
 
   if (options.expectedSlides !== undefined) {
@@ -144,9 +156,18 @@ const summarizePage = async (page, screenshotPath) => {
 
 const main = async () => {
   const options = parseArgs(process.argv.slice(2));
-  const htmlPath = path.resolve(options.htmlPath);
-  if (!existsSync(htmlPath)) {
-    fail(`HTML file not found: ${htmlPath}`);
+  let htmlPath;
+  if (options.htmlPath) {
+    htmlPath = path.resolve(options.htmlPath);
+    if (!existsSync(htmlPath)) {
+      fail(`HTML file not found: ${htmlPath}`);
+    }
+  } else {
+    try {
+      htmlPath = findHtmlArtifactForRunDir(path.resolve(options.runDir));
+    } catch (error) {
+      fail(error.message);
+    }
   }
 
   const screenshotPath = path.resolve(options.screenshotOut ?? defaultScreenshotPath(htmlPath));

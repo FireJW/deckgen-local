@@ -59,7 +59,7 @@ managed browser cache is missing, pass an installed browser executable.
 
 ```powershell
 npm run smoke:html -- `
-  --html .tmp\deckgen\<run-id>\html\index.html `
+  --run-dir .tmp\deckgen\<run-id> `
   --expected-title "Deck Generator Briefing" `
   --expected-slides 4 `
   --module-dir C:\Users\rickylu\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules `
@@ -67,6 +67,7 @@ npm run smoke:html -- `
   --viewport 390x844
 ```
 
+`--html <path>` still works for a direct `html/index.html` check.
 Omit `--viewport` to use the default desktop smoke size of `1440x900`.
 
 Run the structural PPTX smoke against a generated `.pptx` when checking editable

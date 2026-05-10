@@ -1,3 +1,6 @@
+import { existsSync, statSync } from 'node:fs';
+import path from 'node:path';
+
 export function validateVisualSmokeResult(summary = {}, options = {}) {
   const errors = [];
   const title = String(summary.title ?? '').trim();
@@ -74,4 +77,28 @@ export function parseViewportOption(value) {
   }
 
   return { width, height };
+}
+
+export function findHtmlArtifactForRunDir(runDir) {
+  const resolvedRunDir = path.resolve(runDir ?? '');
+  if (!existsSync(resolvedRunDir)) {
+    throw new Error(`Deckgen run directory not found: ${resolvedRunDir}`);
+  }
+
+  const runStats = statSync(resolvedRunDir);
+  if (!runStats.isDirectory()) {
+    throw new Error(`Deckgen run path is not a directory: ${resolvedRunDir}`);
+  }
+
+  const htmlPath = path.join(resolvedRunDir, 'html', 'index.html');
+  if (!existsSync(htmlPath)) {
+    throw new Error(`HTML artifact not found under deckgen run directory: ${htmlPath}`);
+  }
+
+  const htmlStats = statSync(htmlPath);
+  if (!htmlStats.isFile()) {
+    throw new Error(`HTML artifact path is not a file: ${htmlPath}`);
+  }
+
+  return htmlPath;
 }

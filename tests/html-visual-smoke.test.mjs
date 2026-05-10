@@ -1,7 +1,11 @@
 import { strict as assert } from 'node:assert';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 import {
   buildBrowserLaunchOptions,
+  findHtmlArtifactForRunDir,
   parseViewportOption,
   validateVisualSmokeResult
 } from '../src/qc/html-visual-smoke.mjs';
@@ -68,4 +72,13 @@ test('parseViewportOption rejects malformed viewport dimensions', () => {
   assert.throws(() => parseViewportOption('390'), /--viewport must use WIDTHxHEIGHT/);
   assert.throws(() => parseViewportOption('0x844'), /--viewport width and height must be positive integers/);
   assert.throws(() => parseViewportOption('390x1.5'), /--viewport must use WIDTHxHEIGHT/);
+});
+
+test('findHtmlArtifactForRunDir resolves html/index.html from a deckgen run directory', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-html-run-dir-'));
+  const htmlPath = path.join(runDir, 'html', 'index.html');
+  mkdirSync(path.dirname(htmlPath), { recursive: true });
+  writeFileSync(htmlPath, '<!doctype html><title>Deck</title>', 'utf8');
+
+  assert.equal(findHtmlArtifactForRunDir(runDir), htmlPath);
 });
