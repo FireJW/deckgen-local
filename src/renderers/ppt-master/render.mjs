@@ -197,6 +197,25 @@ const trimProcessOutput = (value) => String(value ?? '').trim().slice(0, 2000);
 export const getPptMasterExporterPath = (pptMasterPath) =>
   path.join(pptMasterPath, exporterRelativePath);
 
+export const resolvePptMasterPythonPath = ({ pptMasterPath, pythonPath, env = process.env }) => {
+  if (pythonPath) {
+    return pythonPath;
+  }
+
+  if (env.DECKGEN_PPT_MASTER_PYTHON) {
+    return env.DECKGEN_PPT_MASTER_PYTHON;
+  }
+
+  const localVenvPython = process.platform === 'win32'
+    ? path.join(pptMasterPath, '.venv', 'Scripts', 'python.exe')
+    : path.join(pptMasterPath, '.venv', 'bin', 'python');
+  if (existsSync(localVenvPython)) {
+    return localVenvPython;
+  }
+
+  return process.platform === 'win32' ? 'py' : 'python3';
+};
+
 export const renderPptMasterDeck = ({ contract, content = '', config = {}, outputDir }) => {
   if (typeof config.pptMasterPath !== 'string' || config.pptMasterPath.trim() === '') {
     throw new Error('pptMasterPath is required for PPTX output');
@@ -211,7 +230,10 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
 
   mkdirSync(projectDir, { recursive: true });
   const { exportsDir } = writePptMasterProject({ contract, content, projectDir });
-  const pythonPath = config.pythonPath || process.env.DECKGEN_PPT_MASTER_PYTHON || (process.platform === 'win32' ? 'py' : 'python3');
+  const pythonPath = resolvePptMasterPythonPath({
+    pptMasterPath,
+    pythonPath: config.pythonPath
+  });
   const run = spawnSync(pythonPath, [
     exporterPath,
     projectDir,

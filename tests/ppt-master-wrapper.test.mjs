@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { renderPptMasterDeck } from '../src/renderers/ppt-master/render.mjs';
+import { renderPptMasterDeck, resolvePptMasterPythonPath } from '../src/renderers/ppt-master/render.mjs';
 
 const sampleContract = {
   title: 'Quarterly Briefing',
@@ -80,6 +80,18 @@ test('renderPptMasterDeck requires pptMasterPath', () => {
     () => renderPptMasterDeck({ contract: { title: 'x', slides: [] }, config: {} }),
     /pptMasterPath/
   );
+});
+
+test('resolvePptMasterPythonPath prefers a checkout-local venv', () => {
+  const pptMasterPath = path.join(os.tmpdir(), `deckgen-ppt-master-venv-${Date.now()}`);
+  const relativePythonPath = process.platform === 'win32'
+    ? path.join('.venv', 'Scripts', 'python.exe')
+    : path.join('.venv', 'bin', 'python');
+  const pythonPath = path.join(pptMasterPath, relativePythonPath);
+  mkdirSync(path.dirname(pythonPath), { recursive: true });
+  writeFileSync(pythonPath, '');
+
+  assert.equal(resolvePptMasterPythonPath({ pptMasterPath, env: {} }), pythonPath);
 });
 
 test('renderPptMasterDeck writes ppt-master project input and returns real artifacts only', () => {
