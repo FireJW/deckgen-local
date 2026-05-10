@@ -96,6 +96,20 @@ test('generate writes a run bundle with html and qc report', () => {
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
 
+test('generate writes guizang html motion asset next to index.html', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const htmlPath = path.join(runDir, 'html', 'index.html');
+  const motionAssetPath = path.join(runDir, 'html', 'assets', 'motion.min.js');
+  const html = readFileSync(htmlPath, 'utf8');
+
+  assert.ok(existsSync(motionAssetPath));
+  assert.match(html, /import\('\.\/assets\/motion\.min\.js'\)/);
+});
+
 test('generate auto-detects article package directory sources', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
   const run = runGenerate(['--source', articlePackageSource, '--output', 'html', '--workdir', tmp]);

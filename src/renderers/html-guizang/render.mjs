@@ -1,3 +1,14 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const rendererDir = path.dirname(fileURLToPath(import.meta.url));
+const vendoredGuizangRoot = path.resolve(rendererDir, '..', '..', '..', 'third_party', 'guizang-ppt-skill');
+const templatePath = path.join(vendoredGuizangRoot, 'assets', 'template.html');
+const motionAssetPath = path.join(vendoredGuizangRoot, 'assets', 'motion.min.js');
+const slidesPlaceholder = '<!-- SLIDES_HERE -->';
+const externalLucideScriptPattern = /\n?<script src="https:\/\/unpkg\.com\/lucide@latest\/dist\/umd\/lucide\.min\.js"><\/script>\n?/;
+
 const escapeHtml = (value) =>
   String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -102,6 +113,49 @@ const renderThemeVars = (vars) => [
   `--ink-tint:${vars.inkTint};`
 ].join('');
 
+let cachedTemplate = '';
+
+const loadVendoredTemplate = () => {
+  if (!cachedTemplate) {
+    cachedTemplate = readFileSync(templatePath, 'utf8');
+  }
+  return cachedTemplate;
+};
+
+export const getHtmlGuizangAssetFiles = () => [
+  {
+    sourcePath: motionAssetPath,
+    relativePath: path.join('assets', 'motion.min.js')
+  }
+];
+
+const renderDeckgenOverrides = (theme) => `
+  /* ============ Deckgen contract bridge ============ */
+  :root { ${renderThemeVars(theme.vars)} }
+  #deck[data-renderer] * { letter-spacing: 0; overflow-wrap: anywhere; }
+  #deck[data-renderer] .slide-kicker { display: inline-block; justify-self: start; }
+  #deck[data-renderer] .slide-copy { max-width: 1060px; display: grid; gap: 28px; margin-top: auto; margin-bottom: auto; }
+  #deck[data-renderer] .slide-body { display: grid; gap: 18px; max-width: 820px; }
+  #deck[data-renderer] .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; }
+  #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
+  #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
+  #deck[data-renderer] table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
+  #deck[data-renderer] th, #deck[data-renderer] td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; }
+  #deck[data-renderer] th { font-family: var(--mono); font-size: 0.76rem; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.76); background: rgba(var(--ink-rgb), 0.06); }
+  #deck[data-renderer] tr:last-child td { border-bottom: 0; }
+  #deck[data-renderer] .slide-evidence .slide-copy, #deck[data-renderer] .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
+  #deck[data-renderer] .slide-content:not(.layout-text-split) .slide-copy, #deck[data-renderer] .slide-evidence .slide-copy { align-content: center; }
+  #deck[data-renderer] .slide-content:not(.layout-text-split) h2, #deck[data-renderer] .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }
+  #deck[data-renderer] .layout-text-split .slide-copy { max-width: 1180px; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr); align-items: start; column-gap: min(6vw, 84px); }
+  #deck[data-renderer] .layout-text-split h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
+  #deck[data-renderer] .layout-text-split .slide-body { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }
+  @media (max-width: 720px) {
+    #deck[data-renderer] .slide-copy { max-width: none; }
+    #deck[data-renderer] .layout-text-split .slide-copy { grid-template-columns: minmax(0, 1fr); }
+    #deck[data-renderer] .layout-text-split .slide-body { padding-left: 0; border-left: 0; }
+  }
+`;
+
 const splitTableRow = (line) =>
   line
     .trim()
@@ -159,132 +213,69 @@ const renderBody = (body) => {
     })
     .join('\n');
 
-  return `<div class="slide-body">\n${paragraphs}\n</div>`;
+  return `<div class="slide-body body-zh" data-anim>\n${paragraphs}\n</div>`;
 };
 
-const renderSlide = (slide, index) => {
+const slideAnimation = (role, layout) => {
+  if (role === 'cover' || layout === 'hero-dark') return 'hero';
+  if (layout === 'quote') return 'quote';
+  if (layout === 'text-split') return 'directional';
+  if (layout === 'pipeline') return 'pipeline';
+  return 'cascade';
+};
+
+const renderSlide = (slide, index, totalSlides, title) => {
   const id = stableClassPart(slide.id, `slide-${index + 1}`);
   const role = stableClassPart(slide.role, 'content');
   const layout = stableClassPart(slide.layout_intent, 'default');
   const surface = role === 'cover' || layout === 'hero-dark' || layout === 'quote'
-    ? 'surface-ink'
-    : 'surface-paper';
+    ? 'dark'
+    : 'light';
   const label = String(index + 1).padStart(2, '0');
+  const headingTag = role === 'cover' || layout === 'hero-dark' ? 'h1' : 'h2';
+  const headingClass = headingTag === 'h1' ? 'h-hero' : 'h-xl';
+  const slideClasses = [
+    'slide',
+    role === 'cover' || layout === 'hero-dark' ? 'hero' : '',
+    surface,
+    `slide-${role}`,
+    `layout-${layout}`
+  ].filter(Boolean).join(' ');
 
   return [
-    `<section id="${escapeHtml(id)}" class="slide slide-${escapeHtml(role)} layout-${escapeHtml(layout)} ${surface}" data-slide-index="${index}" data-role="${escapeHtml(role)}" data-layout="${escapeHtml(layout)}">`,
-    `  <div class="slide-kicker">${escapeHtml(label)} / ${escapeHtml(role)}</div>`,
+    `<section id="${escapeHtml(id)}" class="${escapeHtml(slideClasses)}" data-slide-index="${index}" data-theme="${escapeHtml(surface)}" data-role="${escapeHtml(role)}" data-layout="${escapeHtml(layout)}" data-animate="${escapeHtml(slideAnimation(role, layout))}">`,
+    '  <div class="chrome">',
+    `    <div class="left"><span>${escapeHtml(role)}</span><span class="sep"></span><span>${escapeHtml(title)}</span></div>`,
+    `    <div class="right"><span>${escapeHtml(label)} / ${escapeHtml(String(totalSlides).padStart(2, '0'))}</span></div>`,
+    '  </div>',
     '  <div class="slide-copy">',
-    `    <h2>${escapeHtml(slide.headline)}</h2>`,
+    `    <div class="kicker slide-kicker" data-anim>${escapeHtml(label)} / ${escapeHtml(role)}</div>`,
+    `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
     renderBody(slide.body),
+    '  </div>',
+    '  <div class="foot">',
+    `    <span class="title">${escapeHtml(title)}</span>`,
+    `    <span>${escapeHtml(id)}</span>`,
     '  </div>',
     '</section>'
   ].filter(Boolean).join('\n');
 };
 
-const renderDots = (slides) => slides
-  .map((slide, index) => `<button type="button" class="deck-dot" data-slide-dot="${index}" aria-label="Go to slide ${index + 1}"></button>`)
-  .join('\n');
-
 export function renderHtmlDeck(contract) {
   const title = contract?.title ?? 'Deck';
   const theme = resolveTheme(contract?.theme?.renderer_hint);
   const slides = Array.isArray(contract?.slides) ? contract.slides : [];
+  const slideHtml = slides
+    .map((slide, index) => renderSlide(slide, index, slides.length, title))
+    .join('\n');
 
-  return `<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
-  <style>
-    :root { color-scheme: light; font-family: "Noto Sans SC", Inter, "Segoe UI", Arial, sans-serif; }
-    * { box-sizing: border-box; }
-    body { margin: 0; overflow: hidden; background: var(--paper); color: var(--ink); }
-    .deck { ${renderThemeVars(theme.vars)} min-height: 100vh; background: var(--paper); color: var(--ink); }
-    .slide-track { height: 100vh; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
-    .slide-track::-webkit-scrollbar { display: none; }
-    .slide { position: relative; flex: 0 0 100vw; min-height: 100vh; padding: 64px min(8vw, 96px); display: grid; align-content: center; gap: 30px; scroll-snap-align: start; }
-    .surface-paper { background: linear-gradient(135deg, var(--paper) 0%, var(--paper-tint) 100%); color: var(--ink); }
-    .surface-ink { background: radial-gradient(circle at 85% 15%, rgba(var(--paper-rgb), 0.18), transparent 34%), var(--ink); color: var(--paper); }
-    .slide-kicker { display: inline-block; justify-self: start; font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; opacity: 0.72; }
-    .slide-copy { max-width: 1060px; display: grid; gap: 28px; }
-    .slide h2 { margin: 0; max-width: 1040px; font-family: "Noto Serif SC", "Songti SC", Georgia, serif; font-size: clamp(2.35rem, 7vw, 6.2rem); line-height: 1.02; letter-spacing: 0; overflow-wrap: anywhere; }
-    .slide-body { display: grid; gap: 18px; max-width: 820px; }
-    .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; overflow-wrap: anywhere; }
-    .slide code { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
-    .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-    th { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.76rem; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.76); background: rgba(var(--ink-rgb), 0.06); }
-    tr:last-child td { border-bottom: 0; }
-    .slide-evidence .slide-copy, .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
-    .slide-content:not(.layout-text-split) .slide-copy, .slide-evidence .slide-copy { align-content: center; }
-    .slide-content:not(.layout-text-split) h2, .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }
-    .layout-text-split .slide-copy { max-width: 1180px; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr); align-items: start; column-gap: min(6vw, 84px); }
-    .layout-text-split h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
-    .layout-text-split .slide-body { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }
-    .deck-nav { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 10px; border: 1px solid rgba(var(--ink-rgb), 0.18); background: rgba(var(--paper-rgb), 0.78); backdrop-filter: blur(16px); }
-    .deck-dot { width: 10px; height: 10px; padding: 0; border: 1px solid rgba(var(--ink-rgb), 0.42); border-radius: 999px; background: transparent; cursor: pointer; }
-    .deck-dot[data-active="true"] { background: var(--ink); border-color: var(--ink); }
-    .surface-ink + .deck-nav, .deck-nav { color: var(--ink); }
-    @media (max-width: 720px) {
-      .slide { padding: 48px 24px 80px; }
-      .slide h2 { font-size: clamp(2.1rem, 15vw, 4.2rem); }
-      .slide p { font-size: 1rem; line-height: 1.62; }
-      .layout-text-split .slide-copy { grid-template-columns: minmax(0, 1fr); }
-      .layout-text-split .slide-body { padding-left: 0; border-left: 0; }
-    }
-  </style>
-</head>
-<body>
-<main class="deck theme-${escapeHtml(theme.key)}" data-renderer="html-guizang" data-guizang-theme="${escapeHtml(theme.key)}">
-  <div class="slide-track" data-slide-track>
-${slides.map(renderSlide).join('\n')}
-  </div>
-  <nav class="deck-nav" aria-label="Slide navigation">
-${renderDots(slides)}
-  </nav>
-</main>
-<script>
-(() => {
-  const track = document.querySelector('[data-slide-track]');
-  const dots = Array.from(document.querySelectorAll('[data-slide-dot]'));
-  if (!track || dots.length === 0) return;
-
-  const setActive = (index) => {
-    dots.forEach((dot, dotIndex) => {
-      dot.dataset.active = String(dotIndex === index);
-    });
-  };
-
-  const goTo = (index) => {
-    const slide = track.querySelector(\`[data-slide-index="\${index}"]\`);
-    if (slide) slide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-  };
-
-  dots.forEach((dot) => {
-    dot.addEventListener('click', () => goTo(Number(dot.dataset.slideDot)));
-  });
-
-  document.addEventListener('keydown', (event) => {
-    const current = Math.round(track.scrollLeft / Math.max(track.clientWidth, 1));
-    if (event.key === 'ArrowRight') goTo(Math.min(current + 1, dots.length - 1));
-    if (event.key === 'ArrowLeft') goTo(Math.max(current - 1, 0));
-    if (event.key === 'Escape') goTo(0);
-  });
-
-  let animationFrame = 0;
-  track.addEventListener('scroll', () => {
-    cancelAnimationFrame(animationFrame);
-    animationFrame = requestAnimationFrame(() => {
-      setActive(Math.round(track.scrollLeft / Math.max(track.clientWidth, 1)));
-    });
-  }, { passive: true });
-
-  setActive(0);
-})();
-</script>
-</body>
-</html>`;
+  return loadVendoredTemplate()
+    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+    .replace(externalLucideScriptPattern, '\n')
+    .replace('</style>', `${renderDeckgenOverrides(theme)}\n</style>`)
+    .replace(
+      '<div id="deck">',
+      `<div id="deck" class="deck theme-${escapeHtml(theme.key)}" data-renderer="html-guizang" data-guizang-theme="${escapeHtml(theme.key)}">`
+    )
+    .replace(slidesPlaceholder, slideHtml);
 }

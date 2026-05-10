@@ -4,11 +4,10 @@ Local cross-repo deck generation for Markdown, research packages, and learning n
 
 ## Current Usage
 
-HTML preview output is available now. The HTML renderer uses a local
-guizang-compatible horizontal swipe shell with fixed theme presets; it does not
-convert HTML into PPTX and does not vendor the upstream guizang template or
-motion assets. Contract slides with `layout_intent: "text_split"` render as a
-local two-column HTML layout, used by the `learning` profile for concept and
+HTML preview output is available now. The HTML renderer uses the vendored
+guizang shell with fixed theme presets; it does not convert HTML into PPTX.
+Contract slides with `layout_intent: "text_split"` render as a local
+two-column HTML layout, used by the `learning` profile for concept and
 explanation slides. Standard Markdown table blocks in slide bodies render as
 HTML tables instead of raw pipe-delimited text.
 

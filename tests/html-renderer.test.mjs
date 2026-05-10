@@ -29,12 +29,29 @@ test('renderHtmlDeck renders a guizang horizontal shell', () => {
 
   assert.match(html, /data-renderer="html-guizang"/);
   assert.match(html, /data-guizang-theme="indigo-porcelain"/);
-  assert.match(html, /class="slide-track"/);
-  assert.match(html, /scroll-snap-type: x mandatory/);
+  assert.match(html, /<canvas id="bg-dark" class="bg"><\/canvas>/);
+  assert.match(html, /<div id="deck" class="deck theme-indigo-porcelain" data-renderer="html-guizang" data-guizang-theme="indigo-porcelain">/);
+  assert.match(html, /<div id="nav"><\/div>/);
   assert.match(html, /data-slide-index="1"/);
-  assert.match(html, /aria-label="Go to slide 2"/);
   assert.match(html, /addEventListener\('keydown'/);
-  assert.doesNotMatch(html, /motion\.min\.js/);
+  assert.match(html, /import\('\.\/assets\/motion\.min\.js'\)/);
+});
+
+test('renderHtmlDeck injects contract slides into the vendored guizang template shell', () => {
+  const html = renderHtmlDeck({
+    title: 'Vendored Template',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      { id: 'cover', role: 'cover', headline: 'Vendored Template', body: 'Preview', evidence_refs: [], layout_intent: 'hero_dark' }
+    ]
+  });
+
+  assert.match(html, /<canvas id="bg-dark" class="bg"><\/canvas>/);
+  assert.match(html, /<div id="deck"[^>]*data-renderer="html-guizang"[^>]*data-guizang-theme="indigo-porcelain"/);
+  assert.match(html, /<div id="nav"><\/div>/);
+  assert.match(html, /class="slide hero dark\b/);
+  assert.match(html, /data-animate="hero"/);
+  assert.doesNotMatch(html, /<!-- SLIDES_HERE -->/);
 });
 
 test('renderHtmlDeck maps renderer hints to guizang theme presets', () => {
@@ -59,17 +76,16 @@ test('renderHtmlDeck gives text_split a distinct local layout', () => {
     ]
   });
 
-  assert.match(html, /class="slide slide-content layout-text-split surface-paper"/);
+  assert.match(html, /class="slide light slide-content layout-text-split"/);
   assert.match(html, /data-layout="text-split"/);
-  assert.match(html, /\.layout-text-split \.slide-copy/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-copy/);
   assert.match(html, /grid-template-columns: minmax\(0, 0\.78fr\) minmax\(0, 1fr\)/);
-  assert.match(html, /\.layout-text-split h2 \{[^}]*font-size: clamp\(2rem, 4\.2vw, 4rem\)/);
-  assert.match(html, /\.slide-kicker \{[^}]*display: inline-block/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split h2 \{[^}]*font-size: clamp\(2rem, 4\.2vw, 4rem\)/);
+  assert.match(html, /#deck\[data-renderer\] \.slide-kicker \{[^}]*display: inline-block/);
   assert.match(html, /overflow-wrap: anywhere/);
   assert.doesNotMatch(html, /template\.html/);
-  assert.doesNotMatch(html, /motion\.min\.js/);
+  assert.match(html, /import\('\.\/assets\/motion\.min\.js'\)/);
   assert.doesNotMatch(html, /<script src=/);
-  assert.doesNotMatch(html, /assets\//);
 });
 
 test('renderHtmlDeck bounds long article content layouts', () => {
@@ -88,9 +104,9 @@ test('renderHtmlDeck bounds long article content layouts', () => {
     ]
   });
 
-  assert.match(html, /\.slide-kicker \{[^}]*justify-self: start/);
-  assert.match(html, /\.slide-content:not\(\.layout-text-split\) h2, \.slide-evidence h2 \{[^}]*font-size: clamp\(2rem, 5vw, 4\.6rem\)/);
-  assert.match(html, /\.slide-content:not\(\.layout-text-split\) \.slide-copy, \.slide-evidence \.slide-copy \{[^}]*align-content: center/);
+  assert.match(html, /#deck\[data-renderer\] \.slide-kicker \{[^}]*justify-self: start/);
+  assert.match(html, /#deck\[data-renderer\] \.slide-content:not\(\.layout-text-split\) h2, #deck\[data-renderer\] \.slide-evidence h2 \{[^}]*font-size: clamp\(2rem, 5vw, 4\.6rem\)/);
+  assert.match(html, /#deck\[data-renderer\] \.slide-content:not\(\.layout-text-split\) \.slide-copy, #deck\[data-renderer\] \.slide-evidence \.slide-copy \{[^}]*align-content: center/);
 });
 
 test('renderHtmlDeck renders markdown table blocks as html tables', () => {

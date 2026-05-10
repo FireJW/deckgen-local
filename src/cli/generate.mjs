@@ -1,9 +1,9 @@
 import { randomUUID as defaultRandomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { validateDeckContract } from '../contract/validate.mjs';
 import { buildQcReport } from '../qc/report.mjs';
-import { renderHtmlDeck } from '../renderers/html-guizang/render.mjs';
+import { getHtmlGuizangAssetFiles, renderHtmlDeck } from '../renderers/html-guizang/render.mjs';
 import { getPptMasterExporterPath, renderPptMasterDeck } from '../renderers/ppt-master/render.mjs';
 
 export class DeckgenUserError extends Error {
@@ -94,6 +94,11 @@ export const writeGenerateBundle = ({
     mkdirSync(htmlDir);
     htmlPath = path.join(htmlDir, 'index.html');
     writeFileSync(htmlPath, renderHtmlDeck(contract), 'utf8');
+    for (const asset of getHtmlGuizangAssetFiles()) {
+      const assetPath = path.join(htmlDir, asset.relativePath);
+      mkdirSync(path.dirname(assetPath), { recursive: true });
+      copyFileSync(asset.sourcePath, assetPath);
+    }
   }
 
   if (contract.outputs.includes('pptx')) {

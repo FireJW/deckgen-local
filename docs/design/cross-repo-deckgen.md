@@ -135,14 +135,13 @@ directory unless `--workdir <path>` is supplied.
 
 ## HTML Renderer Boundary
 
-The HTML renderer is a local guizang-compatible implementation rather than a
-vendored copy of `op7418/guizang-ppt-skill/assets/template.html`. It keeps the
-single-file, horizontal swipe deck shape, fixed theme presets, keyboard
-navigation, and slide-dot navigation, while reading only `deck_contract.json`.
-It maps contract-native layout intents locally, including `text_split` as a
-responsive two-column content layout, without copying upstream template or
-motion assets. Markdown table blocks in slide bodies are rendered as native HTML
-tables so report-style inputs do not appear as raw pipe-delimited text.
+The HTML renderer now uses the vendored `op7418/guizang-ppt-skill` shell as its
+base. It keeps the single-file, horizontal swipe deck shape, fixed theme
+presets, keyboard navigation, and slide-dot navigation, while reading only
+`deck_contract.json`. It maps contract-native layout intents locally, including
+`text_split` as a responsive two-column content layout. Markdown table blocks
+in slide bodies are rendered as native HTML tables so report-style inputs do not
+appear as raw pipe-delimited text.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 
@@ -152,9 +151,8 @@ The renderer currently adapts the upstream MIT theme palette values for:
 - `kraft-paper`
 - `dune`
 
-No upstream JavaScript, HTML template, image, or motion asset is copied into the
-repo in this slice. If later work vendors upstream template code or assets, it
-must preserve the upstream MIT notice in `third_party/NOTICE.md`.
+The upstream MIT template and motion asset are vendored under
+`third_party/guizang-ppt-skill/` and preserved in `third_party/NOTICE.md`.
 
 Before any guizang template integration, run:
 
