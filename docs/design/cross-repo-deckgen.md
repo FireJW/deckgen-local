@@ -197,6 +197,9 @@ The deckgen renderer converts `deck_contract.json` into a ppt-master project by
 writing `notes/`, `svg_output/`, `svg_final/`, `design_spec.md`, and source
 copies. It then calls the upstream exporter and verifies
 `ppt-master/exports/*.pptx` before the CLI reports success.
+When a slide body contains a standard Markdown table block, the project writer
+maps it into an SVG table group for `ppt-master` instead of passing raw
+pipe-delimited Markdown text through to the slide image.
 
 PPTX verification is structural and fail-closed:
 

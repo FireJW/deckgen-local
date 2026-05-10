@@ -67,6 +67,84 @@ const wrapText = (value, maxChars, maxLines) => {
 
 const slideStem = (slide, index) => `${String(index + 1).padStart(2, '0')}_${slugPart(slide?.id, 'slide')}`;
 
+const splitTableRow = (line) =>
+  line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+
+const isTableSeparator = (line) => {
+  const cells = splitTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+};
+
+const parseMarkdownTable = (body) => {
+  const paragraphs = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.split('\n').map((line) => line.trim()).filter(Boolean));
+
+  const tableLines = paragraphs.find((lines) =>
+    lines.length >= 2 &&
+    lines[0].includes('|') &&
+    lines[1].includes('|') &&
+    isTableSeparator(lines[1])
+  );
+
+  if (!tableLines) {
+    return null;
+  }
+
+  return {
+    headers: splitTableRow(tableLines[0]),
+    rows: tableLines.slice(2).map((line) => splitTableRow(line))
+  };
+};
+
+const cleanCellText = (value) => String(value ?? '').replace(/`([^`]*)`/g, '$1');
+
+const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
+  const columnCount = Math.max(1, table.headers.length);
+  const rowCount = Math.min(5, table.rows.length);
+  const columnWidth = width / columnCount;
+  const rowHeight = 48;
+  const headerHeight = 50;
+  const height = headerHeight + rowCount * rowHeight;
+  const cells = [];
+
+  table.headers.forEach((header, index) => {
+    cells.push(`<text x="${x + index * columnWidth + 18}" y="${y + 33}" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="${bodyColor}">${escapeXml(cleanCellText(header))}</text>`);
+  });
+
+  table.rows.slice(0, rowCount).forEach((row, rowIndex) => {
+    const cellY = y + headerHeight + rowIndex * rowHeight + 32;
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+      cells.push(`<text x="${x + columnIndex * columnWidth + 18}" y="${cellY}" font-family="Arial, sans-serif" font-size="24" fill="${bodyColor}">${escapeXml(cleanCellText(row[columnIndex] ?? ''))}</text>`);
+    }
+  });
+
+  const horizontalLines = Array.from({ length: rowCount + 1 }, (_, index) =>
+    `<line x1="${x}" y1="${y + headerHeight + index * rowHeight}" x2="${x + width}" y2="${y + headerHeight + index * rowHeight}" stroke="#cbd5e1" stroke-width="2"/>`
+  );
+  const verticalLines = Array.from({ length: columnCount + 1 }, (_, index) =>
+    `<line x1="${x + index * columnWidth}" y1="${y}" x2="${x + index * columnWidth}" y2="${y + height}" stroke="#cbd5e1" stroke-width="2"/>`
+  );
+
+  return [
+    '<g class="ppt-table">',
+    `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>`,
+    `<rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" fill="#e0f2fe"/>`,
+    `<rect x="${x}" y="${y}" width="10" height="${height}" fill="${accent}"/>`,
+    ...horizontalLines,
+    ...verticalLines,
+    ...cells,
+    '</g>'
+  ].join('\n  ');
+};
+
 const renderSlideSvg = (slide, index) => {
   const isCover = index === 0 || slide?.role === 'cover';
   const background = isCover ? '#101820' : '#f8fafc';
@@ -74,16 +152,19 @@ const renderSlideSvg = (slide, index) => {
   const bodyColor = isCover ? '#dbeafe' : '#475569';
   const accent = isCover ? '#38bdf8' : '#2563eb';
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
-  const bodyLines = wrapText(slide?.body, 52, isCover ? 4 : 7);
+  const table = isCover ? null : parseMarkdownTable(slide?.body);
+  const bodyLines = table ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
   const headlineSvg = headlineLines.map((line, lineIndex) =>
     `<text x="120" y="${headlineStartY + lineIndex * (isCover ? 76 : 58)}" font-family="Arial, sans-serif" font-size="${isCover ? 64 : 48}" font-weight="700" fill="${headlineColor}">${escapeXml(line)}</text>`
   ).join('\n  ');
-  const bodySvg = bodyLines.map((line, lineIndex) =>
-    `<text x="120" y="${bodyStartY + lineIndex * 38}" font-family="Arial, sans-serif" font-size="30" fill="${bodyColor}">${escapeXml(line)}</text>`
-  ).join('\n  ');
+  const bodySvg = table
+    ? renderTableSvg({ table, x: 120, y: bodyStartY, width: 1040, bodyColor, accent })
+    : bodyLines.map((line, lineIndex) =>
+      `<text x="120" y="${bodyStartY + lineIndex * 38}" font-family="Arial, sans-serif" font-size="30" fill="${bodyColor}">${escapeXml(line)}</text>`
+    ).join('\n  ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
   <rect width="1600" height="900" fill="${background}"/>

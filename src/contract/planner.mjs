@@ -12,8 +12,28 @@ const splitSourceText = (sourceText) =>
     .filter(Boolean)
     .slice(0, 6);
 
+const splitTableRow = (line) =>
+  line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim().replace(/`([^`]*)`/g, '$1'))
+    .filter(Boolean);
+
+const isTableSeparator = (line) => {
+  const cells = splitTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+};
+
 const summarizeHeadline = (section, index) => {
-  const firstLine = section.split(/\r?\n/).find((line) => line.trim()) ?? '';
+  const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length >= 2 && lines[0].includes('|') && lines[1].includes('|') && isTableSeparator(lines[1])) {
+    const tableTitle = splitTableRow(lines[0]).slice(0, 3).join(' / ');
+    return tableTitle ? `Table: ${tableTitle}` : `Key table ${index + 1}`;
+  }
+
+  const firstLine = lines[0] ?? '';
   const normalized = firstLine.replace(/^#+\s*/, '').trim();
   return normalized || `Key point ${index + 1}`;
 };

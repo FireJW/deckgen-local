@@ -137,6 +137,47 @@ fs.writeFileSync(path.join(projectDir, 'exporter-args.json'), JSON.stringify(pro
   assert.match(readFileSync(path.join(outputDir, 'svg_output', '02_s02.svg'), 'utf8'), /Revenue expanded/);
 });
 
+test('renderPptMasterDeck renders markdown table bodies into pptx svg table blocks', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-table-ppt-project-${Date.now()}`);
+  const tableContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Candidate Table',
+        body: [
+          '| Rank | Symbol | Score |',
+          '|---:|---|---:|',
+          '| 1 | `000988.SZ` | 75.05 |'
+        ].join('\n')
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: tableContract,
+    content: '# Candidate Table',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-table"/);
+  assert.match(svg, />Rank</);
+  assert.match(svg, />000988\.SZ</);
+  assert.match(svg, />75\.05</);
+  assert.doesNotMatch(svg, /\| Rank \| Symbol \| Score \|/);
+});
+
 test('renderPptMasterDeck rejects pptx artifacts with the wrong slide count', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

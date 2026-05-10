@@ -184,6 +184,22 @@ test('buildDeckPlan splits Windows CRLF markdown sections into separate slides',
   );
 });
 
+test('buildDeckPlan summarizes markdown table sections with readable headlines', () => {
+  const plan = buildDeckPlan({
+    title: 'Table report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: [
+      '| Symbol | Name | Score |',
+      '|---|---|---:|',
+      '| `000988.SZ` | Sample | 75.05 |'
+    ].join('\n')
+  });
+
+  assert.equal(plan.slides[1].headline, 'Table: Symbol / Name / Score');
+  assert.doesNotMatch(plan.slides[1].headline, /\|/);
+});
+
 test('buildDeckPlan rejects invalid inputs with clear errors', () => {
   for (const [name, input, message] of invalidPlannerInputs) {
     assert.throws(() => buildDeckPlan(input), message, name);
