@@ -174,6 +174,15 @@ writing `notes/`, `svg_output/`, `svg_final/`, `design_spec.md`, and source
 copies. It then calls the upstream exporter and verifies
 `ppt-master/exports/*.pptx` before the CLI reports success.
 
+PPTX verification is structural and fail-closed:
+
+- the artifact must be a readable PPTX/ZIP package
+- `[Content_Types].xml` and `ppt/presentation.xml` must exist
+- `ppt/slides/slide*.xml` count must match `deck_contract.json.slides.length`
+
+The QC report records `pptx_slide_count: PASS actual/expected` for generated
+PPTX artifacts.
+
 ## Output Model
 
 HTML and PPTX are sibling outputs from `deck_contract.json`.

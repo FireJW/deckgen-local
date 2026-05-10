@@ -19,8 +19,12 @@ const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'g
 
 const writtenRunDir = (stdout) => stdout.match(/written (.+)$/m)?.[1]?.trim();
 
-const createMinimalPptxBytes = () => {
-  const entries = ['[Content_Types].xml', 'ppt/presentation.xml'];
+const createMinimalPptxBytes = (slideCount = 4) => {
+  const entries = [
+    '[Content_Types].xml',
+    'ppt/presentation.xml',
+    ...Array.from({ length: slideCount }, (_, index) => `ppt/slides/slide${index + 1}.xml`)
+  ];
   const localParts = [];
   const centralParts = [];
   let offset = 0;
@@ -145,6 +149,7 @@ test('generate writes pptx output only when ppt-master creates an artifact', () 
   assert.ok(existsSync(path.join(runDir, 'ppt-master', 'exports', 'cli-fake.pptx')));
   assert.ok(existsSync(path.join(runDir, 'ppt-master', 'deck_contract.json')));
   assert.equal(existsSync(path.join(runDir, 'html', 'index.html')), false);
+  assert.match(readFileSync(path.join(runDir, 'qc_report.md'), 'utf8'), /pptx_slide_count: PASS 4\/4/);
 });
 
 test('generate writes sibling html and pptx outputs for both mode', () => {

@@ -88,6 +88,7 @@ export const writeGenerateBundle = ({
 
   let htmlPath = '';
   let pptxPaths = [];
+  let pptxQa = [];
   if (contract.outputs.includes('html')) {
     const htmlDir = path.join(runDir, 'html');
     mkdirSync(htmlDir);
@@ -104,6 +105,7 @@ export const writeGenerateBundle = ({
         outputDir: path.join(runDir, 'ppt-master')
       });
       pptxPaths = pptxResult.pptxPaths;
+      pptxQa = pptxResult.pptxQa;
     } catch (error) {
       throw new DeckgenUserError(error.message);
     }
@@ -113,8 +115,9 @@ export const writeGenerateBundle = ({
     sourcePath,
     validation,
     htmlPath,
-    pptxPaths
+    pptxPaths,
+    pptxQa
   }), 'utf8');
 
-  return { runDir, validation, htmlPath, pptxPaths };
+  return { runDir, validation, htmlPath, pptxPaths, pptxQa };
 };

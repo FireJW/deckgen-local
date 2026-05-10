@@ -144,12 +144,12 @@ const findEndOfCentralDirectory = (buffer) => {
   return -1;
 };
 
-const isPptxPackage = (filePath) => {
+const inspectPptxPackage = (filePath) => {
   try {
     const buffer = readFileSync(filePath);
     const eocdOffset = findEndOfCentralDirectory(buffer);
     if (eocdOffset < 0 || eocdOffset + 22 > buffer.length) {
-      return false;
+      return { ok: false, error: 'missing end of central directory' };
     }
 
     const entryCount = buffer.readUInt16LE(eocdOffset + 10);
@@ -158,7 +158,7 @@ const isPptxPackage = (filePath) => {
 
     for (let index = 0; index < entryCount; index += 1) {
       if (cursor + 46 > buffer.length || buffer.readUInt32LE(cursor) !== 0x02014b50) {
-        return false;
+        return { ok: false, error: 'invalid central directory entry' };
       }
 
       const nameLength = buffer.readUInt16LE(cursor + 28);
@@ -167,16 +167,24 @@ const isPptxPackage = (filePath) => {
       const nameStart = cursor + 46;
       const nameEnd = nameStart + nameLength;
       if (nameEnd > buffer.length) {
-        return false;
+        return { ok: false, error: 'invalid central directory name' };
       }
 
       names.add(buffer.toString('utf8', nameStart, nameEnd).replaceAll('\\', '/'));
       cursor = nameEnd + extraLength + commentLength;
     }
 
-    return names.has('[Content_Types].xml') && names.has('ppt/presentation.xml');
-  } catch {
-    return false;
+    if (!names.has('[Content_Types].xml') || !names.has('ppt/presentation.xml')) {
+      return { ok: false, error: 'missing required presentation entries' };
+    }
+
+    const slideCount = Array.from(names)
+      .filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name))
+      .length;
+
+    return { ok: true, names, slideCount };
+  } catch (error) {
+    return { ok: false, error: error.message };
   }
 };
 
@@ -189,7 +197,8 @@ const findPptxArtifacts = (exportsDir) => {
     .filter((entry) => entry.toLowerCase().endsWith('.pptx'))
     .map((entry) => path.join(exportsDir, entry))
     .filter((entryPath) => statSync(entryPath).isFile())
-    .filter((entryPath) => isPptxPackage(entryPath));
+    .map((entryPath) => ({ path: entryPath, inspection: inspectPptxPackage(entryPath) }))
+    .filter(({ inspection }) => inspection.ok);
 };
 
 const trimProcessOutput = (value) => String(value ?? '').trim().slice(0, 2000);
@@ -255,14 +264,26 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
     throw new Error(`ppt-master export failed with status ${run.status}${detail ? `: ${detail}` : ''}`);
   }
 
-  const pptxPaths = findPptxArtifacts(exportsDir);
-  if (pptxPaths.length === 0) {
+  const pptxArtifacts = findPptxArtifacts(exportsDir);
+  if (pptxArtifacts.length === 0) {
     throw new Error(`ppt-master exporter did not create a valid PPTX artifact in ${exportsDir}`);
+  }
+
+  const expectedSlideCount = Array.isArray(contract.slides) ? contract.slides.length : 0;
+  const pptxQa = pptxArtifacts.map(({ path: pptxPath, inspection }) => ({
+    path: pptxPath,
+    expected_slide_count: expectedSlideCount,
+    actual_slide_count: inspection.slideCount
+  }));
+  const mismatched = pptxQa.find((item) => item.actual_slide_count !== item.expected_slide_count);
+  if (mismatched) {
+    throw new Error(`ppt-master exporter created PPTX with slide count ${mismatched.actual_slide_count}; expected ${mismatched.expected_slide_count}: ${mismatched.path}`);
   }
 
   return {
     projectDir,
     exportsDir,
-    pptxPaths
+    pptxPaths: pptxArtifacts.map((artifact) => artifact.path),
+    pptxQa
   };
 };

@@ -28,8 +28,12 @@ const sampleContract = {
   ]
 };
 
-const createMinimalPptxBytes = () => {
-  const entries = ['[Content_Types].xml', 'ppt/presentation.xml'];
+const createMinimalPptxBytes = (slideCount = sampleContract.slides.length) => {
+  const entries = [
+    '[Content_Types].xml',
+    'ppt/presentation.xml',
+    ...Array.from({ length: slideCount }, (_, index) => `ppt/slides/slide${index + 1}.xml`)
+  ];
   const localParts = [];
   const centralParts = [];
   let offset = 0;
@@ -116,6 +120,11 @@ fs.writeFileSync(path.join(projectDir, 'exporter-args.json'), JSON.stringify(pro
   assert.equal(result.projectDir, outputDir);
   assert.equal(result.exportsDir, path.join(outputDir, 'exports'));
   assert.deepEqual(result.pptxPaths, [path.join(outputDir, 'exports', 'fake.pptx')]);
+  assert.deepEqual(result.pptxQa, [{
+    path: path.join(outputDir, 'exports', 'fake.pptx'),
+    expected_slide_count: 2,
+    actual_slide_count: 2
+  }]);
   assert.ok(existsSync(path.join(outputDir, 'deck_contract.json')));
   assert.ok(existsSync(path.join(outputDir, 'content.md')));
   assert.ok(existsSync(path.join(outputDir, 'design_spec.md')));
@@ -126,6 +135,29 @@ fs.writeFileSync(path.join(projectDir, 'exporter-args.json'), JSON.stringify(pro
   const args = JSON.parse(readFileSync(path.join(outputDir, 'exporter-args.json'), 'utf8'));
   assert.equal(args[0], outputDir);
   assert.match(readFileSync(path.join(outputDir, 'svg_output', '02_s02.svg'), 'utf8'), /Revenue expanded/);
+});
+
+test('renderPptMasterDeck rejects pptx artifacts with the wrong slide count', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.writeFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), Buffer.from(${JSON.stringify([...createMinimalPptxBytes(1)])}));
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'wrong-count.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-wrong-count-ppt-project-${Date.now()}`);
+
+  assert.throws(
+    () => renderPptMasterDeck({
+      contract: sampleContract,
+      content: '# Quarterly Briefing',
+      config: { pptMasterPath, pythonPath: process.execPath },
+      outputDir
+    }),
+    /slide count/i
+  );
 });
 
 test('renderPptMasterDeck fails if exporter does not create a pptx artifact', () => {
