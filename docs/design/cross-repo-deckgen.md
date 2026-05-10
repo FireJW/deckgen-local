@@ -46,7 +46,6 @@ The Phase 1 bundle shape is:
   html/
     index.html
   qc_report.md
-  ppt-master/
 ```
 
 `request.json` records the requested source, profile, output mode, and workdir.
@@ -55,8 +54,9 @@ The Phase 1 bundle shape is:
 validated renderer contract. `html/index.html` is the current browser preview
 output. `qc_report.md` records validation and output checks.
 
-`ppt-master/` is reserved for future editable PowerPoint exports from a real
-local `ppt-master` checkout. It is not produced by Phase 1 HTML-only runs.
+Future editable PowerPoint exports will add a `ppt-master/` subtree after a
+real local `ppt-master` checkout is wired. That subtree is not produced by
+Phase 1 HTML-only runs.
 
 ## Current HTML Command
 
