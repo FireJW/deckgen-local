@@ -141,7 +141,8 @@ single-file, horizontal swipe deck shape, fixed theme presets, keyboard
 navigation, and slide-dot navigation, while reading only `deck_contract.json`.
 It maps contract-native layout intents locally, including `text_split` as a
 responsive two-column content layout, without copying upstream template or
-motion assets.
+motion assets. Markdown table blocks in slide bodies are rendered as native HTML
+tables so report-style inputs do not appear as raw pipe-delimited text.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 

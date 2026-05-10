@@ -93,6 +93,36 @@ test('renderHtmlDeck bounds long article content layouts', () => {
   assert.match(html, /\.slide-content:not\(\.layout-text-split\) \.slide-copy, \.slide-evidence \.slide-copy \{[^}]*align-content: center/);
 });
 
+test('renderHtmlDeck renders markdown table blocks as html tables', () => {
+  const html = renderHtmlDeck({
+    title: 'Report Table',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'Candidate Table',
+        body: [
+          'The summary remains readable.',
+          '',
+          '| Rank | Symbol | Score |',
+          '|---:|---|---:|',
+          '| 1 | `000988.SZ` | 75.05 |'
+        ].join('\n'),
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  });
+
+  assert.match(html, /<p>The summary remains readable\.<\/p>/);
+  assert.match(html, /<div class="table-wrap">/);
+  assert.match(html, /<table>/);
+  assert.match(html, /<th>Rank<\/th>/);
+  assert.match(html, /<td><code>000988\.SZ<\/code><\/td>/);
+  assert.doesNotMatch(html, /<p>\| Rank \| Symbol \| Score \|/);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

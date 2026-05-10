@@ -6,6 +6,18 @@ const escapeHtml = (value) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
+const renderInline = (value) =>
+  String(value ?? '')
+    .split(/(`[^`]*`)/g)
+    .map((part) => {
+      if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+        return `<code>${escapeHtml(part.slice(1, -1))}</code>`;
+      }
+
+      return escapeHtml(part);
+    })
+    .join('');
+
 const stableClassPart = (value, fallback) => {
   const normalized = String(value ?? '')
     .trim()
@@ -90,14 +102,61 @@ const renderThemeVars = (vars) => [
   `--ink-tint:${vars.inkTint};`
 ].join('');
 
+const splitTableRow = (line) =>
+  line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+
+const isTableSeparator = (line) => {
+  const cells = splitTableRow(line);
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+};
+
+const isMarkdownTableBlock = (lines) =>
+  lines.length >= 2 &&
+  lines[0].includes('|') &&
+  lines[1].includes('|') &&
+  isTableSeparator(lines[1]);
+
+const renderTableCells = (tag, cells) =>
+  cells.map((cell) => `<${tag}>${renderInline(cell)}</${tag}>`).join('');
+
+const renderMarkdownTable = (lines) => {
+  const headerCells = splitTableRow(lines[0]);
+  const bodyRows = lines.slice(2).map((line) => splitTableRow(line));
+
+  return [
+    '<div class="table-wrap">',
+    '<table>',
+    `<thead><tr>${renderTableCells('th', headerCells)}</tr></thead>`,
+    '<tbody>',
+    ...bodyRows.map((cells) => `<tr>${renderTableCells('td', cells)}</tr>`),
+    '</tbody>',
+    '</table>',
+    '</div>'
+  ].join('\n');
+};
+
 const renderBody = (body) => {
   if (typeof body !== 'string' || body.length === 0) {
     return '';
   }
 
   const paragraphs = body
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
     .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph.trim()).replaceAll('\n', '<br>')}</p>`)
+    .map((paragraph) => {
+      const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (isMarkdownTableBlock(lines)) {
+        return renderMarkdownTable(lines);
+      }
+
+      return `<p>${renderInline(paragraph.trim()).replaceAll('\n', '<br>')}</p>`;
+    })
     .join('\n');
 
   return `<div class="slide-body">\n${paragraphs}\n</div>`;
@@ -153,6 +212,12 @@ export function renderHtmlDeck(contract) {
     .slide h2 { margin: 0; max-width: 1040px; font-family: "Noto Serif SC", "Songti SC", Georgia, serif; font-size: clamp(2.35rem, 7vw, 6.2rem); line-height: 1.02; letter-spacing: 0; overflow-wrap: anywhere; }
     .slide-body { display: grid; gap: 18px; max-width: 820px; }
     .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; overflow-wrap: anywhere; }
+    .slide code { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+    .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    th { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.76rem; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.76); background: rgba(var(--ink-rgb), 0.06); }
+    tr:last-child td { border-bottom: 0; }
     .slide-evidence .slide-copy, .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
     .slide-content:not(.layout-text-split) .slide-copy, .slide-evidence .slide-copy { align-content: center; }
     .slide-content:not(.layout-text-split) h2, .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }

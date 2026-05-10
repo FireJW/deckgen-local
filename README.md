@@ -9,7 +9,8 @@ guizang-compatible horizontal swipe shell with fixed theme presets; it does not
 convert HTML into PPTX and does not vendor the upstream guizang template or
 motion assets. Contract slides with `layout_intent: "text_split"` render as a
 local two-column HTML layout, used by the `learning` profile for concept and
-explanation slides.
+explanation slides. Standard Markdown table blocks in slide bodies render as
+HTML tables instead of raw pipe-delimited text.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
