@@ -1,10 +1,10 @@
 import { strict as assert } from 'node:assert';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { inspectPptxFile, validatePptxSmokeResult } from '../src/qc/pptx-structural-smoke.mjs';
+import { findLatestPptxArtifact, inspectPptxFile, validatePptxSmokeResult } from '../src/qc/pptx-structural-smoke.mjs';
 import test from 'node:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,6 +60,13 @@ const writePptxFixture = (slideCount = 3) => {
   return pptxPath;
 };
 
+const writePptxInDirectory = (dir, name, slideCount, mtime) => {
+  const pptxPath = path.join(dir, name);
+  writeFileSync(pptxPath, createMinimalPptxBytes(slideCount));
+  utimesSync(pptxPath, mtime, mtime);
+  return pptxPath;
+};
+
 test('inspectPptxFile reads slide count from a valid pptx package', () => {
   const pptxPath = writePptxFixture(3);
   const summary = inspectPptxFile(pptxPath);
@@ -91,6 +98,16 @@ test('validatePptxSmokeResult rejects invalid packages and slide mismatches', ()
   assert.match(invalid.errors.join('\n'), /invalid pptx/i);
 });
 
+test('findLatestPptxArtifact discovers the newest pptx in an exports directory', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-exports-'));
+  writeFileSync(path.join(dir, 'notes.txt'), 'ignore me');
+  const older = writePptxInDirectory(dir, 'older.pptx', 2, new Date('2026-05-10T00:00:00Z'));
+  const newer = writePptxInDirectory(dir, 'newer.PPTX', 4, new Date('2026-05-10T00:01:00Z'));
+
+  assert.equal(findLatestPptxArtifact(dir), newer);
+  assert.notEqual(findLatestPptxArtifact(dir), older);
+});
+
 test('pptx structural smoke script validates expected slide count', () => {
   const pptxPath = writePptxFixture(4);
   const run = spawnSync(process.execPath, [
@@ -113,4 +130,21 @@ test('pptx structural smoke script validates expected slide count', () => {
 
   assert.equal(mismatch.status, 1);
   assert.match(mismatch.stdout, /slide count 4 does not match expected 3/);
+});
+
+test('pptx structural smoke script accepts an exports directory', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-exports-cli-'));
+  writePptxInDirectory(dir, 'latest.pptx', 5, new Date('2026-05-10T00:02:00Z'));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--exports-dir', dir,
+    '--expected-slides', '5'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true);
+  assert.equal(result.slideCount, 5);
+  assert.match(result.path, /latest\.pptx$/);
 });

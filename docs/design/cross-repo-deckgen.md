@@ -181,9 +181,11 @@ mobile-sized output.
 Structural smoke for PPTX output lives in `scripts/pptx-structural-smoke.mjs`.
 It reads a generated `.pptx` as a ZIP package and validates that the required
 PowerPoint package entries exist and that `ppt/slides/slide*.xml` count matches
-`--expected-slides` when supplied. This is not a visual screenshot check, but it
-gives a reusable command-line gate for real PPTX artifacts outside the generate
-bundle writer.
+`--expected-slides` when supplied. Pass `--exports-dir <dir>` to let the smoke
+command discover the newest `.pptx` under `ppt-master/exports/`, or keep using
+`--pptx <path>` for a direct file check. This is not a visual screenshot check,
+but it gives a reusable command-line gate for real PPTX artifacts outside the
+generate bundle writer.
 
 ## PPTX Boundary
 

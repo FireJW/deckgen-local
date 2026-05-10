@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { inspectPptxFile, validatePptxSmokeResult } from '../src/qc/pptx-structural-smoke.mjs';
+import { findLatestPptxArtifact, inspectPptxFile, validatePptxSmokeResult } from '../src/qc/pptx-structural-smoke.mjs';
 
 const usage = [
-  'pptx-structural-smoke --pptx <path> [--expected-slides <n>]'
+  'pptx-structural-smoke --pptx <path> | --exports-dir <dir> [--expected-slides <n>]'
 ].join('\n');
 
 const fail = (message) => {
@@ -16,6 +16,7 @@ const parseArgs = (tokens) => {
   const options = {};
   const flagMap = new Map([
     ['--pptx', 'pptxPath'],
+    ['--exports-dir', 'exportsDir'],
     ['--expected-slides', 'expectedSlides']
   ]);
 
@@ -45,7 +46,13 @@ const parseArgs = (tokens) => {
   }
 
   if (!options.pptxPath) {
-    fail('Missing required option: --pptx.');
+    if (!options.exportsDir) {
+      fail('Missing required option: --pptx or --exports-dir.');
+    }
+  }
+
+  if (options.pptxPath && options.exportsDir) {
+    fail('Pass only one of --pptx or --exports-dir.');
   }
 
   if (options.expectedSlides !== undefined) {
@@ -60,9 +67,19 @@ const parseArgs = (tokens) => {
 };
 
 const options = parseArgs(process.argv.slice(2));
-const pptxPath = path.resolve(options.pptxPath);
-if (!existsSync(pptxPath)) {
-  fail(`PPTX file not found: ${pptxPath}`);
+let pptxPath;
+if (options.pptxPath) {
+  pptxPath = path.resolve(options.pptxPath);
+  if (!existsSync(pptxPath)) {
+    fail(`PPTX file not found: ${pptxPath}`);
+  }
+} else {
+  const exportsDir = path.resolve(options.exportsDir);
+  try {
+    pptxPath = findLatestPptxArtifact(exportsDir);
+  } catch (error) {
+    fail(error.message);
+  }
 }
 
 const summary = inspectPptxFile(pptxPath);

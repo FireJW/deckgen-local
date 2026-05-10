@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const findEndOfCentralDirectory = (buffer) => {
@@ -77,6 +77,34 @@ export function inspectPptxFile(filePath) {
   } catch (error) {
     return { ok: false, path: resolvedPath, error: error.message };
   }
+}
+
+export function findLatestPptxArtifact(exportsDir) {
+  const resolvedDir = path.resolve(exportsDir ?? '');
+  if (!existsSync(resolvedDir)) {
+    throw new Error(`PPTX exports directory not found: ${resolvedDir}`);
+  }
+
+  const stats = statSync(resolvedDir);
+  if (!stats.isDirectory()) {
+    throw new Error(`PPTX exports path is not a directory: ${resolvedDir}`);
+  }
+
+  const candidates = readdirSync(resolvedDir)
+    .filter((entry) => entry.toLowerCase().endsWith('.pptx'))
+    .map((entry) => {
+      const filePath = path.join(resolvedDir, entry);
+      const fileStats = statSync(filePath);
+      return { filePath, fileStats };
+    })
+    .filter(({ fileStats }) => fileStats.isFile())
+    .sort((left, right) => right.fileStats.mtimeMs - left.fileStats.mtimeMs || left.filePath.localeCompare(right.filePath));
+
+  if (candidates.length === 0) {
+    throw new Error(`No PPTX artifacts found in exports directory: ${resolvedDir}`);
+  }
+
+  return candidates[0].filePath;
 }
 
 export function validatePptxSmokeResult(summary = {}, options = {}) {
