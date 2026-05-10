@@ -10,7 +10,8 @@
     "test": "node --test tests/*.test.mjs",
     "preflight:guizang": "node scripts/guizang-source-preflight.mjs",
     "smoke:html": "node scripts/html-visual-smoke.mjs",
-    "smoke:pptx": "node scripts/pptx-structural-smoke.mjs"
+    "smoke:pptx": "node scripts/pptx-structural-smoke.mjs",
+    "smoke:pptx:visual": "node scripts/pptx-visual-smoke.mjs"
   },
   "engines": {
     "node": ">=20"

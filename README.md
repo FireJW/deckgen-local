@@ -90,6 +90,15 @@ npm run smoke:pptx -- `
 `--exports-dir <path>` checks the newest `.pptx` under an exports directory,
 and `--pptx <path>` still works for a direct file check.
 
+On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
+smoke to export slide 1 as a PNG and verify a real screenshot artifact exists:
+
+```powershell
+npm run smoke:pptx:visual -- `
+  --run-dir .tmp\deckgen\<run-id> `
+  --expected-slides 7
+```
+
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 
 Configure the checkout with `--ppt-master-path`, `DECKGEN_PPT_MASTER_PATH`, or a sibling directory named `../ppt-master` from the repo root. The wrapper calls `skills/ppt-master/scripts/svg_to_pptx.py` and verifies `ppt-master/exports/*.pptx` before reporting success.

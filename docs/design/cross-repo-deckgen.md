@@ -200,6 +200,13 @@ run bundle, `--exports-dir <dir>` to discover the newest `.pptx` under
 visual screenshot check, but it gives a reusable command-line gate for real PPTX
 artifacts outside the generate bundle writer.
 
+Visual smoke for PPTX output lives in `scripts/pptx-visual-smoke.mjs`. On
+Windows machines with Microsoft PowerPoint available, it reuses the structural
+PPTX checks, opens the deck through PowerPoint automation, exports slide 1 as a
+PNG, and validates that the screenshot file exists and has bytes. It fails
+closed when PowerPoint is unavailable; use `--powerpoint-executable <path>` or
+`DECKGEN_POWERPOINT_PATH` when the executable is not in the default Office path.
+
 ## PPTX Boundary
 
 `--output pptx` and `--output both` intentionally fail closed unless the
