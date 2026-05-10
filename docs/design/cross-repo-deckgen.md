@@ -119,6 +119,9 @@ The HTML renderer is a local guizang-compatible implementation rather than a
 vendored copy of `op7418/guizang-ppt-skill/assets/template.html`. It keeps the
 single-file, horizontal swipe deck shape, fixed theme presets, keyboard
 navigation, and slide-dot navigation, while reading only `deck_contract.json`.
+It maps contract-native layout intents locally, including `text_split` as a
+responsive two-column content layout, without copying upstream template or
+motion assets.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 

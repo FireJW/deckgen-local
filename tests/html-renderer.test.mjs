@@ -50,6 +50,28 @@ test('renderHtmlDeck maps renderer hints to guizang theme presets', () => {
   assert.doesNotMatch(html, /theme-forest_ink/);
 });
 
+test('renderHtmlDeck gives text_split a distinct local layout', () => {
+  const html = renderHtmlDeck({
+    title: 'Learning Layout',
+    theme: { renderer_hint: 'ink_classic' },
+    slides: [
+      { id: 's01', role: 'content', headline: 'Concept', body: 'Left idea\n\nRight explanation', evidence_refs: [], layout_intent: 'text_split' }
+    ]
+  });
+
+  assert.match(html, /class="slide slide-content layout-text-split surface-paper"/);
+  assert.match(html, /data-layout="text-split"/);
+  assert.match(html, /\.layout-text-split \.slide-copy/);
+  assert.match(html, /grid-template-columns: minmax\(0, 0\.78fr\) minmax\(0, 1fr\)/);
+  assert.match(html, /\.layout-text-split h2 \{[^}]*font-size: clamp\(2rem, 4\.2vw, 4rem\)/);
+  assert.match(html, /\.slide-kicker \{[^}]*display: inline-block/);
+  assert.match(html, /overflow-wrap: anywhere/);
+  assert.doesNotMatch(html, /template\.html/);
+  assert.doesNotMatch(html, /motion\.min\.js/);
+  assert.doesNotMatch(html, /<script src=/);
+  assert.doesNotMatch(html, /assets\//);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

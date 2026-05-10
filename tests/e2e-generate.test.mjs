@@ -9,6 +9,7 @@ import test from 'node:test';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'src', 'cli', 'deckgen.mjs');
 const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
+const learningSource = path.join(root, 'fixtures', 'generic-markdown', 'learning.md');
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 
 const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'generate', ...args], {
@@ -110,6 +111,16 @@ test('generate auto-detects article package directory sources', () => {
   assert.equal(contract.profile, 'article');
   assert.equal(contract.title, 'Detected Article Package');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+});
+
+test('generate propagates learning text_split layout to html output', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', learningSource, '--profile', 'learning', '--output', 'html', '--workdir', tmp]);
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const html = readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8');
+  assert.match(html, /layout-text-split/);
 });
 
 test('generate fails closed for pptx output until ppt-master wrapper exists', () => {

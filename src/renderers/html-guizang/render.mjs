@@ -148,12 +148,15 @@ export function renderHtmlDeck(contract) {
     .slide { position: relative; flex: 0 0 100vw; min-height: 100vh; padding: 64px min(8vw, 96px); display: grid; align-content: center; gap: 30px; scroll-snap-align: start; }
     .surface-paper { background: linear-gradient(135deg, var(--paper) 0%, var(--paper-tint) 100%); color: var(--ink); }
     .surface-ink { background: radial-gradient(circle at 85% 15%, rgba(var(--paper-rgb), 0.18), transparent 34%), var(--ink); color: var(--paper); }
-    .slide-kicker { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; opacity: 0.72; }
+    .slide-kicker { display: inline-block; font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; letter-spacing: 0; text-transform: uppercase; opacity: 0.72; }
     .slide-copy { max-width: 1060px; display: grid; gap: 28px; }
-    .slide h2 { margin: 0; max-width: 1040px; font-family: "Noto Serif SC", "Songti SC", Georgia, serif; font-size: clamp(2.35rem, 7vw, 6.2rem); line-height: 1.02; letter-spacing: 0; }
+    .slide h2 { margin: 0; max-width: 1040px; font-family: "Noto Serif SC", "Songti SC", Georgia, serif; font-size: clamp(2.35rem, 7vw, 6.2rem); line-height: 1.02; letter-spacing: 0; overflow-wrap: anywhere; }
     .slide-body { display: grid; gap: 18px; max-width: 820px; }
-    .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; }
+    .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; overflow-wrap: anywhere; }
     .slide-evidence .slide-copy, .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
+    .layout-text-split .slide-copy { max-width: 1180px; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr); align-items: start; column-gap: min(6vw, 84px); }
+    .layout-text-split h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
+    .layout-text-split .slide-body { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }
     .deck-nav { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 10px; border: 1px solid rgba(var(--ink-rgb), 0.18); background: rgba(var(--paper-rgb), 0.78); backdrop-filter: blur(16px); }
     .deck-dot { width: 10px; height: 10px; padding: 0; border: 1px solid rgba(var(--ink-rgb), 0.42); border-radius: 999px; background: transparent; cursor: pointer; }
     .deck-dot[data-active="true"] { background: var(--ink); border-color: var(--ink); }
@@ -162,6 +165,8 @@ export function renderHtmlDeck(contract) {
       .slide { padding: 48px 24px 80px; }
       .slide h2 { font-size: clamp(2.1rem, 15vw, 4.2rem); }
       .slide p { font-size: 1rem; line-height: 1.62; }
+      .layout-text-split .slide-copy { grid-template-columns: minmax(0, 1fr); }
+      .layout-text-split .slide-body { padding-left: 0; border-left: 0; }
     }
   </style>
 </head>
