@@ -102,6 +102,24 @@ No upstream JavaScript, HTML template, image, or motion asset is copied into the
 repo in this slice. If later work vendors upstream template code or assets, it
 must preserve the upstream MIT notice in `third_party/NOTICE.md`.
 
+## HTML Visual QA
+
+Browser smoke for HTML output lives in `scripts/html-visual-smoke.mjs`. It opens
+a generated `html/index.html` with Playwright, captures a screenshot under
+`.tmp/deckgen-visual-smoke/`, and validates:
+
+- page title is present and matches the expected title when provided
+- renderer marker is `html-guizang`
+- slide count is positive and matches the expected count when provided
+- body text is non-empty
+- text elements do not visibly overflow their slide bounds
+- screenshot file exists and has bytes
+
+The script intentionally keeps Playwright out of repo dependencies. Use
+`--module-dir <node_modules>` or `DECKGEN_PLAYWRIGHT_MODULE_DIR` to point at a
+local Playwright installation, and use `--browser-executable <path>` when the
+Playwright-managed browser cache is unavailable.
+
 ## PPTX Boundary
 
 `--output pptx` and `--output both` intentionally fail closed unless the
