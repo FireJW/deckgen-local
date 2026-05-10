@@ -17,6 +17,12 @@ test('validateVisualSmokeResult accepts nonempty deck screenshots with expected 
     slideCount: 4,
     textLength: 320,
     overflowItems: [],
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 2,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
     screenshotPath: '.tmp/deckgen-visual-smoke/briefing.png',
     screenshotBytes: 12400
   }, {
@@ -27,6 +33,35 @@ test('validateVisualSmokeResult accepts nonempty deck screenshots with expected 
   assert.deepEqual(result, { ok: true, errors: [] });
 });
 
+test('validateVisualSmokeResult rejects missing guizang shell and local assets', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Deck Generator Briefing',
+    renderer: 'html-guizang',
+    slideCount: 4,
+    textLength: 320,
+    overflowItems: [],
+    deckElementPresent: false,
+    navElementPresent: false,
+    backgroundCanvasCount: 0,
+    localMotionImportPresent: false,
+    localMotionAssetBytes: 0,
+    externalScriptSrcs: ['https://unpkg.com/lucide@latest/dist/umd/lucide.min.js'],
+    screenshotPath: '.tmp/deckgen-visual-smoke/briefing.png',
+    screenshotBytes: 12400
+  }, {
+    expectedTitle: 'Deck Generator Briefing',
+    expectedSlides: 4
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), /guizang deck element is missing/);
+  assert.match(result.errors.join('\n'), /guizang navigation element is missing/);
+  assert.match(result.errors.join('\n'), /background canvas count 0 is below 2/);
+  assert.match(result.errors.join('\n'), /local motion import is missing/);
+  assert.match(result.errors.join('\n'), /local motion asset is missing/);
+  assert.match(result.errors.join('\n'), /external script src is not allowed/);
+});
+
 test('validateVisualSmokeResult rejects empty or visibly broken decks', () => {
   const result = validateVisualSmokeResult({
     title: '',
@@ -34,6 +69,12 @@ test('validateVisualSmokeResult rejects empty or visibly broken decks', () => {
     slideCount: 0,
     textLength: 0,
     overflowItems: [{ selector: '.slide h2', text: 'Long headline' }],
+    deckElementPresent: false,
+    navElementPresent: false,
+    backgroundCanvasCount: 0,
+    localMotionImportPresent: false,
+    localMotionAssetBytes: 0,
+    externalScriptSrcs: [],
     screenshotPath: '',
     screenshotBytes: 0
   }, {

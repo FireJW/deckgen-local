@@ -176,6 +176,12 @@ a generated `html/index.html` with Playwright, captures a screenshot under
 
 - page title is present and matches the expected title when provided
 - renderer marker is `html-guizang`
+- vendored guizang shell markers exist: `#deck`, `#nav`, and two background
+  canvases
+- the generated `html/assets/motion.min.js` file exists when the page imports
+  the local motion asset
+- external `<script src="...">` tags are absent, so the smoke catches CDN
+  script regressions
 - slide count is positive and matches the expected count when provided
 - body text is non-empty
 - text elements do not visibly overflow their slide bounds

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -105,9 +105,14 @@ const defaultScreenshotPath = (htmlPath) => {
   return path.resolve(process.cwd(), '.tmp', 'deckgen-visual-smoke', name);
 };
 
-const summarizePage = async (page, screenshotPath) => {
+const summarizePage = async (page, htmlPath, screenshotPath) => {
+  const htmlSource = readFileSync(htmlPath, 'utf8');
+  const motionAssetPath = path.join(path.dirname(htmlPath), 'assets', 'motion.min.js');
+  const motionAssetBytes = existsSync(motionAssetPath) && statSync(motionAssetPath).isFile()
+    ? statSync(motionAssetPath).size
+    : 0;
   const summary = await page.evaluate(() => {
-    const textElements = Array.from(document.querySelectorAll('.slide h2, .slide p, .slide-kicker, .deck-nav'));
+    const textElements = Array.from(document.querySelectorAll('.slide h1, .slide h2, .slide p, .slide-kicker, .chrome, .foot, #nav'));
     const appearsOverflowing = (element) => {
       const rect = element.getBoundingClientRect();
       const container = element.closest('.slide');
@@ -138,6 +143,12 @@ const summarizePage = async (page, screenshotPath) => {
     return {
       title: document.title,
       renderer: document.querySelector('[data-renderer]')?.getAttribute('data-renderer') ?? '',
+      deckElementPresent: Boolean(document.querySelector('#deck[data-renderer="html-guizang"]')),
+      navElementPresent: Boolean(document.querySelector('#nav')),
+      backgroundCanvasCount: document.querySelectorAll('canvas.bg').length,
+      externalScriptSrcs: Array.from(document.scripts)
+        .map((script) => script.src)
+        .filter(Boolean),
       slideCount: document.querySelectorAll('.slide').length,
       textLength: document.body.innerText.trim().length,
       overflowItems
@@ -149,6 +160,8 @@ const summarizePage = async (page, screenshotPath) => {
 
   return {
     ...summary,
+    localMotionImportPresent: htmlSource.includes("import('./assets/motion.min.js')"),
+    localMotionAssetBytes: motionAssetBytes,
     screenshotPath,
     screenshotBytes
   };
@@ -181,7 +194,7 @@ const main = async () => {
   try {
     const page = await browser.newPage({ viewport: options.viewport });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'load' });
-    const summary = await summarizePage(page, screenshotPath);
+    const summary = await summarizePage(page, htmlPath, screenshotPath);
     const validation = validateVisualSmokeResult(summary, {
       expectedTitle: options.expectedTitle,
       expectedSlides: options.expectedSlides

@@ -8,6 +8,12 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
   const slideCount = Number(summary.slideCount ?? 0);
   const textLength = Number(summary.textLength ?? 0);
   const overflowItems = Array.isArray(summary.overflowItems) ? summary.overflowItems : [];
+  const deckElementPresent = summary.deckElementPresent === true;
+  const navElementPresent = summary.navElementPresent === true;
+  const backgroundCanvasCount = Number(summary.backgroundCanvasCount ?? 0);
+  const localMotionImportPresent = summary.localMotionImportPresent === true;
+  const localMotionAssetBytes = Number(summary.localMotionAssetBytes ?? 0);
+  const externalScriptSrcs = Array.isArray(summary.externalScriptSrcs) ? summary.externalScriptSrcs : [];
   const screenshotPath = String(summary.screenshotPath ?? '').trim();
   const screenshotBytes = Number(summary.screenshotBytes ?? 0);
 
@@ -21,6 +27,30 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
 
   if (renderer !== 'html-guizang') {
     errors.push(`renderer "${renderer}" is not html-guizang`);
+  }
+
+  if (!deckElementPresent) {
+    errors.push('guizang deck element is missing');
+  }
+
+  if (!navElementPresent) {
+    errors.push('guizang navigation element is missing');
+  }
+
+  if (!Number.isFinite(backgroundCanvasCount) || backgroundCanvasCount < 2) {
+    errors.push(`background canvas count ${backgroundCanvasCount} is below 2`);
+  }
+
+  if (!localMotionImportPresent) {
+    errors.push('local motion import is missing');
+  }
+
+  if (!Number.isFinite(localMotionAssetBytes) || localMotionAssetBytes < 1) {
+    errors.push('local motion asset is missing');
+  }
+
+  if (externalScriptSrcs.length > 0) {
+    errors.push(`external script src is not allowed: ${externalScriptSrcs.join(', ')}`);
   }
 
   if (Number.isInteger(options.expectedSlides) && slideCount !== options.expectedSlides) {
