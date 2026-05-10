@@ -12,6 +12,7 @@ const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 
 const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'generate', ...args], {
   encoding: 'utf8',
+  cwd: options.cwd,
   env: { ...process.env, ...options.env }
 });
 
@@ -88,7 +89,10 @@ test('generate writes a run bundle with html and qc report', () => {
 
 test('generate fails closed for pptx output until ppt-master wrapper exists', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
-  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp]);
+  const isolatedCwd = mkdtempSync(path.join(os.tmpdir(), 'deckgen-no-ppt-master-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp], {
+    cwd: isolatedCwd
+  });
 
   assert.notEqual(run.status, 0);
   assert.doesNotMatch(run.stdout, /written/);
@@ -97,7 +101,10 @@ test('generate fails closed for pptx output until ppt-master wrapper exists', ()
 
 test('generate fails closed for both output until ppt-master wrapper exists', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
-  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'both', '--workdir', tmp]);
+  const isolatedCwd = mkdtempSync(path.join(os.tmpdir(), 'deckgen-no-ppt-master-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'both', '--workdir', tmp], {
+    cwd: isolatedCwd
+  });
 
   assert.notEqual(run.status, 0);
   assert.doesNotMatch(run.stdout, /written/);
