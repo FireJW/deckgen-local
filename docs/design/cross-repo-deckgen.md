@@ -174,6 +174,15 @@ The script intentionally keeps Playwright out of repo dependencies. Use
 local Playwright installation, and use `--browser-executable <path>` when the
 Playwright-managed browser cache is unavailable.
 
+## PPTX Structural QA
+
+Structural smoke for PPTX output lives in `scripts/pptx-structural-smoke.mjs`.
+It reads a generated `.pptx` as a ZIP package and validates that the required
+PowerPoint package entries exist and that `ppt/slides/slide*.xml` count matches
+`--expected-slides` when supplied. This is not a visual screenshot check, but it
+gives a reusable command-line gate for real PPTX artifacts outside the generate
+bundle writer.
+
 ## PPTX Boundary
 
 `--output pptx` and `--output both` intentionally fail closed unless the

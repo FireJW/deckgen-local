@@ -66,6 +66,15 @@ npm run smoke:html -- `
   --browser-executable "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 ```
 
+Run the structural PPTX smoke against a generated `.pptx` when checking editable
+export artifacts without opening PowerPoint:
+
+```powershell
+npm run smoke:pptx -- `
+  --pptx .tmp\deckgen\<run-id>\ppt-master\exports\<deck>.pptx `
+  --expected-slides 7
+```
+
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 
 Configure the checkout with `--ppt-master-path`, `DECKGEN_PPT_MASTER_PATH`, or a sibling directory named `../ppt-master` from the repo root. The wrapper calls `skills/ppt-master/scripts/svg_to_pptx.py` and verifies `ppt-master/exports/*.pptx` before reporting success.

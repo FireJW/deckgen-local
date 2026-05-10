@@ -2,12 +2,12 @@ import { spawnSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
   statSync,
   writeFileSync
 } from 'node:fs';
 import path from 'node:path';
+import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
 
 const exporterRelativePath = path.join('skills', 'ppt-master', 'scripts', 'svg_to_pptx.py');
 
@@ -214,61 +214,6 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
   return { exportsDir };
 };
 
-const findEndOfCentralDirectory = (buffer) => {
-  const earliestOffset = Math.max(0, buffer.length - 22 - 0xffff);
-  for (let offset = buffer.length - 22; offset >= earliestOffset; offset -= 1) {
-    if (buffer.readUInt32LE(offset) === 0x06054b50) {
-      return offset;
-    }
-  }
-
-  return -1;
-};
-
-const inspectPptxPackage = (filePath) => {
-  try {
-    const buffer = readFileSync(filePath);
-    const eocdOffset = findEndOfCentralDirectory(buffer);
-    if (eocdOffset < 0 || eocdOffset + 22 > buffer.length) {
-      return { ok: false, error: 'missing end of central directory' };
-    }
-
-    const entryCount = buffer.readUInt16LE(eocdOffset + 10);
-    let cursor = buffer.readUInt32LE(eocdOffset + 16);
-    const names = new Set();
-
-    for (let index = 0; index < entryCount; index += 1) {
-      if (cursor + 46 > buffer.length || buffer.readUInt32LE(cursor) !== 0x02014b50) {
-        return { ok: false, error: 'invalid central directory entry' };
-      }
-
-      const nameLength = buffer.readUInt16LE(cursor + 28);
-      const extraLength = buffer.readUInt16LE(cursor + 30);
-      const commentLength = buffer.readUInt16LE(cursor + 32);
-      const nameStart = cursor + 46;
-      const nameEnd = nameStart + nameLength;
-      if (nameEnd > buffer.length) {
-        return { ok: false, error: 'invalid central directory name' };
-      }
-
-      names.add(buffer.toString('utf8', nameStart, nameEnd).replaceAll('\\', '/'));
-      cursor = nameEnd + extraLength + commentLength;
-    }
-
-    if (!names.has('[Content_Types].xml') || !names.has('ppt/presentation.xml')) {
-      return { ok: false, error: 'missing required presentation entries' };
-    }
-
-    const slideCount = Array.from(names)
-      .filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name))
-      .length;
-
-    return { ok: true, names, slideCount };
-  } catch (error) {
-    return { ok: false, error: error.message };
-  }
-};
-
 const findPptxArtifacts = (exportsDir) => {
   if (!existsSync(exportsDir)) {
     return [];
@@ -278,7 +223,7 @@ const findPptxArtifacts = (exportsDir) => {
     .filter((entry) => entry.toLowerCase().endsWith('.pptx'))
     .map((entry) => path.join(exportsDir, entry))
     .filter((entryPath) => statSync(entryPath).isFile())
-    .map((entryPath) => ({ path: entryPath, inspection: inspectPptxPackage(entryPath) }))
+    .map((entryPath) => ({ path: entryPath, inspection: inspectPptxFile(entryPath) }))
     .filter(({ inspection }) => inspection.ok);
 };
 
