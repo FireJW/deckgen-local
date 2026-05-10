@@ -77,7 +77,13 @@ const malformedContracts = [
   ['slide body is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), body: 7 }] })],
   ['slide evidence_refs is not an array', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: null }] })],
   ['slide evidence_refs item is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [' '] }] })],
+  ['slide evidence_refs string item is unknown', () => ({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'main' }],
+    slides: [{ ...validSlide(), evidence_refs: ['missing-source'] }]
+  })],
   ['slide evidence_refs object item is missing id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ source_ref: 'primary' }] }] })],
+  ['slide evidence_refs object item has no source locator or quote', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }] }] })],
   ['slide evidence_refs object item has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', extra: true }] }] })],
   ['slide evidence_refs object item has duplicate id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }, { id: 'ev1' }] }] })],
   ['slide evidence_refs object locator is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', locator: ' ' }] }] })],

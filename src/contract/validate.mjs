@@ -191,7 +191,7 @@ function collectSourceRefKeys(sourceRefs) {
   for (const sourceRef of sourceRefs) {
     for (const key of ['id', 'role', 'path']) {
       if (isNonEmptyString(sourceRef[key])) {
-        keys.add(sourceRef[key]);
+        keys.add(sourceRef[key].trim());
       }
     }
   }
@@ -208,6 +208,9 @@ function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
     if (typeof evidenceRef === 'string') {
       if (!isNonEmptyString(evidenceRef)) {
         return fail(`${itemPrefix} must be a non-empty string`);
+      }
+      if (!knownSourceRefKeys.has(evidenceRef.trim())) {
+        return fail(`${itemPrefix} must match a source_refs id, role, or path`);
       }
       continue;
     }
@@ -232,6 +235,10 @@ function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
     }
     seenObjectIds.add(id);
 
+    if (!['source_ref', 'locator', 'quote'].some((key) => Object.hasOwn(evidenceRef, key))) {
+      return fail(`${itemPrefix} must include source_ref, locator, or quote`);
+    }
+
     if (Object.hasOwn(evidenceRef, 'source_ref') && !isNonEmptyString(evidenceRef.source_ref)) {
       return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
     }
@@ -245,7 +252,7 @@ function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
     if (
       Object.hasOwn(evidenceRef, 'source_ref') &&
       isNonEmptyString(evidenceRef.source_ref) &&
-      !knownSourceRefKeys.has(evidenceRef.source_ref)
+      !knownSourceRefKeys.has(evidenceRef.source_ref.trim())
     ) {
       return fail(`${itemPrefix}.source_ref must match a source_refs id, role, or path`);
     }
