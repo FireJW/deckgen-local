@@ -63,8 +63,11 @@ npm run smoke:html -- `
   --expected-title "Deck Generator Briefing" `
   --expected-slides 4 `
   --module-dir C:\Users\rickylu\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules `
-  --browser-executable "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+  --browser-executable "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" `
+  --viewport 390x844
 ```
+
+Omit `--viewport` to use the default desktop smoke size of `1440x900`.
 
 Run the structural PPTX smoke against a generated `.pptx` when checking editable
 export artifacts without opening PowerPoint:

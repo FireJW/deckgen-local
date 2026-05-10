@@ -1,6 +1,10 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { buildBrowserLaunchOptions, validateVisualSmokeResult } from '../src/qc/html-visual-smoke.mjs';
+import {
+  buildBrowserLaunchOptions,
+  parseViewportOption,
+  validateVisualSmokeResult
+} from '../src/qc/html-visual-smoke.mjs';
 
 test('validateVisualSmokeResult accepts nonempty deck screenshots with expected slides', () => {
   const result = validateVisualSmokeResult({
@@ -49,4 +53,19 @@ test('buildBrowserLaunchOptions uses an explicit browser executable when provide
       executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
     }
   );
+});
+
+test('parseViewportOption defaults to desktop smoke dimensions', () => {
+  assert.deepEqual(parseViewportOption(), { width: 1440, height: 900 });
+});
+
+test('parseViewportOption accepts explicit width by height dimensions', () => {
+  assert.deepEqual(parseViewportOption('390x844'), { width: 390, height: 844 });
+  assert.deepEqual(parseViewportOption(' 768X1024 '), { width: 768, height: 1024 });
+});
+
+test('parseViewportOption rejects malformed viewport dimensions', () => {
+  assert.throws(() => parseViewportOption('390'), /--viewport must use WIDTHxHEIGHT/);
+  assert.throws(() => parseViewportOption('0x844'), /--viewport width and height must be positive integers/);
+  assert.throws(() => parseViewportOption('390x1.5'), /--viewport must use WIDTHxHEIGHT/);
 });

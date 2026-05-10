@@ -172,7 +172,9 @@ a generated `html/index.html` with Playwright, captures a screenshot under
 The script intentionally keeps Playwright out of repo dependencies. Use
 `--module-dir <node_modules>` or `DECKGEN_PLAYWRIGHT_MODULE_DIR` to point at a
 local Playwright installation, and use `--browser-executable <path>` when the
-Playwright-managed browser cache is unavailable.
+Playwright-managed browser cache is unavailable. The default viewport is
+`1440x900`; pass `--viewport <width>x<height>` such as `390x844` when checking
+mobile-sized output.
 
 ## PPTX Structural QA
 

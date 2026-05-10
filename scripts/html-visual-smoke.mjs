@@ -3,12 +3,12 @@ import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { buildBrowserLaunchOptions, validateVisualSmokeResult } from '../src/qc/html-visual-smoke.mjs';
+import { buildBrowserLaunchOptions, parseViewportOption, validateVisualSmokeResult } from '../src/qc/html-visual-smoke.mjs';
 
 const usage = [
   'html-visual-smoke --html <path> [--expected-title <title>] [--expected-slides <n>]',
   '                  [--screenshot-out <path>] [--module-dir <node_modules>]',
-  '                  [--browser-executable <path>]'
+  '                  [--browser-executable <path>] [--viewport <width>x<height>]'
 ].join('\n');
 
 const fail = (message) => {
@@ -24,7 +24,8 @@ const parseArgs = (tokens) => {
     ['--expected-slides', 'expectedSlides'],
     ['--screenshot-out', 'screenshotOut'],
     ['--module-dir', 'moduleDir'],
-    ['--browser-executable', 'browserExecutable']
+    ['--browser-executable', 'browserExecutable'],
+    ['--viewport', 'viewport']
   ]);
 
   for (let index = 0; index < tokens.length; index += 2) {
@@ -62,6 +63,12 @@ const parseArgs = (tokens) => {
       fail('--expected-slides must be a positive integer.');
     }
     options.expectedSlides = expectedSlides;
+  }
+
+  try {
+    options.viewport = parseViewportOption(options.viewport);
+  } catch (error) {
+    fail(error.message);
   }
 
   return options;
@@ -151,7 +158,7 @@ const main = async () => {
   }));
 
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const page = await browser.newPage({ viewport: options.viewport });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'load' });
     const summary = await summarizePage(page, screenshotPath);
     const validation = validateVisualSmokeResult(summary, {

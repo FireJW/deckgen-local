@@ -53,3 +53,25 @@ export function buildBrowserLaunchOptions(options = {}) {
 
   return launchOptions;
 }
+
+export function parseViewportOption(value) {
+  if (value === undefined || value === null) {
+    return { width: 1440, height: 900 };
+  }
+
+  const input = String(value).trim();
+  const match = input.match(/^(\d+)[xX](\d+)$/);
+
+  if (!match) {
+    throw new Error('--viewport must use WIDTHxHEIGHT, for example 1440x900 or 390x844.');
+  }
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+    throw new Error('--viewport width and height must be positive integers.');
+  }
+
+  return { width, height };
+}
