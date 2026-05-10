@@ -7,6 +7,7 @@ const templateCandidates = [
   path.join('templates', 'template.html'),
   'template.html'
 ];
+const missingSourceNextStep = 'Provide a local guizang-ppt-skill checkout or extracted archive directory (extract archive files first), then rerun this preflight before template integration.';
 
 const findExistingFile = (rootPath, candidates) => {
   for (const candidate of candidates) {
@@ -72,6 +73,6 @@ export function buildGuizangPreflightResult(sourcePath) {
     integration: inspection.ok ? 'source-ready-no-files-vendored' : 'blocked-no-files-vendored',
     next_step: inspection.ok
       ? 'Review license/template scope before copying any upstream file and update third_party/NOTICE.md if files are vendored.'
-      : 'Provide a local guizang-ppt-skill checkout or archive, then rerun this preflight before template integration.'
+      : missingSourceNextStep
   };
 }

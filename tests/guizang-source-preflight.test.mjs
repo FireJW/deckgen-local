@@ -5,7 +5,10 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { inspectGuizangSourcePath } from '../src/integrations/guizang-ppt-skill.mjs';
+import {
+  buildGuizangPreflightResult,
+  inspectGuizangSourcePath
+} from '../src/integrations/guizang-ppt-skill.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const script = path.join(root, 'scripts', 'guizang-source-preflight.mjs');
@@ -47,5 +50,17 @@ test('guizang source preflight script reports actionable missing-source failures
   const result = JSON.parse(run.stdout);
   assert.equal(result.ok, false);
   assert.match(result.error, /not found/i);
-  assert.match(result.next_step, /provide a local guizang-ppt-skill checkout or archive/i);
+  assert.match(result.next_step, /provide a local guizang-ppt-skill checkout or extracted archive directory/i);
+});
+
+test('buildGuizangPreflightResult tells users to extract archive files first', () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-guizang-archive-'));
+  const archivePath = path.join(tempDir, 'guizang-ppt-skill.zip');
+  writeFileSync(archivePath, 'archive placeholder', 'utf8');
+
+  const result = buildGuizangPreflightResult(archivePath);
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /not a directory/i);
+  assert.match(result.next_step, /extract.*archive/i);
 });
