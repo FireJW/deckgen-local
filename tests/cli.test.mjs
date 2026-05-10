@@ -1,4 +1,6 @@
 import { strict as assert } from 'node:assert';
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import test from 'node:test';
@@ -37,4 +39,12 @@ test('generate exits non-zero when source is missing', () => {
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /source file not found/i);
+});
+
+test('generate exits non-zero when directory source lacks marker manifest', () => {
+  const emptyDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-empty-source-'));
+  const result = runCli(['generate', '--source', emptyDir, '--output', 'html']);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /deckgen\.source\.json/i);
 });

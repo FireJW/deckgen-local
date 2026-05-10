@@ -27,6 +27,36 @@ These adapters normalize repo-specific inputs into the same internal package:
 `content.md` plus `deck_contract.json`. Adapter code should stay thin and avoid
 importing business-repo logic into this shared generator.
 
+## Source Detection
+
+Markdown file sources remain the compatibility path:
+
+```bash
+node src/cli/deckgen.mjs generate --source path/to/briefing.md --profile briefing --output html
+```
+
+Directory sources are accepted only when they contain an explicit
+`deckgen.source.json` marker. The CLI does not infer package type from a repo or
+directory name.
+
+```json
+{
+  "type": "article-package",
+  "primary": "content.md",
+  "title": "Optional title override"
+}
+```
+
+Supported marker types:
+
+- `article-package` -> `article`
+- `research-report` -> `briefing`
+- `obsidian-note` -> `learning`
+
+For typed packages, a conflicting explicit `--profile` is rejected before the
+run bundle is created. `--output` remains the caller-selected output mode, so a
+typed package never silently requests PPTX.
+
 ## Run Directory
 
 Each run writes artifacts under:

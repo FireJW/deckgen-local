@@ -9,6 +9,7 @@ import test from 'node:test';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'src', 'cli', 'deckgen.mjs');
 const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
+const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 
 const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'generate', ...args], {
   encoding: 'utf8',
@@ -84,6 +85,26 @@ test('generate writes a run bundle with html and qc report', () => {
   assert.ok(existsSync(path.join(runDir, 'request.json')));
   assert.ok(existsSync(path.join(runDir, 'content.md')));
   assert.ok(existsSync(path.join(runDir, 'deck_contract.json')));
+  assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+});
+
+test('generate auto-detects article package directory sources', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const run = runGenerate(['--source', articlePackageSource, '--output', 'html', '--workdir', tmp]);
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const request = JSON.parse(readFileSync(path.join(runDir, 'request.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(path.join(runDir, 'source_manifest.json'), 'utf8'));
+  const contract = JSON.parse(readFileSync(path.join(runDir, 'deck_contract.json'), 'utf8'));
+
+  assert.equal(request.source_type, 'article-package');
+  assert.equal(request.profile, 'article');
+  assert.equal(manifest.type, 'article-package');
+  assert.equal(manifest.manifest.path, path.join(articlePackageSource, 'deckgen.source.json'));
+  assert.equal(manifest.primary.path, path.join(articlePackageSource, 'content.md'));
+  assert.equal(contract.profile, 'article');
+  assert.equal(contract.title, 'Detected Article Package');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
 

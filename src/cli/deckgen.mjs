@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { buildGenericMarkdownPackage } from '../adapters/generic-markdown.mjs';
 import { allowedCliOutputModes, allowedProfiles } from '../contract/schema.mjs';
 import {
   DeckgenUserError,
@@ -9,6 +8,7 @@ import {
   normalizeOutputs,
   writeGenerateBundle
 } from './generate.mjs';
+import { loadSourcePackage } from './source-loader.mjs';
 
 const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--workdir <path>] [--ppt-master-path <path>]`;
 const args = process.argv.slice(2);
@@ -22,7 +22,6 @@ const fail = (message) => {
 
 const parseGenerateFlags = (tokens) => {
   const options = {
-    profile: 'briefing',
     output: 'html',
     workdir: process.cwd()
   };
@@ -80,7 +79,7 @@ const commandGenerate = (tokens) => {
     fail('Missing required option: --source.');
   }
 
-  if (!allowedProfiles.includes(options.profile)) {
+  if (options.profile !== undefined && !allowedProfiles.includes(options.profile)) {
     fail(`Invalid profile: ${options.profile}. Expected one of ${allowedProfiles.join(', ')}.`);
   }
 
@@ -88,18 +87,19 @@ const commandGenerate = (tokens) => {
     fail(`Invalid output: ${options.output}. Expected one of ${allowedCliOutputModes.join(', ')}.`);
   }
 
-  let sourceStat;
+  let sourcePackage;
   try {
-    sourceStat = statSync(options.source);
-  } catch {
-    fail(`Source file not found: ${options.source}`);
+    sourcePackage = loadSourcePackage({
+      source: options.source,
+      profile: options.profile
+    });
+  } catch (error) {
+    if (error instanceof DeckgenUserError) {
+      fail(error.message);
+    }
+    throw error;
   }
 
-  if (!sourceStat.isFile()) {
-    fail(`Source is not a file: ${options.source}`);
-  }
-
-  const markdown = readFileSync(options.source, 'utf8');
   const concreteOutputs = normalizeOutputs(options.output);
   const pptMasterPath = resolvePptMasterPath(options);
   const config = {
@@ -116,40 +116,29 @@ const commandGenerate = (tokens) => {
     throw error;
   }
 
-  const deckPackage = buildGenericMarkdownPackage({
-    sourcePath: options.source,
-    markdown,
-    profile: options.profile
-  });
   const contract = {
-    ...deckPackage.contract,
+    ...sourcePackage.contract,
     outputs: concreteOutputs
   };
   const request = {
     command: 'generate',
     source: options.source,
-    profile: options.profile,
+    source_type: sourcePackage.sourceType,
+    profile: sourcePackage.profile,
     output: options.output,
     outputs: concreteOutputs,
     workdir: options.workdir,
     pptMasterPath
-  };
-  const sourceManifest = {
-    primary: {
-      path: options.source,
-      bytes: sourceStat.size,
-      modified_at: sourceStat.mtime.toISOString()
-    }
   };
 
   try {
     const { runDir } = writeGenerateBundle({
       workdir: options.workdir,
       request,
-      sourceManifest,
-      content: deckPackage.content,
+      sourceManifest: sourcePackage.sourceManifest,
+      content: sourcePackage.content,
       contract,
-      sourcePath: options.source,
+      sourcePath: sourcePackage.sourcePath,
       config
     });
     process.stdout.write(`written ${runDir}\n`);

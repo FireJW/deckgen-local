@@ -13,6 +13,28 @@ motion assets.
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
 ```
 
+Directory sources are supported when they include an explicit
+`deckgen.source.json` marker. This keeps cross-repo package detection
+fail-closed instead of guessing from directory names.
+
+```bash
+node src/cli/deckgen.mjs generate --source fixtures/source-packages/article/basic --output html
+```
+
+Minimal marker:
+
+```json
+{
+  "type": "article-package",
+  "primary": "content.md",
+  "title": "Optional title override"
+}
+```
+
+Supported package `type` values are `article-package`, `research-report`, and
+`obsidian-note`; their profiles are inferred as `article`, `briefing`, and
+`learning` respectively. Passing a conflicting `--profile` fails closed.
+
 Run the browser/screenshot smoke against a generated `html/index.html` when
 layout regressions matter. The repo does not vendor Playwright, so pass a local
 or bundled `node_modules` directory that contains `playwright`; if Playwright's
