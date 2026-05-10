@@ -70,6 +70,14 @@ npm run smoke:html -- `
 `--html <path>` still works for a direct `html/index.html` check.
 Omit `--viewport` to use the default desktop smoke size of `1440x900`.
 
+Before copying any upstream guizang template file, run the local source
+preflight. This validates that a local checkout or extracted archive has a
+license file and a supported template path; it does not vendor files.
+
+```powershell
+npm run preflight:guizang -- --source D:\Users\rickylu\dev\guizang-ppt-skill
+```
+
 Run the structural PPTX smoke against a generated `.pptx` when checking editable
 export artifacts without opening PowerPoint:
 

@@ -156,6 +156,18 @@ No upstream JavaScript, HTML template, image, or motion asset is copied into the
 repo in this slice. If later work vendors upstream template code or assets, it
 must preserve the upstream MIT notice in `third_party/NOTICE.md`.
 
+Before any guizang template integration, run:
+
+```bash
+npm run preflight:guizang -- --source path/to/guizang-ppt-skill
+```
+
+The preflight checks only local source paths. It fails closed when the checkout
+or extracted archive is missing, when no license file is present, or when a
+supported template file cannot be found. Passing this preflight does not copy
+files; it only confirms that the next integration slice has auditable local
+source material.
+
 ## HTML Visual QA
 
 Browser smoke for HTML output lives in `scripts/html-visual-smoke.mjs`. It opens
