@@ -100,12 +100,15 @@ npm run smoke:pptx -- `
 and `--pptx <path>` still works for a direct file check.
 
 On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
-smoke to export slide 1 as a PNG and verify a real screenshot artifact exists:
+smoke to export a slide as a PNG and verify a real screenshot artifact exists.
+It defaults to slide 1; pass `--slide <n>` when checking a later table or
+two-column slide:
 
 ```powershell
 npm run smoke:pptx:visual -- `
   --run-dir .tmp\deckgen\<run-id> `
-  --expected-slides 7
+  --expected-slides 7 `
+  --slide 2
 ```
 
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.

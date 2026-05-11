@@ -9,6 +9,14 @@ const defaultPowerPointPaths = [
 
 const psQuote = (value) => `'${String(value ?? '').replaceAll("'", "''")}'`;
 
+const normalizeSlideNumber = (value) => {
+  const slideNumber = Number(value ?? 1);
+  if (!Number.isInteger(slideNumber) || slideNumber < 1) {
+    throw new Error('slideNumber must be a positive integer.');
+  }
+  return slideNumber;
+};
+
 export function resolvePowerPointExecutable(options = {}) {
   const {
     executablePath,
@@ -24,7 +32,14 @@ export function resolvePowerPointExecutable(options = {}) {
   return candidates.find((candidate) => exists(candidate)) ?? '';
 }
 
-export function buildPowerPointExportScript({ pptxPath, screenshotPath, width = 1600, height = 900 } = {}) {
+export function buildPowerPointExportScript({
+  pptxPath,
+  screenshotPath,
+  slideNumber = 1,
+  width = 1600,
+  height = 900
+} = {}) {
+  const resolvedSlideNumber = normalizeSlideNumber(slideNumber);
   return [
     "$ErrorActionPreference = 'Stop'",
     `$pptx = ${psQuote(pptxPath)}`,
@@ -34,7 +49,7 @@ export function buildPowerPointExportScript({ pptxPath, screenshotPath, width = 
     'try {',
     '  $app = New-Object -ComObject PowerPoint.Application',
     '  $presentation = $app.Presentations.Open($pptx, -1, 0, 0)',
-    `  $presentation.Slides.Item(1).Export($out, 'PNG', ${Number(width)}, ${Number(height)})`,
+    `  $presentation.Slides.Item(${resolvedSlideNumber}).Export($out, 'PNG', ${Number(width)}, ${Number(height)})`,
     '} finally {',
     '  if ($presentation -ne $null) {',
     '    try { $presentation.Close() } catch {}',
@@ -50,10 +65,11 @@ export function buildPowerPointExportScript({ pptxPath, screenshotPath, width = 
   ].join('\n');
 }
 
-export function defaultPptxScreenshotPath(pptxPath, cwd = process.cwd()) {
+export function defaultPptxScreenshotPath(pptxPath, cwd = process.cwd(), slideNumber = 1) {
+  const resolvedSlideNumber = normalizeSlideNumber(slideNumber);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const basename = path.basename(pptxPath ?? 'deck.pptx', path.extname(pptxPath ?? 'deck.pptx'));
-  return path.resolve(cwd, '.tmp', 'deckgen-pptx-visual-smoke', `${basename}-${stamp}-slide1.png`);
+  return path.resolve(cwd, '.tmp', 'deckgen-pptx-visual-smoke', `${basename}-${stamp}-slide${resolvedSlideNumber}.png`);
 }
 
 export function inspectPngFile(filePath) {
@@ -89,13 +105,15 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
     pptxPath,
     screenshotPath,
     powerPointPath,
+    slideNumber = 1,
     width = 1600,
     height = 900,
     exists = existsSync,
     spawn = spawnSync
   } = options;
+  const resolvedSlideNumber = normalizeSlideNumber(slideNumber);
   const resolvedPptxPath = path.resolve(pptxPath ?? '');
-  const resolvedScreenshotPath = path.resolve(screenshotPath ?? defaultPptxScreenshotPath(resolvedPptxPath));
+  const resolvedScreenshotPath = path.resolve(screenshotPath ?? defaultPptxScreenshotPath(resolvedPptxPath, process.cwd(), resolvedSlideNumber));
   const resolvedPowerPointPath = resolvePowerPointExecutable({
     executablePath: powerPointPath,
     exists
@@ -113,6 +131,7 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
   const script = buildPowerPointExportScript({
     pptxPath: resolvedPptxPath,
     screenshotPath: resolvedScreenshotPath,
+    slideNumber: resolvedSlideNumber,
     width,
     height
   });
@@ -151,6 +170,7 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
     renderer: 'powerpoint',
     pptxPath: resolvedPptxPath,
     powerPointPath: resolvedPowerPointPath,
+    slideNumber: resolvedSlideNumber,
     screenshotPath: resolvedScreenshotPath,
     screenshotBytes,
     ...image,

@@ -15,7 +15,7 @@ import {
 const usage = [
   'pptx-visual-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir>',
   '                  [--screenshot-out <path>] [--expected-slides <n>]',
-  '                  [--powerpoint-executable <path>]'
+  '                  [--slide <n>] [--powerpoint-executable <path>]'
 ].join('\n');
 
 const fail = (message) => {
@@ -31,6 +31,7 @@ const parseArgs = (tokens) => {
     ['--run-dir', 'runDir'],
     ['--screenshot-out', 'screenshotOut'],
     ['--expected-slides', 'expectedSlides'],
+    ['--slide', 'slideNumber'],
     ['--powerpoint-executable', 'powerPointPath']
   ]);
 
@@ -77,6 +78,16 @@ const parseArgs = (tokens) => {
     options.expectedSlides = expectedSlides;
   }
 
+  if (options.slideNumber !== undefined) {
+    const slideNumber = Number(options.slideNumber);
+    if (!Number.isInteger(slideNumber) || slideNumber < 1) {
+      fail('--slide must be a positive integer.');
+    }
+    options.slideNumber = slideNumber;
+  } else {
+    options.slideNumber = 1;
+  }
+
   return options;
 };
 
@@ -111,12 +122,17 @@ const main = async () => {
     return;
   }
 
-  const screenshotPath = path.resolve(options.screenshotOut ?? defaultPptxScreenshotPath(pptxPath));
+  if (options.slideNumber > structural.slideCount) {
+    fail(`--slide ${options.slideNumber} exceeds PPTX slide count ${structural.slideCount}.`);
+  }
+
+  const screenshotPath = path.resolve(options.screenshotOut ?? defaultPptxScreenshotPath(pptxPath, process.cwd(), options.slideNumber));
   try {
     const visual = exportFirstSlideWithPowerPoint({
       pptxPath,
       screenshotPath,
-      powerPointPath: options.powerPointPath
+      powerPointPath: options.powerPointPath,
+      slideNumber: options.slideNumber
     });
     process.stdout.write(`${JSON.stringify({ ...structural, ...structuralValidation, ...visual }, null, 2)}\n`);
   } catch (error) {
