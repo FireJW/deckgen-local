@@ -4,6 +4,7 @@ import {
   deckContractSchemaVersion,
   requiredContractKeys
 } from './schema.mjs';
+import { isAbsolute } from 'node:path';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -12,6 +13,7 @@ const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
+const allowedSourceRefTypes = new Set(['local_file']);
 
 export function validateDeckContract(contract) {
   try {
@@ -70,6 +72,7 @@ function validateDeckContractInternal(contract) {
     return sourceRefsValidation;
   }
   const knownSourceRefKeys = collectSourceRefKeys(contract.source_refs);
+  const knownSourceRefIds = collectSourceRefIds(contract.source_refs);
 
   if (!Array.isArray(contract.hard_constraints)) {
     return fail('hard_constraints must be an array');
@@ -131,7 +134,12 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix}.evidence_refs must be an array`);
     }
 
-    const evidenceRefsValidation = validateEvidenceRefs(slide.evidence_refs, `${prefix}.evidence_refs`, knownSourceRefKeys);
+    const evidenceRefsValidation = validateEvidenceRefs({
+      evidenceRefs: slide.evidence_refs,
+      prefix: `${prefix}.evidence_refs`,
+      knownSourceRefKeys,
+      knownSourceRefIds
+    });
     if (!evidenceRefsValidation.ok) {
       return evidenceRefsValidation;
     }
@@ -161,6 +169,14 @@ function validateSourceRefs(sourceRefs) {
       if (!isNonEmptyString(sourceRef[key])) {
         return fail(`${prefix}.${key} must be a non-empty string`);
       }
+    }
+
+    if (!allowedSourceRefTypes.has(sourceRef.type.trim())) {
+      return fail(`${prefix}.type must be local_file`);
+    }
+
+    if (!isAbsolute(sourceRef.path.trim())) {
+      return fail(`${prefix}.path must be an absolute path`);
     }
 
     if (Object.hasOwn(sourceRef, 'id') && !isNonEmptyString(sourceRef.id)) {
@@ -199,7 +215,19 @@ function collectSourceRefKeys(sourceRefs) {
   return keys;
 }
 
-function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
+function collectSourceRefIds(sourceRefs) {
+  const ids = new Set();
+
+  for (const sourceRef of sourceRefs) {
+    if (isNonEmptyString(sourceRef.id)) {
+      ids.add(sourceRef.id.trim());
+    }
+  }
+
+  return ids;
+}
+
+function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownSourceRefIds }) {
   const seenObjectIds = new Set();
 
   for (const [index, evidenceRef] of evidenceRefs.entries()) {
@@ -249,12 +277,13 @@ function validateEvidenceRefs(evidenceRefs, prefix, knownSourceRefKeys) {
       }
     }
 
-    if (
-      Object.hasOwn(evidenceRef, 'source_ref') &&
-      isNonEmptyString(evidenceRef.source_ref) &&
-      !knownSourceRefKeys.has(evidenceRef.source_ref.trim())
-    ) {
-      return fail(`${itemPrefix}.source_ref must match a source_refs id, role, or path`);
+    if (Object.hasOwn(evidenceRef, 'source_ref')) {
+      if (!isNonEmptyString(evidenceRef.source_ref)) {
+        return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
+      }
+      if (!knownSourceRefIds.has(evidenceRef.source_ref.trim())) {
+        return fail(`${itemPrefix}.source_ref must match a source_refs id`);
+      }
     }
   }
 
