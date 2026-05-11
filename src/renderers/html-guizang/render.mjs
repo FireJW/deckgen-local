@@ -144,9 +144,9 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] th, #deck[data-renderer] td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; }
   #deck[data-renderer] th { font-family: var(--mono); font-size: 0.76rem; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.76); background: rgba(var(--ink-rgb), 0.06); }
   #deck[data-renderer] tr:last-child td { border-bottom: 0; }
-  #deck[data-renderer] .slide-evidence-refs { display: grid; gap: 8px; margin-top: 20px; max-width: 820px; font-family: var(--mono); font-size: 0.78rem; line-height: 1.44; color: rgba(var(--ink-rgb), 0.64); }
+  #deck[data-renderer] .slide-evidence-refs { display: grid; gap: 8px; margin-top: 20px; max-width: 820px; max-height: min(15vh, 132px); overflow: hidden; font-family: var(--mono); font-size: 0.78rem; line-height: 1.44; color: rgba(var(--ink-rgb), 0.64); }
   #deck[data-renderer] .dark .slide-evidence-refs { color: rgba(var(--paper-rgb), 0.68); }
-  #deck[data-renderer] .slide-evidence-ref { overflow-wrap: anywhere; }
+  #deck[data-renderer] .slide-evidence-ref { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; overflow-wrap: anywhere; }
   #deck[data-renderer] .slide-evidence .slide-copy, #deck[data-renderer] .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
   #deck[data-renderer] .slide-content:not(.layout-text-split) .slide-copy, #deck[data-renderer] .slide-evidence .slide-copy { align-content: center; }
   #deck[data-renderer] .slide-content:not(.layout-text-split) h2, #deck[data-renderer] .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }

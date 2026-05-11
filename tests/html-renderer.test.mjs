@@ -161,6 +161,8 @@ test('renderHtmlDeck renders structured and legacy evidence references', () => {
   assert.match(html, /class="slide-evidence-refs"/);
   assert.match(html, /<div class="slide-evidence-ref">source: primary<\/div>/);
   assert.match(html, /ev1 \| source: primary \| p\. 2 \| Verified claim\./);
+  assert.match(html, /#deck\[data-renderer\] \.slide-evidence-refs \{[^}]*max-height: min\(15vh, 132px\)/);
+  assert.match(html, /#deck\[data-renderer\] \.slide-evidence-ref \{[^}]*-webkit-line-clamp: 2/);
 });
 
 test('buildQcReport renders source validation and html lines', () => {
