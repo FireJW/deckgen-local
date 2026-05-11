@@ -7,6 +7,7 @@ import {
   writeFileSync
 } from 'node:fs';
 import path from 'node:path';
+import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
 
 const exporterRelativePath = path.join('skills', 'ppt-master', 'scripts', 'svg_to_pptx.py');
@@ -194,6 +195,39 @@ const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
   ].join('\n  ');
 };
 
+const renderEvidenceSvg = ({ evidenceRefs, x, y, color }) => {
+  const lines = formatEvidenceRefs(evidenceRefs)
+    .slice(0, 3)
+    .map((line) => wrapText(line, 92, 1)[0])
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return '';
+  }
+
+  return [
+    '<g class="ppt-evidence-refs">',
+    ...lines.map((line, index) =>
+      `<text x="${x}" y="${y + index * 26}" font-family="Arial, sans-serif" font-size="18" fill="${color}">${escapeXml(line)}</text>`
+    ),
+    '</g>'
+  ].join('\n  ');
+};
+
+const renderSlideNotes = (slide) => {
+  const notes = [];
+  const body = String(slide?.body ?? '').trimEnd();
+  const evidenceRefs = formatEvidenceRefs(slide?.evidence_refs);
+
+  if (body) {
+    notes.push(body);
+  }
+  if (evidenceRefs.length > 0) {
+    notes.push('## Evidence', ...evidenceRefs.map((ref) => `- ${ref}`));
+  }
+
+  return `${notes.join('\n')}\n`;
+};
+
 const renderSlideSvg = (slide, index) => {
   const isCover = index === 0 || slide?.role === 'cover';
   const background = isCover ? '#101820' : '#f8fafc';
@@ -220,12 +254,19 @@ const renderSlideSvg = (slide, index) => {
       `<text x="120" y="${bodyStartY + lineIndex * 38}" font-family="Arial, sans-serif" font-size="30" fill="${bodyColor}">${escapeXml(line)}</text>`
     ).join('\n  ');
   }
+  const evidenceSvg = renderEvidenceSvg({
+    evidenceRefs: slide?.evidence_refs,
+    x: 120,
+    y: 748,
+    color: isCover ? '#94a3b8' : '#64748b'
+  });
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
   <rect width="1600" height="900" fill="${background}"/>
   <rect x="120" y="${isCover ? 210 : 96}" width="180" height="10" rx="5" fill="${accent}"/>
   ${headlineSvg}
   ${bodySvg}
+  ${evidenceSvg}
   <text x="120" y="820" font-family="Arial, sans-serif" font-size="22" fill="${isCover ? '#94a3b8' : '#64748b'}">${escapeXml(slide?.role ?? 'slide')}</text>
 </svg>
 `;
@@ -263,7 +304,7 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
     const svg = renderSlideSvg(slide, index);
     writeFileSync(path.join(svgOutputDir, `${stem}.svg`), svg, 'utf8');
     writeFileSync(path.join(svgFinalDir, `${stem}.svg`), svg, 'utf8');
-    writeFileSync(path.join(notesDir, `${stem}.md`), `${slide.body ?? ''}\n`, 'utf8');
+    writeFileSync(path.join(notesDir, `${stem}.md`), renderSlideNotes(slide), 'utf8');
   });
 
   return { exportsDir };

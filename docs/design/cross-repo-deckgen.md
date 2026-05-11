@@ -141,7 +141,8 @@ presets, keyboard navigation, and slide-dot navigation, while reading only
 `deck_contract.json`. It maps contract-native layout intents locally, including
 `text_split` as a responsive two-column content layout. Markdown table blocks
 in slide bodies are rendered as native HTML tables so report-style inputs do not
-appear as raw pipe-delimited text.
+appear as raw pipe-delimited text. Structured and legacy `evidence_refs` render
+as compact reference lines under the slide body.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 
@@ -254,6 +255,8 @@ maps it into an SVG table group for `ppt-master` instead of passing raw
 pipe-delimited Markdown text through to the slide image. Slides with
 `layout_intent: "text_split"` are mapped into two-column SVG blocks so learning
 profile concept/explanation slides keep their contract layout in PPTX output.
+Structured and legacy `evidence_refs` are emitted into both slide SVGs and
+per-slide note Markdown so editable PPTX projects keep citation context.
 
 PPTX verification is structural and fail-closed:
 

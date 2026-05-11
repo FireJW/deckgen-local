@@ -139,6 +139,30 @@ test('renderHtmlDeck renders markdown table blocks as html tables', () => {
   assert.doesNotMatch(html, /<p>\| Rank \| Symbol \| Score \|/);
 });
 
+test('renderHtmlDeck renders structured and legacy evidence references', () => {
+  const html = renderHtmlDeck({
+    title: 'Evidence Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'Evidence-backed Claim',
+        body: 'The claim stays grounded.',
+        evidence_refs: [
+          'primary',
+          { id: 'ev1', source_ref: 'primary', locator: 'p. 2', quote: 'Verified claim.' }
+        ],
+        layout_intent: 'evidence'
+      }
+    ]
+  });
+
+  assert.match(html, /class="slide-evidence-refs"/);
+  assert.match(html, /<div class="slide-evidence-ref">source: primary<\/div>/);
+  assert.match(html, /ev1 \| source: primary \| p\. 2 \| Verified claim\./);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

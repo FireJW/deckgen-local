@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 
 const rendererDir = path.dirname(fileURLToPath(import.meta.url));
 const vendoredGuizangRoot = path.resolve(rendererDir, '..', '..', '..', 'third_party', 'guizang-ppt-skill');
@@ -143,6 +144,9 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] th, #deck[data-renderer] td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; }
   #deck[data-renderer] th { font-family: var(--mono); font-size: 0.76rem; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.76); background: rgba(var(--ink-rgb), 0.06); }
   #deck[data-renderer] tr:last-child td { border-bottom: 0; }
+  #deck[data-renderer] .slide-evidence-refs { display: grid; gap: 8px; margin-top: 20px; max-width: 820px; font-family: var(--mono); font-size: 0.78rem; line-height: 1.44; color: rgba(var(--ink-rgb), 0.64); }
+  #deck[data-renderer] .dark .slide-evidence-refs { color: rgba(var(--paper-rgb), 0.68); }
+  #deck[data-renderer] .slide-evidence-ref { overflow-wrap: anywhere; }
   #deck[data-renderer] .slide-evidence .slide-copy, #deck[data-renderer] .slide-content .slide-copy { grid-template-columns: minmax(0, 1fr); }
   #deck[data-renderer] .slide-content:not(.layout-text-split) .slide-copy, #deck[data-renderer] .slide-evidence .slide-copy { align-content: center; }
   #deck[data-renderer] .slide-content:not(.layout-text-split) h2, #deck[data-renderer] .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }
@@ -216,6 +220,19 @@ const renderBody = (body) => {
   return `<div class="slide-body body-zh" data-anim>\n${paragraphs}\n</div>`;
 };
 
+const renderEvidenceRefs = (evidenceRefs) => {
+  const refs = formatEvidenceRefs(evidenceRefs);
+  if (refs.length === 0) {
+    return '';
+  }
+
+  return [
+    '<div class="slide-evidence-refs" data-anim>',
+    ...refs.map((ref) => `      <div class="slide-evidence-ref">${escapeHtml(ref)}</div>`),
+    '    </div>'
+  ].join('\n');
+};
+
 const slideAnimation = (role, layout) => {
   if (role === 'cover' || layout === 'hero-dark') return 'hero';
   if (layout === 'quote') return 'quote';
@@ -252,6 +269,7 @@ const renderSlide = (slide, index, totalSlides, title) => {
     `    <div class="kicker slide-kicker" data-anim>${escapeHtml(label)} / ${escapeHtml(role)}</div>`,
     `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
     renderBody(slide.body),
+    renderEvidenceRefs(slide.evidence_refs),
     '  </div>',
     '  <div class="foot">',
     `    <span class="title">${escapeHtml(title)}</span>`,

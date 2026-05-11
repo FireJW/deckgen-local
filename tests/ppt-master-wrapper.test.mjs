@@ -219,6 +219,46 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(svg, /implementation context\./);
 });
 
+test('renderPptMasterDeck carries evidence references into svg and notes', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-evidence-ppt-project-${Date.now()}`);
+  const evidenceContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        evidence_refs: [
+          'primary',
+          { id: 'ev1', source_ref: 'primary', locator: 'p. 2', quote: 'Verified claim.' }
+        ]
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: evidenceContract,
+    content: '# Evidence-backed Claim',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  const notes = readFileSync(path.join(outputDir, 'notes', '02_s02.md'), 'utf8');
+  assert.match(svg, /source: primary/);
+  assert.match(svg, /ev1 \| source: primary \| p\. 2 \| Verified claim\./);
+  assert.match(notes, /^## Evidence/m);
+  assert.match(notes, /- source: primary/);
+  assert.match(notes, /- ev1 \| source: primary \| p\. 2 \| Verified claim\./);
+});
+
 test('renderPptMasterDeck rejects pptx artifacts with the wrong slide count', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');
