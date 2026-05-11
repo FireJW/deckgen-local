@@ -168,6 +168,18 @@ when a supported template file cannot be found. Passing this preflight does not
 copy files; it only confirms that the next integration slice has auditable local
 source material.
 
+The ppt-master environment preflight lives in
+`scripts/ppt-master-preflight.mjs`:
+
+```bash
+npm run preflight:ppt-master -- --ppt-master-path path/to/ppt-master
+```
+
+It checks the local checkout, upstream exporter path, resolved Python
+executable, and `python-pptx` import before generation starts. This catches
+broken virtual environments and missing exporter dependencies before
+`--output pptx` or `--output both` creates a run bundle.
+
 ## HTML Visual QA
 
 Browser smoke for HTML output lives in `scripts/html-visual-smoke.mjs`. It opens

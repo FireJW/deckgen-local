@@ -79,6 +79,14 @@ npm run preflight:guizang -- --source D:\Users\rickylu\dev\guizang-ppt-skill
 npm run preflight:guizang -- --source D:\下载\guizang-ppt-skill-main.zip
 ```
 
+Before relying on editable PPTX export on a machine, run the ppt-master
+preflight. It checks the checkout path, upstream exporter, resolved Python
+environment, and `python-pptx` import before a generation run starts:
+
+```powershell
+npm run preflight:ppt-master -- --ppt-master-path D:\Users\rickylu\dev\ppt-master
+```
+
 Run the structural PPTX smoke against a generated `.pptx` when checking editable
 export artifacts without opening PowerPoint:
 
