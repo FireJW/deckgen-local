@@ -297,6 +297,46 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(notes, /- ev1 \| source: primary \| p\. 2 \| Verified claim\./);
 });
 
+test('renderPptMasterDeck renders swiss hinted decks with Swiss SVG tokens', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-swiss-ppt-project-${Date.now()}`);
+  const swissContract = {
+    ...sampleContract,
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Swiss Claim',
+        body: 'The visual system should use Swiss tokens.',
+        evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'Verified.' }]
+      }
+    ],
+    source_refs: [{ id: 'primary', type: 'local_file', path: 'D:/source.md', role: 'primary' }]
+  };
+
+  renderPptMasterDeck({
+    contract: swissContract,
+    content: '# Swiss Claim',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /data-renderer="ppt-master-swiss"/);
+  assert.match(svg, /#fafaf8/);
+  assert.match(svg, /#002FA7/);
+  assert.match(svg, /Swiss Claim/);
+  assert.match(svg, /Verified\./);
+});
+
 test('renderPptMasterDeck rejects pptx artifacts with the wrong slide count', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

@@ -9,8 +9,61 @@ import {
 import path from 'node:path';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
+import { isSwissRendererHint, resolveSwissTheme } from '../guizang-swiss/theme.mjs';
 
 const exporterRelativePath = path.join('skills', 'ppt-master', 'scripts', 'svg_to_pptx.py');
+const defaultPptVisualTheme = {
+  renderer: 'ppt-master',
+  background: '#f8fafc',
+  coverBackground: '#101820',
+  headlineColor: '#111827',
+  coverHeadlineColor: '#ffffff',
+  bodyColor: '#475569',
+  coverBodyColor: '#dbeafe',
+  accent: '#2563eb',
+  coverAccent: '#38bdf8',
+  muted: '#64748b',
+  coverMuted: '#94a3b8',
+  line: '#cbd5e1',
+  tableFill: '#ffffff',
+  tableHeaderFill: '#e0f2fe',
+  textSplitPrimaryFill: '#eff6ff',
+  textSplitSecondaryFill: '#ffffff',
+  textSplitPrimaryStroke: '#bfdbfe',
+  textSplitSecondaryStroke: '#e2e8f0',
+  panelRadius: 22,
+  swiss: null
+};
+
+const resolvePptVisualTheme = (contract) => {
+  if (!isSwissRendererHint(contract?.theme?.renderer_hint)) {
+    return defaultPptVisualTheme;
+  }
+
+  const swiss = resolveSwissTheme(contract.theme.renderer_hint);
+  return {
+    renderer: 'ppt-master-swiss',
+    background: swiss.paper,
+    coverBackground: swiss.accent,
+    headlineColor: swiss.ink,
+    coverHeadlineColor: swiss.accentOn,
+    bodyColor: swiss.ink,
+    coverBodyColor: swiss.accentOn,
+    accent: swiss.accent,
+    coverAccent: swiss.accentOn,
+    muted: swiss.grey3,
+    coverMuted: swiss.accentOn,
+    line: swiss.grey2,
+    tableFill: swiss.paper,
+    tableHeaderFill: swiss.grey1,
+    textSplitPrimaryFill: swiss.paper,
+    textSplitSecondaryFill: swiss.grey1,
+    textSplitPrimaryStroke: swiss.grey2,
+    textSplitSecondaryStroke: swiss.grey2,
+    panelRadius: 0,
+    swiss
+  };
+};
 
 const requiredString = (value, name) => {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -145,7 +198,21 @@ const splitTextSplitBody = (body) => {
   return [paragraphs[0] ?? lines[0] ?? '', ''];
 };
 
-const renderTextSplitSvg = ({ body, x, y, width, bodyColor, accent }) => {
+const roundedAttrs = (radius) => radius > 0 ? ` rx="${radius}"` : '';
+
+const renderTextSplitSvg = ({
+  body,
+  x,
+  y,
+  width,
+  bodyColor,
+  accent,
+  primaryFill = defaultPptVisualTheme.textSplitPrimaryFill,
+  secondaryFill = defaultPptVisualTheme.textSplitSecondaryFill,
+  primaryStroke = defaultPptVisualTheme.textSplitPrimaryStroke,
+  secondaryStroke = defaultPptVisualTheme.textSplitSecondaryStroke,
+  panelRadius = defaultPptVisualTheme.panelRadius
+}) => {
   const [leftText, rightText] = splitTextSplitBody(body);
   const gap = 48;
   const columnWidth = (width - gap) / 2;
@@ -160,16 +227,26 @@ const renderTextSplitSvg = ({ body, x, y, width, bodyColor, accent }) => {
 
   return [
     '<g class="ppt-text-split">',
-    `  <rect x="${x}" y="${y}" width="${columnWidth}" height="${panelHeight}" rx="22" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>`,
-    `  <rect x="${x}" y="${y}" width="8" height="${panelHeight}" rx="4" fill="${accent}"/>`,
-    `  <rect x="${x + columnWidth + gap}" y="${y}" width="${columnWidth}" height="${panelHeight}" rx="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>`,
+    `  <rect x="${x}" y="${y}" width="${columnWidth}" height="${panelHeight}"${roundedAttrs(panelRadius)} fill="${primaryFill}" stroke="${primaryStroke}" stroke-width="2"/>`,
+    `  <rect x="${x}" y="${y}" width="8" height="${panelHeight}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
+    `  <rect x="${x + columnWidth + gap}" y="${y}" width="${columnWidth}" height="${panelHeight}"${roundedAttrs(panelRadius)} fill="${secondaryFill}" stroke="${secondaryStroke}" stroke-width="2"/>`,
     `  ${renderColumnText(leftText, x)}`,
     `  ${renderColumnText(rightText, x + columnWidth + gap)}`,
     '</g>'
   ].join('\n  ');
 };
 
-const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
+const renderTableSvg = ({
+  table,
+  x,
+  y,
+  width,
+  bodyColor,
+  accent,
+  line = defaultPptVisualTheme.line,
+  fill = defaultPptVisualTheme.tableFill,
+  headerFill = defaultPptVisualTheme.tableHeaderFill
+}) => {
   const columnCount = Math.max(1, table.headers.length);
   const rowCount = Math.min(5, table.rows.length);
   const columnWidth = width / columnCount;
@@ -190,16 +267,16 @@ const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
   });
 
   const horizontalLines = Array.from({ length: rowCount + 1 }, (_, index) =>
-    `<line x1="${x}" y1="${y + headerHeight + index * rowHeight}" x2="${x + width}" y2="${y + headerHeight + index * rowHeight}" stroke="#cbd5e1" stroke-width="2"/>`
+    `<line x1="${x}" y1="${y + headerHeight + index * rowHeight}" x2="${x + width}" y2="${y + headerHeight + index * rowHeight}" stroke="${line}" stroke-width="2"/>`
   );
   const verticalLines = Array.from({ length: columnCount + 1 }, (_, index) =>
-    `<line x1="${x + index * columnWidth}" y1="${y}" x2="${x + index * columnWidth}" y2="${y + height}" stroke="#cbd5e1" stroke-width="2"/>`
+    `<line x1="${x + index * columnWidth}" y1="${y}" x2="${x + index * columnWidth}" y2="${y + height}" stroke="${line}" stroke-width="2"/>`
   );
 
   return [
     '<g class="ppt-table">',
-    `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>`,
-    `<rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" fill="#e0f2fe"/>`,
+    `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${fill}" stroke="${line}" stroke-width="2"/>`,
+    `<rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" fill="${headerFill}"/>`,
     `<rect x="${x}" y="${y}" width="10" height="${height}" fill="${accent}"/>`,
     ...horizontalLines,
     ...verticalLines,
@@ -241,12 +318,13 @@ const renderSlideNotes = (slide) => {
   return `${notes.join('\n')}\n`;
 };
 
-const renderSlideSvg = (slide, index) => {
+const renderSlideSvg = (slide, index, visualTheme) => {
   const isCover = index === 0 || slide?.role === 'cover';
-  const background = isCover ? '#101820' : '#f8fafc';
-  const headlineColor = isCover ? '#ffffff' : '#111827';
-  const bodyColor = isCover ? '#dbeafe' : '#475569';
-  const accent = isCover ? '#38bdf8' : '#2563eb';
+  const background = isCover ? visualTheme.coverBackground : visualTheme.background;
+  const headlineColor = isCover ? visualTheme.coverHeadlineColor : visualTheme.headlineColor;
+  const bodyColor = isCover ? visualTheme.coverBodyColor : visualTheme.bodyColor;
+  const accent = isCover ? visualTheme.coverAccent : visualTheme.accent;
+  const muted = isCover ? visualTheme.coverMuted : visualTheme.muted;
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
   const table = isCover ? null : parseMarkdownTable(slide?.body);
   const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table;
@@ -259,9 +337,31 @@ const renderSlideSvg = (slide, index) => {
   ).join('\n  ');
   let bodySvg;
   if (table) {
-    bodySvg = renderTableSvg({ table, x: 120, y: bodyStartY, width: 1040, bodyColor, accent });
+    bodySvg = renderTableSvg({
+      table,
+      x: 120,
+      y: bodyStartY,
+      width: 1040,
+      bodyColor,
+      accent,
+      line: visualTheme.line,
+      fill: visualTheme.tableFill,
+      headerFill: visualTheme.tableHeaderFill
+    });
   } else if (textSplit) {
-    bodySvg = renderTextSplitSvg({ body: slide?.body, x: 120, y: bodyStartY, width: 1040, bodyColor, accent });
+    bodySvg = renderTextSplitSvg({
+      body: slide?.body,
+      x: 120,
+      y: bodyStartY,
+      width: 1040,
+      bodyColor,
+      accent,
+      primaryFill: visualTheme.textSplitPrimaryFill,
+      secondaryFill: visualTheme.textSplitSecondaryFill,
+      primaryStroke: visualTheme.textSplitPrimaryStroke,
+      secondaryStroke: visualTheme.textSplitSecondaryStroke,
+      panelRadius: visualTheme.panelRadius
+    });
   } else {
     bodySvg = bodyLines.map((line, lineIndex) =>
       `<text x="120" y="${bodyStartY + lineIndex * 38}" font-family="Arial, sans-serif" font-size="30" fill="${bodyColor}">${escapeXml(line)}</text>`
@@ -271,16 +371,16 @@ const renderSlideSvg = (slide, index) => {
     evidenceRefs: slide?.evidence_refs,
     x: 120,
     y: 748,
-    color: isCover ? '#94a3b8' : '#64748b'
+    color: muted
   });
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" data-renderer="${visualTheme.renderer}">
   <rect width="1600" height="900" fill="${background}"/>
-  <rect x="120" y="${isCover ? 210 : 96}" width="180" height="10" rx="5" fill="${accent}"/>
+  <rect x="120" y="${isCover ? 210 : 96}" width="180" height="10"${roundedAttrs(visualTheme.panelRadius ? 5 : 0)} fill="${accent}"/>
   ${headlineSvg}
   ${bodySvg}
   ${evidenceSvg}
-  <text x="120" y="820" font-family="Arial, sans-serif" font-size="22" fill="${isCover ? '#94a3b8' : '#64748b'}">${escapeXml(slide?.role ?? 'slide')}</text>
+  <text x="120" y="820" font-family="Arial, sans-serif" font-size="22" fill="${muted}">${escapeXml(slide?.role ?? 'slide')}</text>
 </svg>
 `;
 };
@@ -294,6 +394,7 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
   const svgOutputDir = path.join(projectDir, 'svg_output');
   const svgFinalDir = path.join(projectDir, 'svg_final');
   const exportsDir = path.join(projectDir, 'exports');
+  const visualTheme = resolvePptVisualTheme(contract);
 
   mkdirSync(notesDir, { recursive: true });
   mkdirSync(svgOutputDir, { recursive: true });
@@ -314,7 +415,7 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
 
   contract.slides.forEach((slide, index) => {
     const stem = slideStem(slide, index);
-    const svg = renderSlideSvg(slide, index);
+    const svg = renderSlideSvg(slide, index, visualTheme);
     writeFileSync(path.join(svgOutputDir, `${stem}.svg`), svg, 'utf8');
     writeFileSync(path.join(svgFinalDir, `${stem}.svg`), svg, 'utf8');
     writeFileSync(path.join(notesDir, `${stem}.md`), renderSlideNotes(slide), 'utf8');
