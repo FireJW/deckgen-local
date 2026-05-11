@@ -284,6 +284,9 @@ const findPptxArtifacts = (exportsDir) => {
 
 const trimProcessOutput = (value) => String(value ?? '').trim().slice(0, 2000);
 
+export const shouldUseShellForCommand = (commandPath) =>
+  process.platform === 'win32' && /\.(cmd|bat)$/i.test(commandPath);
+
 export const getPptMasterExporterPath = (pptMasterPath) =>
   path.join(pptMasterPath, exporterRelativePath);
 
@@ -333,7 +336,8 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
     '--quiet'
   ], {
     cwd: path.dirname(exporterPath),
-    encoding: 'utf8'
+    encoding: 'utf8',
+    shell: shouldUseShellForCommand(pythonPath)
   });
 
   if (run.error) {

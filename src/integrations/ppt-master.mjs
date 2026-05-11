@@ -3,7 +3,8 @@ import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import {
   getPptMasterExporterPath,
-  resolvePptMasterPythonPath
+  resolvePptMasterPythonPath,
+  shouldUseShellForCommand
 } from '../renderers/ppt-master/render.mjs';
 
 const missingCheckoutNextStep = 'Provide a local ppt-master checkout, then rerun this preflight before PPTX export.';
@@ -14,7 +15,10 @@ const missingPythonPptxNextStep = 'Install python-pptx into the resolved ppt-mas
 const trimOutput = (value) => String(value ?? '').trim().slice(0, 2000);
 
 const runPythonProcess = (pythonPath, args) => {
-  const run = spawnSync(pythonPath, args, { encoding: 'utf8' });
+  const run = spawnSync(pythonPath, args, {
+    encoding: 'utf8',
+    shell: shouldUseShellForCommand(pythonPath)
+  });
   return {
     status: run.status,
     stdout: run.stdout,

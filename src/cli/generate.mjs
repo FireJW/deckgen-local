@@ -2,6 +2,7 @@ import { randomUUID as defaultRandomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { validateDeckContract } from '../contract/validate.mjs';
+import { inspectPptMasterEnvironment } from '../integrations/ppt-master.mjs';
 import { buildQcReport } from '../qc/report.mjs';
 import { getHtmlGuizangAssetFiles, renderHtmlDeck } from '../renderers/html-guizang/render.mjs';
 import { getPptMasterExporterPath, renderPptMasterDeck } from '../renderers/ppt-master/render.mjs';
@@ -24,6 +25,15 @@ export const failIfPptxRequested = (outputs, config = {}) => {
     const exporterPath = getPptMasterExporterPath(path.resolve(config.pptMasterPath));
     if (!existsSync(exporterPath)) {
       throw new DeckgenUserError(`ppt-master exporter not found: ${exporterPath}`);
+    }
+
+    const preflight = inspectPptMasterEnvironment({
+      pptMasterPath: path.resolve(config.pptMasterPath),
+      pythonPath: config.pythonPath
+    });
+    if (!preflight.ok) {
+      const nextStep = preflight.next_step ? ` Next: ${preflight.next_step}` : '';
+      throw new DeckgenUserError(`${preflight.error}${nextStep}`);
     }
   }
 };

@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { mkdirSync, mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -79,6 +79,45 @@ fs.mkdirSync(exportsDir, { recursive: true });
 fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'cli-fake.pptx'));
 `, 'utf8');
   return rootDir;
+};
+
+const makeFakePython = () => {
+  const rootDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-fake-python-'));
+  const scriptPath = path.join(rootDir, 'fake-python.mjs');
+  writeFileSync(scriptPath, `#!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+
+const args = process.argv.slice(2);
+if (args[0] === '--version') {
+  process.stdout.write('Python 3.12.13\\n');
+  process.exit(0);
+}
+
+if (args[0] === '-c' && args.slice(1).join(' ').includes('from pptx import Presentation')) {
+  process.stdout.write('python-pptx import ok\\n');
+  process.exit(0);
+}
+
+const run = spawnSync(process.execPath, args, { stdio: 'inherit' });
+if (run.error) {
+  process.stderr.write(String(run.error.message) + '\\n');
+  process.exit(1);
+}
+process.exit(run.status ?? 0);
+`, 'utf8');
+
+  if (process.platform !== 'win32') {
+    chmodSync(scriptPath, 0o755);
+    return scriptPath;
+  }
+
+  const commandPath = path.join(rootDir, 'fake-python.cmd');
+  writeFileSync(commandPath, [
+    '@echo off',
+    `"${process.execPath}" "%~dp0fake-python.mjs" %*`,
+    ''
+  ].join('\r\n'), 'utf8');
+  return commandPath;
 };
 
 test('generate writes a run bundle with html and qc report', () => {
@@ -214,12 +253,27 @@ test('generate fails closed for both output until ppt-master wrapper exists', ()
   assert.match(run.stderr, /pptMasterPath|ppt-master/i);
 });
 
-test('generate writes pptx output only when ppt-master creates an artifact', () => {
+test('generate fails closed before bundle creation when ppt-master python lacks python-pptx', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
   const pptMasterPath = makeFakePptMaster();
   const run = runGenerate(
     ['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
     { env: { DECKGEN_PPT_MASTER_PYTHON: process.execPath } }
+  );
+
+  assert.notEqual(run.status, 0);
+  assert.doesNotMatch(run.stdout, /written/);
+  assert.match(run.stderr, /python-pptx/i);
+  assert.equal(existsSync(path.join(tmp, '.tmp', 'deckgen')), false);
+});
+
+test('generate writes pptx output only when ppt-master creates an artifact', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
+  const pptMasterPath = makeFakePptMaster();
+  const pythonPath = makeFakePython();
+  const run = runGenerate(
+    ['--source', source, '--profile', 'briefing', '--output', 'pptx', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
+    { env: { DECKGEN_PPT_MASTER_PYTHON: pythonPath } }
   );
 
   assert.equal(run.status, 0, run.stderr);
@@ -233,9 +287,10 @@ test('generate writes pptx output only when ppt-master creates an artifact', () 
 test('generate writes sibling html and pptx outputs for both mode', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
   const pptMasterPath = makeFakePptMaster();
+  const pythonPath = makeFakePython();
   const run = runGenerate(
     ['--source', source, '--profile', 'briefing', '--output', 'both', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
-    { env: { DECKGEN_PPT_MASTER_PYTHON: process.execPath } }
+    { env: { DECKGEN_PPT_MASTER_PYTHON: pythonPath } }
   );
 
   assert.equal(run.status, 0, run.stderr);
