@@ -17,6 +17,14 @@ const normalizeSlideNumber = (value) => {
   return slideNumber;
 };
 
+const normalizeSlideNumbers = (values) => {
+  if (!Array.isArray(values) || values.length < 1) {
+    throw new Error('slideNumbers must contain at least one slide number.');
+  }
+
+  return values.map((value) => normalizeSlideNumber(value));
+};
+
 export function resolvePowerPointExecutable(options = {}) {
   const {
     executablePath,
@@ -65,9 +73,48 @@ export function buildPowerPointExportScript({
   ].join('\n');
 }
 
-export function defaultPptxScreenshotPath(pptxPath, cwd = process.cwd(), slideNumber = 1) {
+export function buildPowerPointExportSlidesScript({
+  pptxPath,
+  exports,
+  width = 1600,
+  height = 900
+} = {}) {
+  const exportItems = Array.isArray(exports) ? exports : [];
+  if (exportItems.length < 1) {
+    throw new Error('exports must contain at least one slide export.');
+  }
+
+  const exportLines = exportItems.map((item) => {
+    const slideNumber = normalizeSlideNumber(item?.slideNumber);
+    return `  $presentation.Slides.Item(${slideNumber}).Export(${psQuote(item?.screenshotPath)}, 'PNG', ${Number(width)}, ${Number(height)})`;
+  });
+
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    `$pptx = ${psQuote(pptxPath)}`,
+    '$app = $null',
+    '$presentation = $null',
+    'try {',
+    '  $app = New-Object -ComObject PowerPoint.Application',
+    '  $presentation = $app.Presentations.Open($pptx, -1, 0, 0)',
+    ...exportLines,
+    '} finally {',
+    '  if ($presentation -ne $null) {',
+    '    try { $presentation.Close() } catch {}',
+    '    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($presentation) } catch {}',
+    '  }',
+    '  if ($app -ne $null) {',
+    '    try { $app.Quit() } catch {}',
+    '    try { [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($app) } catch {}',
+    '  }',
+    '  [GC]::Collect()',
+    '  [GC]::WaitForPendingFinalizers()',
+    '}'
+  ].join('\n');
+}
+
+export function defaultPptxScreenshotPath(pptxPath, cwd = process.cwd(), slideNumber = 1, stamp = new Date().toISOString().replace(/[:.]/g, '-')) {
   const resolvedSlideNumber = normalizeSlideNumber(slideNumber);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const basename = path.basename(pptxPath ?? 'deck.pptx', path.extname(pptxPath ?? 'deck.pptx'));
   return path.resolve(cwd, '.tmp', 'deckgen-pptx-visual-smoke', `${basename}-${stamp}-slide${resolvedSlideNumber}.png`);
 }
@@ -97,6 +144,109 @@ export function inspectPngFile(filePath) {
     screenshotMime: 'image/png',
     imageWidth,
     imageHeight
+  };
+}
+
+const inspectScreenshotResult = ({ pptxPath, screenshotPath, slideNumber, width, height }) => {
+  const resolvedScreenshotPath = path.resolve(screenshotPath ?? '');
+  if (!existsSync(resolvedScreenshotPath)) {
+    throw new Error(`PowerPoint visual export did not create a screenshot: ${resolvedScreenshotPath}`);
+  }
+
+  const screenshotBytes = statSync(resolvedScreenshotPath).size;
+  if (screenshotBytes < 1) {
+    throw new Error(`PowerPoint visual export created an empty screenshot: ${resolvedScreenshotPath}`);
+  }
+
+  const image = inspectPngFile(resolvedScreenshotPath);
+
+  return {
+    pptxPath,
+    slideNumber,
+    screenshotPath: resolvedScreenshotPath,
+    screenshotBytes,
+    ...image,
+    width: Number(width),
+    height: Number(height)
+  };
+};
+
+export function exportSlidesWithPowerPoint(options = {}) {
+  const {
+    pptxPath,
+    powerPointPath,
+    slideNumbers,
+    screenshotPathForSlide,
+    width = 1600,
+    height = 900,
+    exists = existsSync,
+    spawn = spawnSync
+  } = options;
+  const resolvedSlideNumbers = normalizeSlideNumbers(slideNumbers);
+  const resolvedPptxPath = path.resolve(pptxPath ?? '');
+  const resolvedPowerPointPath = resolvePowerPointExecutable({
+    executablePath: powerPointPath,
+    exists
+  });
+
+  if (!exists(resolvedPowerPointPath)) {
+    throw new Error('PowerPoint executable not found. Install Microsoft PowerPoint or pass --powerpoint-executable / set DECKGEN_POWERPOINT_PATH.');
+  }
+
+  if (!exists(resolvedPptxPath)) {
+    throw new Error(`PPTX file not found: ${resolvedPptxPath}`);
+  }
+
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const exports = resolvedSlideNumbers.map((slideNumber) => {
+    const screenshotPath = path.resolve(
+      typeof screenshotPathForSlide === 'function'
+        ? screenshotPathForSlide(slideNumber)
+        : defaultPptxScreenshotPath(resolvedPptxPath, process.cwd(), slideNumber, stamp)
+    );
+    mkdirSync(path.dirname(screenshotPath), { recursive: true });
+    return { slideNumber, screenshotPath };
+  });
+
+  const script = buildPowerPointExportSlidesScript({
+    pptxPath: resolvedPptxPath,
+    exports,
+    width,
+    height
+  });
+  const run = spawn('powershell.exe', [
+    '-NoProfile',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    script
+  ], {
+    encoding: 'utf8'
+  });
+
+  if (run.error) {
+    throw new Error(`PowerPoint visual export failed to start: ${run.error.message}`);
+  }
+
+  if (run.status !== 0) {
+    const detail = String(run.stderr || run.stdout || '').trim().slice(0, 2000);
+    throw new Error(`PowerPoint visual export failed with status ${run.status}${detail ? `: ${detail}` : ''}`);
+  }
+
+  return {
+    ok: true,
+    renderer: 'powerpoint',
+    pptxPath: resolvedPptxPath,
+    powerPointPath: resolvedPowerPointPath,
+    slideNumbers: resolvedSlideNumbers,
+    slideCount: resolvedSlideNumbers.length,
+    screenshots: exports.map((item) => inspectScreenshotResult({
+      pptxPath: resolvedPptxPath,
+      screenshotPath: item.screenshotPath,
+      slideNumber: item.slideNumber,
+      width,
+      height
+    }))
   };
 }
 

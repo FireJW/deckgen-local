@@ -227,8 +227,9 @@ Windows machines with Microsoft PowerPoint available, it reuses the structural
 PPTX checks, opens the deck through PowerPoint automation, exports a requested
 slide as a PNG, and validates that the screenshot file exists, has bytes, has a
 PNG signature, and exposes positive IHDR dimensions. It defaults to slide 1; use
-`--slide <n>` to smoke a later table or two-column slide. It fails closed when
-PowerPoint is unavailable; use `--powerpoint-executable <path>` or
+`--slide <n>` to smoke a later table or two-column slide, or `--all-slides` to
+export and validate one PNG per slide in a single PowerPoint session. It fails
+closed when PowerPoint is unavailable; use `--powerpoint-executable <path>` or
 `DECKGEN_POWERPOINT_PATH` when the executable is not in the default Office path.
 
 ## PPTX Boundary

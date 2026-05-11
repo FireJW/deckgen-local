@@ -9,6 +9,7 @@ import {
   buildPowerPointExportScript,
   defaultPptxScreenshotPath,
   exportFirstSlideWithPowerPoint,
+  exportSlidesWithPowerPoint,
   resolvePowerPointExecutable
 } from '../src/qc/pptx-visual-smoke.mjs';
 
@@ -123,6 +124,55 @@ test('pptx visual smoke script rejects slide numbers beyond the deck count', () 
 
   assert.equal(run.status, 1);
   assert.match(run.stderr, /--slide 3 exceeds PPTX slide count 2/);
+});
+
+test('pptx visual smoke script rejects all-slides with slide option', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-cli-'));
+  const pptxPath = path.join(dir, 'deck.pptx');
+  writeFileSync(pptxPath, createMinimalPptxBytes(2));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--pptx', pptxPath,
+    '--all-slides',
+    '--slide', '2'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /--all-slides cannot be combined with --slide/);
+});
+
+test('exportSlidesWithPowerPoint returns screenshot artifacts for each requested slide', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-all-'));
+  const pptxPath = path.join(dir, 'deck.pptx');
+  writeFileSync(pptxPath, 'fake pptx bytes');
+
+  const result = exportSlidesWithPowerPoint({
+    pptxPath,
+    powerPointPath: 'C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE',
+    slideNumbers: [1, 2, 3],
+    exists: (filePath) => filePath === 'C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE' ||
+      filePath === pptxPath ||
+      /slide[123]\.png$/.test(filePath),
+    spawn: (_command, _args, options) => {
+      const scriptText = options.input ?? _args.at(-1);
+      for (const slideNumber of [1, 2, 3]) {
+        const screenshotPath = path.join(dir, `slide${slideNumber}.png`);
+        mkdirSync(path.dirname(screenshotPath), { recursive: true });
+        writeFileSync(screenshotPath, makePngHeader(1600, 900));
+        assert.match(scriptText, new RegExp(`Slides\\.Item\\(${slideNumber}\\)\\.Export`));
+      }
+      return { status: 0, stdout: '', stderr: '' };
+    },
+    screenshotPathForSlide: (slideNumber) => path.join(dir, `slide${slideNumber}.png`)
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.slideCount, 3);
+  assert.deepEqual(result.slideNumbers, [1, 2, 3]);
+  assert.equal(result.screenshots.length, 3);
+  assert.deepEqual(result.screenshots.map((item) => item.slideNumber), [1, 2, 3]);
+  assert.deepEqual(result.screenshots.map((item) => item.screenshotBytes), [33, 33, 33]);
 });
 
 test('exportFirstSlideWithPowerPoint returns a real screenshot artifact when export succeeds', () => {

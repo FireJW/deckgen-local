@@ -9,13 +9,14 @@ import {
 } from '../src/qc/pptx-structural-smoke.mjs';
 import {
   defaultPptxScreenshotPath,
-  exportFirstSlideWithPowerPoint
+  exportFirstSlideWithPowerPoint,
+  exportSlidesWithPowerPoint
 } from '../src/qc/pptx-visual-smoke.mjs';
 
 const usage = [
   'pptx-visual-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir>',
   '                  [--screenshot-out <path>] [--expected-slides <n>]',
-  '                  [--slide <n>] [--powerpoint-executable <path>]'
+  '                  [--slide <n> | --all-slides] [--powerpoint-executable <path>]'
 ].join('\n');
 
 const fail = (message) => {
@@ -35,9 +36,8 @@ const parseArgs = (tokens) => {
     ['--powerpoint-executable', 'powerPointPath']
   ]);
 
-  for (let index = 0; index < tokens.length; index += 2) {
+  for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
-    const value = tokens[index + 1];
 
     if (flag === '--help' || flag === '-h') {
       process.stdout.write(`${usage}\n`);
@@ -48,6 +48,12 @@ const parseArgs = (tokens) => {
       fail(`Unexpected argument: ${flag ?? ''}`);
     }
 
+    if (flag === '--all-slides') {
+      options.allSlides = true;
+      continue;
+    }
+
+    const value = tokens[index + 1];
     if (value === undefined || value.startsWith('--')) {
       fail(`Missing value for ${flag}.`);
     }
@@ -58,6 +64,7 @@ const parseArgs = (tokens) => {
     }
 
     options[key] = value;
+    index += 1;
   }
 
   const targetCount = [options.pptxPath, options.exportsDir, options.runDir]
@@ -76,6 +83,14 @@ const parseArgs = (tokens) => {
       fail('--expected-slides must be a positive integer.');
     }
     options.expectedSlides = expectedSlides;
+  }
+
+  if (options.allSlides && options.slideNumber !== undefined) {
+    fail('--all-slides cannot be combined with --slide.');
+  }
+
+  if (options.allSlides && options.screenshotOut !== undefined) {
+    fail('--all-slides cannot be combined with --screenshot-out.');
   }
 
   if (options.slideNumber !== undefined) {
@@ -124,6 +139,20 @@ const main = async () => {
 
   if (options.slideNumber > structural.slideCount) {
     fail(`--slide ${options.slideNumber} exceeds PPTX slide count ${structural.slideCount}.`);
+  }
+
+  if (options.allSlides) {
+    try {
+      const visual = exportSlidesWithPowerPoint({
+        pptxPath,
+        powerPointPath: options.powerPointPath,
+        slideNumbers: Array.from({ length: structural.slideCount }, (_, index) => index + 1)
+      });
+      process.stdout.write(`${JSON.stringify({ ...structural, ...structuralValidation, ...visual }, null, 2)}\n`);
+    } catch (error) {
+      fail(error.message);
+    }
+    return;
   }
 
   const screenshotPath = path.resolve(options.screenshotOut ?? defaultPptxScreenshotPath(pptxPath, process.cwd(), options.slideNumber));
