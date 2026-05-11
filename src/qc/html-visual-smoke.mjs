@@ -43,7 +43,7 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
     errors.push('guizang navigation element is missing');
   }
 
-  const minimumBackgroundCanvasCount = isSwiss ? 1 : 2;
+  const minimumBackgroundCanvasCount = isSwiss ? 0 : 2;
   if (!Number.isFinite(backgroundCanvasCount) || backgroundCanvasCount < minimumBackgroundCanvasCount) {
     errors.push(`background canvas count ${backgroundCanvasCount} is below ${minimumBackgroundCanvasCount}`);
   }

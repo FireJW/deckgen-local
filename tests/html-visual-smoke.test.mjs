@@ -42,7 +42,7 @@ test('validateVisualSmokeResult accepts Swiss renderer markers', () => {
     overflowItems: [],
     deckElementPresent: true,
     navElementPresent: true,
-    backgroundCanvasCount: 1,
+    backgroundCanvasCount: 0,
     hasSwissLayouts: true,
     localMotionImportPresent: true,
     localMotionAssetBytes: 12400,

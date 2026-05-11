@@ -212,8 +212,9 @@ a generated `html/index.html` with Playwright, captures a screenshot under
 
 - page title is present and matches the expected title when provided
 - renderer marker is `html-guizang` or `html-guizang-swiss`
-- vendored guizang shell markers exist: `#deck`, `#nav`, and background
-  canvases; Swiss output requires registered `data-layout` markers on slides
+- vendored guizang shell markers exist: `#deck` and `#nav`; Style A requires
+  its two background canvases, while Swiss output may remove its grid canvas in
+  full-canvas mode and is keyed by registered `data-layout` markers on slides
 - the generated `html/assets/motion.min.js` file exists when the page imports
   the local motion asset
 - external `<script src="...">` tags are absent, so the smoke catches CDN
