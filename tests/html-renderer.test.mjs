@@ -1,6 +1,10 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import { renderHtmlDeck } from '../src/renderers/html-guizang/render.mjs';
+import {
+  isSwissRendererHint,
+  resolveSwissTheme
+} from '../src/renderers/guizang-swiss/theme.mjs';
 import { buildQcReport } from '../src/qc/report.mjs';
 
 test('renderHtmlDeck renders a single-file deck', () => {
@@ -15,6 +19,33 @@ test('renderHtmlDeck renders a single-file deck', () => {
   assert.match(html, /<html/);
   assert.match(html, /Deck Generator Briefing/);
   assert.match(html, /class="deck/);
+});
+
+test('Swiss theme detection is opt-in only', () => {
+  assert.equal(isSwissRendererHint('swiss-ikb'), true);
+  assert.equal(isSwissRendererHint('swiss_lemon'), true);
+  assert.equal(isSwissRendererHint('indigo_porcelain'), false);
+  assert.equal(isSwissRendererHint(undefined), false);
+});
+
+test('Swiss theme resolver exposes fixed accent tokens and fallback', () => {
+  assert.deepEqual(resolveSwissTheme('swiss-ikb'), {
+    key: 'swiss-ikb',
+    accent: '#002FA7',
+    accentRgb: '0,47,167',
+    accentOn: '#ffffff',
+    paper: '#fafaf8',
+    paperRgb: '250,250,248',
+    ink: '#0a0a0a',
+    inkRgb: '10,10,10',
+    grey1: '#f0f0ee',
+    grey2: '#d4d4d2',
+    grey3: '#737373'
+  });
+  assert.equal(resolveSwissTheme('swiss-custom-purple').key, 'swiss-ikb');
+  assert.equal(resolveSwissTheme('swiss-lemon').accent, '#FFD500');
+  assert.equal(resolveSwissTheme('swiss-green').accent, '#C5E803');
+  assert.equal(resolveSwissTheme('swiss-orange').accent, '#FF6B35');
 });
 
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
