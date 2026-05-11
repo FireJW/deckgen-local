@@ -48,6 +48,37 @@ test('Swiss theme resolver exposes fixed accent tokens and fallback', () => {
   assert.equal(resolveSwissTheme('swiss-orange').accent, '#FF6B35');
 });
 
+test('renderHtmlDeck routes swiss hints to the Swiss renderer', () => {
+  const html = renderHtmlDeck({
+    title: 'Swiss Briefing',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [
+      { id: 's01', role: 'cover', headline: 'Swiss Briefing', body: 'Preview', evidence_refs: [], layout_intent: 'hero_dark' },
+      { id: 's02', role: 'content', headline: 'Grounded Claim', body: 'The body stays restrained.', evidence_refs: [], layout_intent: 'evidence' }
+    ]
+  });
+
+  assert.match(html, /data-renderer="html-guizang-swiss"/);
+  assert.match(html, /data-swiss-theme="swiss-ikb"/);
+  assert.match(html, /data-layout="SWISS-COVER-ASCII"|data-layout="S01"/);
+  assert.match(html, /data-layout="S03"|data-layout="S19"/);
+  assert.match(html, /--accent:#002FA7/);
+  assert.doesNotMatch(html, /data-renderer="html-guizang"/);
+});
+
+test('renderHtmlDeck keeps non-Swiss hints on Style A', () => {
+  const html = renderHtmlDeck({
+    title: 'Style A Briefing',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      { id: 's01', role: 'cover', headline: 'Style A Briefing', body: 'Preview', evidence_refs: [], layout_intent: 'hero_dark' }
+    ]
+  });
+
+  assert.match(html, /data-renderer="html-guizang"/);
+  assert.doesNotMatch(html, /html-guizang-swiss/);
+});
+
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',

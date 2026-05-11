@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { isSwissRendererHint } from '../guizang-swiss/theme.mjs';
+import { renderSwissHtmlDeck } from './swiss.mjs';
 
 const rendererDir = path.dirname(fileURLToPath(import.meta.url));
 const vendoredGuizangRoot = path.resolve(rendererDir, '..', '..', '..', 'third_party', 'guizang-ppt-skill');
@@ -280,6 +282,10 @@ const renderSlide = (slide, index, totalSlides, title) => {
 };
 
 export function renderHtmlDeck(contract) {
+  if (isSwissRendererHint(contract?.theme?.renderer_hint)) {
+    return renderSwissHtmlDeck(contract);
+  }
+
   const title = contract?.title ?? 'Deck';
   const theme = resolveTheme(contract?.theme?.renderer_hint);
   const slides = Array.isArray(contract?.slides) ? contract.slides : [];
