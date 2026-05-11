@@ -231,6 +231,22 @@ test('generate propagates learning text_split layout to html output', () => {
   assert.match(html, /layout-text-split/);
 });
 
+test('generate lets CLI theme override the source renderer hint', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-cli-theme-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp, '--theme', 'swiss-green']);
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const request = JSON.parse(readFileSync(path.join(runDir, 'request.json'), 'utf8'));
+  const contract = JSON.parse(readFileSync(path.join(runDir, 'deck_contract.json'), 'utf8'));
+  const html = readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8');
+
+  assert.equal(request.theme, 'swiss-green');
+  assert.equal(contract.theme.renderer_hint, 'swiss-green');
+  assert.match(html, /data-renderer="html-guizang-swiss"/);
+  assert.match(html, /data-swiss-theme="swiss-green"/);
+});
+
 test('generate fails closed for pptx output until ppt-master wrapper exists', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
   const isolatedCwd = mkdtempSync(path.join(os.tmpdir(), 'deckgen-no-ppt-master-'));

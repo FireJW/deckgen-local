@@ -162,6 +162,15 @@ Swiss Style B is available as an opt-in renderer when
 `deck_contract.json.theme.renderer_hint` starts with `swiss-`. The first pass
 supports `swiss-ikb`, `swiss-lemon`, `swiss-green`, and `swiss-orange`; unknown
 `swiss-*` hints fall back to `swiss-ikb` rather than accepting arbitrary colors.
+For cross-repo or one-off CLI calls, `--theme <renderer-hint>` overrides the
+source package renderer hint before writing the run bundle. This is the
+recommended way to request Swiss output from another local repo without editing
+the source artifact:
+
+```powershell
+node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master
+```
+
 Generic Markdown sources can pass the hint through supported YAML frontmatter:
 
 ```yaml

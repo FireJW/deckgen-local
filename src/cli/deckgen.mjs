@@ -10,7 +10,7 @@ import {
 } from './generate.mjs';
 import { loadSourcePackage } from './source-loader.mjs';
 
-const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--workdir <path>] [--ppt-master-path <path>]`;
+const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--theme <renderer-hint>] [--workdir <path>] [--ppt-master-path <path>]`;
 const args = process.argv.slice(2);
 const [command] = args;
 const isHelpFlag = (token) => token === '--help' || token === '-h';
@@ -29,6 +29,7 @@ const parseGenerateFlags = (tokens) => {
     ['--source', 'source'],
     ['--profile', 'profile'],
     ['--output', 'output'],
+    ['--theme', 'theme'],
     ['--workdir', 'workdir'],
     ['--ppt-master-path', 'pptMasterPath']
   ]);
@@ -118,6 +119,12 @@ const commandGenerate = (tokens) => {
 
   const contract = {
     ...sourcePackage.contract,
+    theme: options.theme
+      ? {
+          ...sourcePackage.contract.theme,
+          renderer_hint: options.theme
+        }
+      : sourcePackage.contract.theme,
     outputs: concreteOutputs
   };
   const request = {
@@ -127,6 +134,7 @@ const commandGenerate = (tokens) => {
     profile: sourcePackage.profile,
     output: options.output,
     outputs: concreteOutputs,
+    ...(options.theme ? { theme: options.theme } : {}),
     workdir: options.workdir,
     pptMasterPath
   };

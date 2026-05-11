@@ -18,6 +18,7 @@ test('prints help', () => {
   assert.match(help.stdout, /deckgen generate/);
   assert.match(help.stdout, /--source/);
   assert.match(help.stdout, /--output/);
+  assert.match(help.stdout, /--theme/);
 });
 
 test('unsupported command exits non-zero with stderr', () => {

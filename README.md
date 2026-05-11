@@ -32,6 +32,13 @@ node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\swiss-brief
 npm run smoke:swiss -- .tmp\deckgen\<run-id>\html\index.html
 ```
 
+For one-off calls from another repo or Codex session, pass the renderer hint on
+the command line instead of editing the source Markdown:
+
+```powershell
+node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --profile briefing --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master
+```
+
 Directory sources are supported when they include an explicit
 `deckgen.source.json` marker. This keeps cross-repo package detection
 fail-closed instead of guessing from directory names.
