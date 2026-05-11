@@ -255,7 +255,8 @@ copies. It then calls the upstream exporter and verifies
 `ppt-master/exports/*.pptx` before the CLI reports success.
 When a slide body contains a standard Markdown table block, the project writer
 maps it into an SVG table group for `ppt-master` instead of passing raw
-pipe-delimited Markdown text through to the slide image. Slides with
+pipe-delimited Markdown text through to the slide image. Long table cell text is
+compacted and ellipsized to keep fixed-width SVG columns readable. Slides with
 `layout_intent: "text_split"` are mapped into two-column SVG blocks so learning
 profile concept/explanation slides keep their contract layout in PPTX output.
 Structured and legacy `evidence_refs` are emitted into both slide SVGs and

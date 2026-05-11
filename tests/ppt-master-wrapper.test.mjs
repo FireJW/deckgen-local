@@ -178,6 +178,44 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.doesNotMatch(svg, /\| Rank \| Symbol \| Score \|/);
 });
 
+test('renderPptMasterDeck truncates long pptx table cells to stay within columns', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-long-table-ppt-project-${Date.now()}`);
+  const tableContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Long Table Cell',
+        body: [
+          '| Company | Thesis |',
+          '|---|---|',
+          '| SampleCo | This is an extremely long table cell that should be shortened before it is written into a fixed-width SVG column. |'
+        ].join('\n')
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: tableContract,
+    content: '# Long Table Cell',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /extremely long table cell that should be.../);
+  assert.doesNotMatch(svg, /fixed-width SVG column/);
+});
+
 test('renderPptMasterDeck maps text_split slides into pptx two-column svg blocks', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

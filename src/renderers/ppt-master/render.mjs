@@ -105,7 +105,20 @@ const parseMarkdownTable = (body) => {
   };
 };
 
-const cleanCellText = (value) => String(value ?? '').replace(/`([^`]*)`/g, '$1');
+const cleanCellText = (value) => String(value ?? '')
+  .replace(/`([^`]*)`/g, '$1')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const fitTableCellText = (value, columnWidth) => {
+  const text = cleanCellText(value);
+  const maxChars = Math.max(12, Math.floor((columnWidth - 28) / 9.5));
+  if (text.length <= maxChars) {
+    return text;
+  }
+
+  return `${text.slice(0, maxChars).trimEnd()}...`;
+};
 
 const splitTextSplitBody = (body) => {
   const normalized = String(body ?? '')
@@ -166,13 +179,13 @@ const renderTableSvg = ({ table, x, y, width, bodyColor, accent }) => {
   const cells = [];
 
   table.headers.forEach((header, index) => {
-    cells.push(`<text x="${x + index * columnWidth + 18}" y="${y + 33}" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="${bodyColor}">${escapeXml(cleanCellText(header))}</text>`);
+    cells.push(`<text x="${x + index * columnWidth + 18}" y="${y + 33}" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="${bodyColor}">${escapeXml(fitTableCellText(header, columnWidth))}</text>`);
   });
 
   table.rows.slice(0, rowCount).forEach((row, rowIndex) => {
     const cellY = y + headerHeight + rowIndex * rowHeight + 32;
     for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
-      cells.push(`<text x="${x + columnIndex * columnWidth + 18}" y="${cellY}" font-family="Arial, sans-serif" font-size="24" fill="${bodyColor}">${escapeXml(cleanCellText(row[columnIndex] ?? ''))}</text>`);
+      cells.push(`<text x="${x + columnIndex * columnWidth + 18}" y="${cellY}" font-family="Arial, sans-serif" font-size="24" fill="${bodyColor}">${escapeXml(fitTableCellText(row[columnIndex] ?? '', columnWidth))}</text>`);
     }
   });
 
