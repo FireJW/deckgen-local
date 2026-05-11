@@ -269,9 +269,9 @@ PPTX artifacts.
 HTML and PPTX are sibling outputs from `deck_contract.json`.
 
 The pipeline is not HTML-to-PPTX conversion. The contract is the stable handoff
-format: the HTML renderer reads it to produce `html/index.html`, and the future
-PPTX renderer will read the same contract to produce editable PowerPoint files
-under `ppt-master/`. This keeps preview rendering and editable export aligned
+format: the HTML renderer reads it to produce `html/index.html`, and the
+`ppt-master` renderer reads it to produce editable PowerPoint files under
+`ppt-master/exports/`. This keeps preview rendering and editable export aligned
 without treating one output as the source for the other.
 
 ## Reference Item Validation
