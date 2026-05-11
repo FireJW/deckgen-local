@@ -145,6 +145,9 @@ const renderSlide = (slide, index, total, title) => {
   const totalLabel = String(total).padStart(2, '0');
   const surface = layout === 'SWISS-COVER-ASCII' ? 'accent' : 'light';
   const headingClass = layout === 'SWISS-COVER-ASCII' ? 'h-xl' : 'h-md';
+  const copyClass = layout === 'S03'
+    ? 'deckgen-swiss-copy deckgen-swiss-split'
+    : 'deckgen-swiss-copy';
 
   return [
     `<section class="slide ${surface}" data-layout="${layout}" data-animate="cascade" data-slide-index="${index}">`,
@@ -153,7 +156,7 @@ const renderSlide = (slide, index, total, title) => {
     `      <div class="l">${escapeHtml(title)}</div>`,
     `      <div class="r">${label} / ${totalLabel}</div>`,
     '    </div>',
-    '    <div class="deckgen-swiss-copy" data-anim="body">',
+    `    <div class="${copyClass}" data-anim="body">`,
     `      <div class="t-meta">${escapeHtml(role)}</div>`,
     `      <h2 class="${headingClass}">${escapeHtml(slide?.headline ?? '')}</h2>`,
     renderBody(slide?.body),
@@ -169,6 +172,11 @@ const renderDeckgenSwissOverrides = (theme) => `
   #deck[data-renderer="html-guizang-swiss"] *{letter-spacing:0;overflow-wrap:anywhere}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy{display:grid;gap:24px;max-width:72ch;align-content:start}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy h2{font-weight:300;line-height:1}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split{max-width:100%;grid-template-columns:minmax(0,0.82fr) minmax(0,1fr);column-gap:56px;align-items:start}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split .t-meta{grid-column:1 / -1}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split h2{grid-column:1}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split .deckgen-swiss-body{grid-column:2}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split .deckgen-swiss-footnote{grid-column:2}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-body{display:grid;gap:14px;max-width:74ch}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-body p{margin:0;line-height:1.5}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-footnote{margin-top:auto;font-family:var(--mono);font-size:12px;line-height:1.45;color:var(--grey-3);display:grid;gap:4px}

@@ -79,6 +79,29 @@ test('renderHtmlDeck keeps non-Swiss hints on Style A', () => {
   assert.doesNotMatch(html, /html-guizang-swiss/);
 });
 
+test('renderHtmlDeck gives Swiss text_split slides a real two-column layout', () => {
+  const html = renderHtmlDeck({
+    title: 'Swiss Learning Layout',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'Concept vs Explanation',
+        body: 'Concept frame for the learner.\n\nDetailed explanation with implementation context.',
+        evidence_refs: [],
+        layout_intent: 'text_split'
+      }
+    ]
+  });
+
+  assert.match(html, /data-layout="S03"/);
+  assert.match(html, /class="deckgen-swiss-copy deckgen-swiss-split"/);
+  assert.match(html, /\.deckgen-swiss-copy\.deckgen-swiss-split\{[^}]*grid-template-columns:minmax\(0,0\.82fr\) minmax\(0,1fr\)/);
+  assert.match(html, /\.deckgen-swiss-copy\.deckgen-swiss-split h2\{[^}]*grid-column:1/);
+  assert.match(html, /\.deckgen-swiss-copy\.deckgen-swiss-split \.deckgen-swiss-body\{[^}]*grid-column:2/);
+});
+
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',
