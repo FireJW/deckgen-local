@@ -11,6 +11,17 @@ const fallbackTitleFromPath = (sourcePath) => {
   return basename.trim() || 'Untitled deck';
 };
 
+const attachPrimarySourceEvidence = (slides) => slides.map((slide, index) => {
+  if (index === 0) {
+    return slide;
+  }
+
+  return {
+    ...slide,
+    evidence_refs: [{ id: `${slide.id}-source`, source_ref: 'primary' }]
+  };
+});
+
 export function buildGenericMarkdownPackage(input) {
   const {
     sourcePath,
@@ -34,12 +45,13 @@ export function buildGenericMarkdownPackage(input) {
     content: markdown,
     contract: {
       ...contract,
-      source_refs: [{ type: 'local_file', path: sourcePath, role: 'primary' }],
+      source_refs: [{ type: 'local_file', path: sourcePath, role: 'primary', id: 'primary' }],
       hard_constraints: ['Keep the source text grounded', 'Do not invent facts'],
       theme: {
         ...contract.theme,
         renderer_hint: profile === 'learning' ? 'ink_classic' : 'indigo_porcelain'
       },
+      slides: attachPrimarySourceEvidence(contract.slides),
       outputs: ['html']
     }
   };

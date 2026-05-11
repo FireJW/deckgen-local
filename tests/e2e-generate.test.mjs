@@ -133,6 +133,7 @@ test('generate writes a run bundle with html and qc report', () => {
   assert.ok(existsSync(path.join(runDir, 'content.md')));
   assert.ok(existsSync(path.join(runDir, 'deck_contract.json')));
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+  assert.match(readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8'), /class="slide-evidence-refs"/);
 });
 
 test('generate writes guizang html motion asset next to index.html', () => {

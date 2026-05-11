@@ -26,6 +26,9 @@ The first handoff adapters are:
 These adapters normalize repo-specific inputs into the same internal package:
 `content.md` plus `deck_contract.json`. Adapter code should stay thin and avoid
 importing business-repo logic into this shared generator.
+The shared Markdown adapter assigns the primary local source `id: "primary"`
+and attaches structured `evidence_refs` to generated content slides so sibling
+HTML and PPTX outputs keep source context by default.
 
 ## Source Detection
 
