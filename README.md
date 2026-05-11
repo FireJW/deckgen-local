@@ -10,6 +10,8 @@ Contract slides with `layout_intent: "text_split"` render as a local
 two-column HTML layout, used by the `learning` profile for concept and
 explanation slides. Standard Markdown table blocks in slide bodies render as
 HTML tables instead of raw pipe-delimited text.
+Leading Markdown blockquote sections (`>` lines) are promoted to quote slides
+and render as quote layouts in HTML and PPTX.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html

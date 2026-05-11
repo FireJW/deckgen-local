@@ -26,8 +26,29 @@ const isTableSeparator = (line) => {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 };
 
+const sectionLines = (section) =>
+  section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
+const isQuoteSection = (section) => {
+  const lines = sectionLines(section);
+  return lines.length > 0 && lines[0].startsWith('>');
+};
+
+const cleanQuoteLine = (line) => line.replace(/^>\s?/, '').trim();
+
+const quoteHeadline = (section) => {
+  const quote = sectionLines(section)
+    .map(cleanQuoteLine)
+    .find(Boolean);
+  return quote ? `Quote: ${quote}` : 'Quote';
+};
+
 const summarizeHeadline = (section, index) => {
-  const lines = section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (isQuoteSection(section)) {
+    return quoteHeadline(section);
+  }
+
+  const lines = sectionLines(section);
   if (lines.length >= 2 && lines[0].includes('|') && lines[1].includes('|') && isTableSeparator(lines[1])) {
     const tableTitle = splitTableRow(lines[0]).slice(0, 3).join(' / ');
     return tableTitle ? `Table: ${tableTitle}` : `Key table ${index + 1}`;
@@ -70,7 +91,7 @@ export function buildDeckPlan(input) {
     headline: summarizeHeadline(section, index),
     body: section,
     evidence_refs: [],
-    layout_intent: contentLayout
+    layout_intent: isQuoteSection(section) ? 'quote' : contentLayout
   }));
 
   const slides = [

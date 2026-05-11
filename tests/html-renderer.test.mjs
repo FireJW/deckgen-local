@@ -102,6 +102,34 @@ test('renderHtmlDeck gives Swiss text_split slides a real two-column layout', ()
   assert.match(html, /\.deckgen-swiss-copy\.deckgen-swiss-split \.deckgen-swiss-body\{[^}]*grid-column:2/);
 });
 
+test('renderHtmlDeck renders quote slides as blockquotes in Style A and Swiss', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Quote: Markets reprice before filings.',
+    body: '> Markets reprice before filings.\n> Evidence stays local.',
+    evidence_refs: [],
+    layout_intent: 'quote'
+  };
+  const styleA = renderHtmlDeck({
+    title: 'Quote Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  });
+  const swiss = renderHtmlDeck({
+    title: 'Quote Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  });
+
+  assert.match(styleA, /class="slide dark slide-content layout-quote"/);
+  assert.match(styleA, /<blockquote>Markets reprice before filings\.<br>Evidence stays local\.<\/blockquote>/);
+  assert.doesNotMatch(styleA, /&gt; Markets/);
+  assert.match(swiss, /data-layout="S09"/);
+  assert.match(swiss, /class="deckgen-swiss-copy deckgen-swiss-quote"/);
+  assert.match(swiss, /<blockquote>Markets reprice before filings\.<br>Evidence stays local\.<\/blockquote>/);
+});
+
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',

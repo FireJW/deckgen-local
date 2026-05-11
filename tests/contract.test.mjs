@@ -218,6 +218,22 @@ test('buildDeckPlan summarizes markdown table sections with readable headlines',
   assert.doesNotMatch(plan.slides[1].headline, /\|/);
 });
 
+test('buildDeckPlan maps leading blockquote sections to quote layout', () => {
+  const plan = buildDeckPlan({
+    title: 'Quote report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: [
+      '> Markets reprice before filings.',
+      '> Evidence stays local.'
+    ].join('\n')
+  });
+
+  assert.equal(plan.slides[1].layout_intent, 'quote');
+  assert.equal(plan.slides[1].headline, 'Quote: Markets reprice before filings.');
+  assert.equal(plan.slides[1].body, '> Markets reprice before filings.\n> Evidence stays local.');
+});
+
 test('buildDeckPlan rejects invalid inputs with clear errors', () => {
   for (const [name, input, message] of invalidPlannerInputs) {
     assert.throws(() => buildDeckPlan(input), message, name);

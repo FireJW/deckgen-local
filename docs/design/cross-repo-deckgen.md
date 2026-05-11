@@ -146,6 +146,9 @@ presets, keyboard navigation, and slide-dot navigation, while reading only
 in slide bodies are rendered as native HTML tables so report-style inputs do not
 appear as raw pipe-delimited text. Structured and legacy `evidence_refs` render
 as compact reference lines under the slide body.
+Leading Markdown blockquote sections are normalized into `layout_intent:
+"quote"` slides. Style A renders them as quote blocks, Swiss maps them to
+`S09`, and PPTX emits a dedicated quote SVG block.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 

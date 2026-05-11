@@ -257,6 +257,43 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(svg, /implementation context\./);
 });
 
+test('renderPptMasterDeck maps quote slides into pptx quote svg blocks', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-quote-ppt-project-${Date.now()}`);
+  const quoteContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Quote: Markets reprice before filings.',
+        body: '> Markets reprice before filings.\n> Evidence stays local.',
+        layout_intent: 'quote'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: quoteContract,
+    content: '# Quote',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-quote"/);
+  assert.match(svg, /Markets reprice before filings\./);
+  assert.match(svg, /Evidence stays local\./);
+  assert.doesNotMatch(svg, /&gt; Markets/);
+});
+
 test('renderPptMasterDeck carries evidence references into svg and notes', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

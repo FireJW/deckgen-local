@@ -140,6 +140,8 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .slide-copy { max-width: 1060px; display: grid; gap: 28px; margin-top: auto; margin-bottom: auto; }
   #deck[data-renderer] .slide-body { display: grid; gap: 18px; max-width: 820px; }
   #deck[data-renderer] .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; }
+  #deck[data-renderer] blockquote { margin: 0; padding: 24px 28px; border-left: 3px solid currentColor; font-family: var(--serif-zh); font-size: clamp(1.5rem, 3vw, 3rem); line-height: 1.26; background: rgba(var(--paper-rgb), 0.08); }
+  #deck[data-renderer] .light blockquote { background: rgba(var(--ink-rgb), 0.05); }
   #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
   #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
   #deck[data-renderer] table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
@@ -200,6 +202,18 @@ const renderMarkdownTable = (lines) => {
   ].join('\n');
 };
 
+const isBlockquoteBlock = (lines) =>
+  lines.length > 0 && lines.every((line) => line.startsWith('>'));
+
+const renderBlockquote = (lines) => {
+  const quote = lines
+    .map((line) => line.replace(/^>\s?/, '').trim())
+    .filter(Boolean)
+    .map(renderInline)
+    .join('<br>');
+  return `<blockquote>${quote}</blockquote>`;
+};
+
 const renderBody = (body) => {
   if (typeof body !== 'string' || body.length === 0) {
     return '';
@@ -213,6 +227,9 @@ const renderBody = (body) => {
       const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
+      }
+      if (isBlockquoteBlock(lines)) {
+        return renderBlockquote(lines);
       }
 
       return `<p>${renderInline(paragraph.trim()).replaceAll('\n', '<br>')}</p>`;

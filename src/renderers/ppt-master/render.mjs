@@ -198,7 +198,48 @@ const splitTextSplitBody = (body) => {
   return [paragraphs[0] ?? lines[0] ?? '', ''];
 };
 
+const parseBlockquoteBody = (body) => {
+  const lines = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0 || !lines.every((line) => line.startsWith('>'))) {
+    return null;
+  }
+
+  return lines
+    .map((line) => line.replace(/^>\s?/, '').trim())
+    .filter(Boolean);
+};
+
 const roundedAttrs = (radius) => radius > 0 ? ` rx="${radius}"` : '';
+
+const renderQuoteSvg = ({
+  quoteLines,
+  x,
+  y,
+  width,
+  bodyColor,
+  accent,
+  line = defaultPptVisualTheme.line
+}) => {
+  const wrappedQuoteLines = quoteLines
+    .flatMap((quoteLine) => wrapText(quoteLine, 42, 2))
+    .slice(0, 5);
+  const lineHeight = 54;
+  return [
+    '<g class="ppt-quote">',
+    `  <line x1="${x}" y1="${y - 20}" x2="${x}" y2="${y + wrappedQuoteLines.length * lineHeight + 20}" stroke="${accent}" stroke-width="8"/>`,
+    `  <line x1="${x + 34}" y1="${y - 20}" x2="${x + width}" y2="${y - 20}" stroke="${line}" stroke-width="2"/>`,
+    ...wrappedQuoteLines.map((lineText, index) =>
+      `<text x="${x + 34}" y="${y + index * lineHeight}" font-family="Arial, sans-serif" font-size="42" font-weight="400" fill="${bodyColor}">${escapeXml(lineText)}</text>`
+    ),
+    '</g>'
+  ].join('\n  ');
+};
 
 const renderTextSplitSvg = ({
   body,
@@ -327,8 +368,11 @@ const renderSlideSvg = (slide, index, visualTheme) => {
   const muted = isCover ? visualTheme.coverMuted : visualTheme.muted;
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
   const table = isCover ? null : parseMarkdownTable(slide?.body);
-  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table;
-  const bodyLines = table || textSplit ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
+  const quote = !isCover && slide?.layout_intent === 'quote' && !table
+    ? parseBlockquoteBody(slide?.body)
+    : null;
+  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote;
+  const bodyLines = table || textSplit || quote ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
@@ -347,6 +391,16 @@ const renderSlideSvg = (slide, index, visualTheme) => {
       line: visualTheme.line,
       fill: visualTheme.tableFill,
       headerFill: visualTheme.tableHeaderFill
+    });
+  } else if (quote) {
+    bodySvg = renderQuoteSvg({
+      quoteLines: quote,
+      x: 120,
+      y: bodyStartY + 10,
+      width: 1040,
+      bodyColor,
+      accent,
+      line: visualTheme.line
     });
   } else if (textSplit) {
     bodySvg = renderTextSplitSvg({
