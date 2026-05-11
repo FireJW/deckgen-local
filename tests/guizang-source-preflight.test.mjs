@@ -131,6 +131,37 @@ test('inspectGuizangSourcePath accepts a local guizang zip archive', () => {
   assert.match(result.templatePath, /guizang-ppt-skill-main\/assets\/template\.html$/);
 });
 
+test('inspectGuizangSourcePath reports swiss template and validator support', () => {
+  const sourceDir = makeGuizangFixture();
+  mkdirSync(path.join(sourceDir, 'scripts'), { recursive: true });
+  writeFileSync(path.join(sourceDir, 'assets', 'template-swiss.html'), '<div id="deck"><!-- SLIDES_HERE --></div>', 'utf8');
+  writeFileSync(path.join(sourceDir, 'scripts', 'validate-swiss-deck.mjs'), 'process.exit(0);\n', 'utf8');
+
+  const result = inspectGuizangSourcePath(sourceDir);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.hasSwissTemplate, true);
+  assert.equal(result.hasSwissValidator, true);
+});
+
+test('inspectGuizangSourcePath reports swiss support in zip archives', () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-guizang-swiss-zip-source-'));
+  const archivePath = path.join(tempDir, 'guizang-ppt-skill-main.zip');
+  writeStoredZip(archivePath, [
+    ['guizang-ppt-skill-main/LICENSE', 'MIT License\nCopyright (c) 2026 op7418\n'],
+    ['guizang-ppt-skill-main/assets/template.html', '<!doctype html><title>Guizang</title>'],
+    ['guizang-ppt-skill-main/assets/template-swiss.html', '<!doctype html><title>Swiss</title>'],
+    ['guizang-ppt-skill-main/assets/motion.min.js', 'window.Motion = {};'],
+    ['guizang-ppt-skill-main/scripts/validate-swiss-deck.mjs', 'process.exit(0);\n']
+  ]);
+
+  const result = inspectGuizangSourcePath(archivePath);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.hasSwissTemplate, true);
+  assert.equal(result.hasSwissValidator, true);
+});
+
 test('inspectGuizangSourcePath fails closed when source is missing', () => {
   const result = inspectGuizangSourcePath(path.join(os.tmpdir(), 'missing-guizang-source'));
 

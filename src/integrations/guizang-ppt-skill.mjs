@@ -7,6 +7,8 @@ const templateCandidates = [
   path.join('templates', 'template.html'),
   'template.html'
 ];
+const swissTemplateCandidates = [path.join('assets', 'template-swiss.html')];
+const swissValidatorCandidates = [path.join('scripts', 'validate-swiss-deck.mjs')];
 const missingSourceNextStep = 'Provide a local guizang-ppt-skill checkout, extracted archive directory, or .zip archive, then rerun this preflight before template integration.';
 
 const findExistingFile = (rootPath, candidates) => {
@@ -154,6 +156,8 @@ const inspectGuizangZipArchive = (resolvedPath) => {
     archiveRoot,
     licensePath: archiveEntryPath(resolvedPath, licenseEntry),
     templatePath: archiveEntryPath(resolvedPath, templateEntry),
+    hasSwissTemplate: Boolean(findZipEntry(entries, swissTemplateCandidates, archiveRoot)),
+    hasSwissValidator: Boolean(findZipEntry(entries, swissValidatorCandidates, archiveRoot)),
     vendoredFiles: []
   };
 };
@@ -207,6 +211,8 @@ export function inspectGuizangSourcePath(sourcePath) {
     sourcePath: resolvedPath,
     licensePath,
     templatePath,
+    hasSwissTemplate: Boolean(findExistingFile(resolvedPath, swissTemplateCandidates)),
+    hasSwissValidator: Boolean(findExistingFile(resolvedPath, swissValidatorCandidates)),
     vendoredFiles: []
   };
 }
