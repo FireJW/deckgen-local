@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'src', 'cli', 'deckgen.mjs');
 const source = path.join(root, 'fixtures', 'generic-markdown', 'briefing.md');
 const learningSource = path.join(root, 'fixtures', 'generic-markdown', 'learning.md');
+const swissSource = path.join(root, 'fixtures', 'generic-markdown', 'swiss-briefing.md');
 const articlePackageSource = path.join(root, 'fixtures', 'source-packages', 'article', 'basic');
 const publishPackageSource = path.join(root, 'fixtures', 'source-packages', 'publish-package', 'basic');
 const obsidianReadingLabSource = path.join(root, 'fixtures', 'source-packages', 'obsidian-reading-lab', 'basic');
@@ -65,11 +66,11 @@ const createMinimalPptxBytes = (slideCount = 4) => {
   return Buffer.concat([...localParts, centralDir, eocd]);
 };
 
-const makeFakePptMaster = () => {
+const makeFakePptMaster = (slideCount = 4) => {
   const rootDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-fake-ppt-master-'));
   const scriptDir = path.join(rootDir, 'skills', 'ppt-master', 'scripts');
   mkdirSync(scriptDir, { recursive: true });
-  writeFileSync(path.join(rootDir, 'fixture.pptx'), createMinimalPptxBytes());
+  writeFileSync(path.join(rootDir, 'fixture.pptx'), createMinimalPptxBytes(slideCount));
   writeFileSync(path.join(scriptDir, 'svg_to_pptx.py'), `
 const fs = require('fs');
 const path = require('path');
@@ -298,6 +299,24 @@ test('generate writes sibling html and pptx outputs for both mode', () => {
   const runDir = writtenRunDir(run.stdout);
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
   assert.ok(existsSync(path.join(runDir, 'ppt-master', 'exports', 'cli-fake.pptx')));
+});
+
+test('generate writes sibling Swiss html and pptx outputs for both mode', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-swiss-both-'));
+  const pptMasterPath = makeFakePptMaster(7);
+  const pythonPath = makeFakePython();
+  const run = runGenerate(
+    ['--source', swissSource, '--profile', 'briefing', '--output', 'both', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
+    { env: { DECKGEN_PPT_MASTER_PYTHON: pythonPath } }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const html = readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8');
+  assert.match(html, /data-renderer="html-guizang-swiss"/);
+  assert.match(html, /data-swiss-theme="swiss-ikb"/);
+  const svg = readFileSync(path.join(runDir, 'ppt-master', 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /data-renderer="ppt-master-swiss"/);
 });
 
 test('generate uses unique run directories for two html runs under one workdir', () => {

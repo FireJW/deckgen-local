@@ -158,6 +158,26 @@ The renderer currently adapts the upstream MIT theme palette values for:
 The upstream MIT template and motion asset are vendored under
 `third_party/guizang-ppt-skill/` and preserved in `third_party/NOTICE.md`.
 
+Swiss Style B is available as an opt-in renderer when
+`deck_contract.json.theme.renderer_hint` starts with `swiss-`. The first pass
+supports `swiss-ikb`, `swiss-lemon`, `swiss-green`, and `swiss-orange`; unknown
+`swiss-*` hints fall back to `swiss-ikb` rather than accepting arbitrary colors.
+Generic Markdown sources can pass the hint through supported YAML frontmatter:
+
+```yaml
+---
+title: Swiss Briefing
+theme:
+  renderer_hint: swiss-ikb
+---
+```
+
+Swiss HTML emits `data-renderer="html-guizang-swiss"` and registered
+`data-layout` values for each slide. The PPTX project writer reads the same
+contract hint and emits Swiss SVG tokens with `data-renderer="ppt-master-swiss"`.
+HTML and PPTX remain sibling outputs from `deck_contract.json`; no HTML-to-PPTX
+conversion is introduced.
+
 Before any guizang template integration, run:
 
 ```bash
@@ -191,9 +211,9 @@ a generated `html/index.html` with Playwright, captures a screenshot under
 `.tmp/deckgen-visual-smoke/`, and validates:
 
 - page title is present and matches the expected title when provided
-- renderer marker is `html-guizang`
-- vendored guizang shell markers exist: `#deck`, `#nav`, and two background
-  canvases
+- renderer marker is `html-guizang` or `html-guizang-swiss`
+- vendored guizang shell markers exist: `#deck`, `#nav`, and background
+  canvases; Swiss output requires registered `data-layout` markers on slides
 - the generated `html/assets/motion.min.js` file exists when the page imports
   the local motion asset
 - external `<script src="...">` tags are absent, so the smoke catches CDN

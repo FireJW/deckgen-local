@@ -15,6 +15,23 @@ HTML tables instead of raw pipe-delimited text.
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
 ```
 
+Swiss Style B can be selected per source with Markdown frontmatter. It stays
+opt-in and affects both HTML preview and PPTX SVG project output when the same
+contract is rendered:
+
+```yaml
+---
+title: Swiss Briefing
+theme:
+  renderer_hint: swiss-ikb
+---
+```
+
+```powershell
+node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\swiss-briefing.md --profile briefing --output both --ppt-master-path D:\Users\rickylu\dev\ppt-master
+npm run smoke:swiss -- .tmp\deckgen\<run-id>\html\index.html
+```
+
 Directory sources are supported when they include an explicit
 `deckgen.source.json` marker. This keeps cross-repo package detection
 fail-closed instead of guessing from directory names.

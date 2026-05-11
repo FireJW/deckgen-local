@@ -23,3 +23,28 @@ test('buildGenericMarkdownPackage builds valid content and contract', () => {
   assert.equal(validateDeckContract(result.contract).ok, true);
   assert.ok(result.content.includes('Why this matters'));
 });
+
+test('buildGenericMarkdownPackage carries supported YAML frontmatter into the contract', () => {
+  const sourcePath = path.join(root, 'fixtures', 'generic-markdown', 'swiss-briefing.md');
+  const md = [
+    '---',
+    'title: Swiss Briefing',
+    'theme:',
+    '  renderer_hint: swiss-ikb',
+    '---',
+    '',
+    '# Swiss Briefing',
+    '',
+    '## Strategic Claim',
+    '',
+    'The deck should preview and export with the same Swiss visual system.'
+  ].join('\n');
+
+  const result = buildGenericMarkdownPackage({ sourcePath, markdown: md, profile: 'briefing' });
+
+  assert.equal(result.contract.title, 'Swiss Briefing');
+  assert.equal(result.contract.theme.renderer_hint, 'swiss-ikb');
+  assert.equal(result.content.startsWith('# Swiss Briefing'), true);
+  assert.doesNotMatch(result.content, /^---/);
+  assert.equal(validateDeckContract(result.contract).ok, true);
+});
