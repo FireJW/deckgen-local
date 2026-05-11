@@ -143,9 +143,10 @@ const summarizePage = async (page, htmlPath, screenshotPath) => {
     return {
       title: document.title,
       renderer: document.querySelector('[data-renderer]')?.getAttribute('data-renderer') ?? '',
-      deckElementPresent: Boolean(document.querySelector('#deck[data-renderer="html-guizang"]')),
+      deckElementPresent: Boolean(document.querySelector('#deck[data-renderer]')),
       navElementPresent: Boolean(document.querySelector('#nav')),
       backgroundCanvasCount: document.querySelectorAll('canvas.bg').length,
+      hasSwissLayouts: Array.from(document.querySelectorAll('.slide')).every((slide) => slide.hasAttribute('data-layout')),
       externalScriptSrcs: Array.from(document.scripts)
         .map((script) => script.src)
         .filter(Boolean),

@@ -5,6 +5,7 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
   const errors = [];
   const title = String(summary.title ?? '').trim();
   const renderer = String(summary.renderer ?? '').trim();
+  const isSwiss = renderer === 'html-guizang-swiss';
   const slideCount = Number(summary.slideCount ?? 0);
   const textLength = Number(summary.textLength ?? 0);
   const overflowItems = Array.isArray(summary.overflowItems) ? summary.overflowItems : [];
@@ -14,6 +15,7 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
   const localMotionImportPresent = summary.localMotionImportPresent === true;
   const localMotionAssetBytes = Number(summary.localMotionAssetBytes ?? 0);
   const externalScriptSrcs = Array.isArray(summary.externalScriptSrcs) ? summary.externalScriptSrcs : [];
+  const hasSwissLayouts = summary.hasSwissLayouts === true;
   const screenshotPath = String(summary.screenshotPath ?? '').trim();
   const screenshotBytes = Number(summary.screenshotBytes ?? 0);
 
@@ -25,20 +27,25 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
     errors.push(`title "${title}" does not match expected "${options.expectedTitle}"`);
   }
 
-  if (renderer !== 'html-guizang') {
-    errors.push(`renderer "${renderer}" is not html-guizang`);
+  if (!['html-guizang', 'html-guizang-swiss'].includes(renderer)) {
+    errors.push(`unexpected renderer marker: ${renderer || 'missing'}`);
   }
 
   if (!deckElementPresent) {
     errors.push('guizang deck element is missing');
   }
 
+  if (isSwiss && !hasSwissLayouts) {
+    errors.push('Swiss renderer is missing registered data-layout markers');
+  }
+
   if (!navElementPresent) {
     errors.push('guizang navigation element is missing');
   }
 
-  if (!Number.isFinite(backgroundCanvasCount) || backgroundCanvasCount < 2) {
-    errors.push(`background canvas count ${backgroundCanvasCount} is below 2`);
+  const minimumBackgroundCanvasCount = isSwiss ? 1 : 2;
+  if (!Number.isFinite(backgroundCanvasCount) || backgroundCanvasCount < minimumBackgroundCanvasCount) {
+    errors.push(`background canvas count ${backgroundCanvasCount} is below ${minimumBackgroundCanvasCount}`);
   }
 
   if (!localMotionImportPresent) {

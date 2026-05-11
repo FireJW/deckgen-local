@@ -33,6 +33,30 @@ test('validateVisualSmokeResult accepts nonempty deck screenshots with expected 
   assert.deepEqual(result, { ok: true, errors: [] });
 });
 
+test('validateVisualSmokeResult accepts Swiss renderer markers', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Swiss Briefing',
+    renderer: 'html-guizang-swiss',
+    slideCount: 3,
+    textLength: 120,
+    overflowItems: [],
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 1,
+    hasSwissLayouts: true,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
+    screenshotPath: '.tmp/deckgen-visual-smoke/swiss.png',
+    screenshotBytes: 12400
+  }, {
+    expectedTitle: 'Swiss Briefing',
+    expectedSlides: 3
+  });
+
+  assert.deepEqual(result, { ok: true, errors: [] });
+});
+
 test('validateVisualSmokeResult rejects missing guizang shell and local assets', () => {
   const result = validateVisualSmokeResult({
     title: 'Deck Generator Briefing',
@@ -60,6 +84,28 @@ test('validateVisualSmokeResult rejects missing guizang shell and local assets',
   assert.match(result.errors.join('\n'), /local motion import is missing/);
   assert.match(result.errors.join('\n'), /local motion asset is missing/);
   assert.match(result.errors.join('\n'), /external script src is not allowed/);
+});
+
+test('validateVisualSmokeResult rejects Swiss decks without registered layout markers', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Swiss Briefing',
+    renderer: 'html-guizang-swiss',
+    slideCount: 2,
+    textLength: 120,
+    overflowItems: [],
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 1,
+    hasSwissLayouts: false,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
+    screenshotPath: '.tmp/deckgen-visual-smoke/swiss.png',
+    screenshotBytes: 12400
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), /registered data-layout markers/);
 });
 
 test('validateVisualSmokeResult rejects empty or visibly broken decks', () => {
