@@ -131,6 +131,15 @@ environment, and `python-pptx` import before a generation run starts:
 npm run preflight:ppt-master -- --ppt-master-path D:\Users\rickylu\dev\ppt-master
 ```
 
+Run the combined run-bundle smoke when you want one local gate that checks the
+generated `deck_contract.json`, `content.md`, `qc_report.md`, and every sibling
+output requested by the contract. It verifies `html/index.html` for HTML output
+and runs structural PPTX validation for PPTX output:
+
+```powershell
+npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>
+```
+
 Run the structural PPTX smoke against a generated `.pptx` when checking editable
 export artifacts without opening PowerPoint:
 

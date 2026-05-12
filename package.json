@@ -11,6 +11,7 @@
     "preflight:guizang": "node scripts/guizang-source-preflight.mjs",
     "preflight:ppt-master": "node scripts/ppt-master-preflight.mjs",
     "smoke:html": "node scripts/html-visual-smoke.mjs",
+    "smoke:run": "node scripts/deck-run-smoke.mjs",
     "smoke:swiss": "node scripts/guizang-swiss-validate.mjs",
     "smoke:pptx": "node scripts/pptx-structural-smoke.mjs",
     "smoke:pptx:visual": "node scripts/pptx-visual-smoke.mjs"

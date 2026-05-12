@@ -107,6 +107,12 @@ The Phase 1 bundle shape is:
 validated renderer contract. `html/index.html` is the current browser preview
 output. `qc_report.md` records validation and output checks.
 
+`scripts/deck-run-smoke.mjs` validates a completed run bundle as a single
+contract-driven gate. It reads `deck_contract.json`, validates the contract,
+checks `content.md` and `qc_report.md`, then verifies each sibling output named
+by `contract.outputs`: `html/index.html` for HTML and the newest
+`ppt-master/exports/*.pptx` with structural PPTX validation for PPTX.
+
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
 real local `ppt-master` checkout is configured and produces a `.pptx`:
 
