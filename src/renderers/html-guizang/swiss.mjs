@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { resolveSwissTheme } from '../guizang-swiss/theme.mjs';
 
 const rendererDir = path.dirname(fileURLToPath(import.meta.url));
@@ -124,14 +125,15 @@ const renderMarkdownImage = (image) => {
   ].filter(Boolean).join('\n');
 };
 
-const bodyContainsTable = (body) =>
-  String(body ?? '')
+const bodyContainsTable = (slide) =>
+  slideMarkdownBody(slide)
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .split(/\n{2,}/)
     .some((paragraph) => isMarkdownTableBlock(paragraph.split('\n').map((line) => line.trim()).filter(Boolean)));
 
-const renderBody = (body) => {
+const renderBody = (slide) => {
+  const body = slideMarkdownBody(slide);
   if (typeof body !== 'string' || body.length === 0) {
     return '';
   }
@@ -166,13 +168,13 @@ const swissLayoutForSlide = (slide) => {
   if (role === 'cover' || layout === 'hero-dark') return 'SWISS-COVER-ASCII';
   if (layout === 'quote') return 'S09';
   if (layout === 'image') return 'S13';
-  if (bodyContainsTable(slide?.body)) return 'S20';
+  if (bodyContainsTable(slide)) return 'S20';
   if (layout === 'text-split') return 'S03';
   return 'S19';
 };
 
-const renderEvidence = (slide) => {
-  const refs = formatEvidenceRefs(slide?.evidence_refs);
+const renderEvidence = (evidenceRefs) => {
+  const refs = formatEvidenceRefs(evidenceRefs);
   if (refs.length === 0) {
     return '';
   }
@@ -208,8 +210,8 @@ const renderSlide = (slide, index, total, title) => {
     `    <div class="${copyClass}" data-anim="body">`,
     `      <div class="t-meta">${escapeHtml(role)}</div>`,
     `      <h2 class="${headingClass}">${escapeHtml(slide?.headline ?? '')}</h2>`,
-    renderBody(slide?.body),
-    renderEvidence(slide),
+    renderBody(slide),
+    renderEvidence(collectSlideEvidenceRefs(slide)),
     '    </div>',
     '  </div>',
     '</section>'

@@ -17,8 +17,9 @@ slides. Local image paths are copied into each generated output bundle under
 `assets/images/` and rewritten to output-relative paths. Remote image URLs and
 data URIs are preserved but not downloaded.
 Generated slide contracts also carry structured `items[]` blocks alongside the
-legacy `body` text so future renderers can read block-level content without
-dropping compatibility with the current HTML and PPTX paths.
+legacy `body` text. Current HTML and PPTX renderers keep `body` as the primary
+compatibility path, but fall back to `items[]` when `body` is absent; local
+image items are copied and rewritten the same way as Markdown image bodies.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html

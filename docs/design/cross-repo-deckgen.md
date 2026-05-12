@@ -343,7 +343,10 @@ without treating one output as the source for the other.
 screenshots, and generated PPTX slide assets stay deterministic. When present,
 `items[]` is a non-empty array of `paragraph`, `quote`, `image`, or `table`
 blocks, and each block may carry its own `evidence_refs[]` using the same
-source-ref rules as the parent slide.
+source-ref rules as the parent slide. Renderers still prefer `body` for
+backward compatibility, but when `body` is absent they serialize `items[]` into
+the same Markdown-shaped rendering path. Image items participate in the same
+local asset-copy step as Markdown image bodies.
 
 `hard_constraints[]` items must be non-empty strings. `theme` is also strict:
 it must include a non-empty `renderer_hint`, may include string `tone`, and

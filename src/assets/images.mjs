@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rewriteSlideImageItems } from '../contract/slide-content.mjs';
 
 const markdownImagePattern = /^!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/;
 const remoteSourcePattern = /^(?:https?:|data:|blob:)/i;
@@ -166,12 +167,22 @@ export function materializeLocalImageAssets({
   let changed = false;
   const slides = contract.slides.map((slide) => {
     const body = rewriteBodyImages({ body: slide?.body, copyImage });
-    if (body === slide?.body) {
+    const itemRewrite = rewriteSlideImageItems({
+      items: slide?.items,
+      copyImage,
+      shouldCopyImage: isCopyableLocalImageSource
+    });
+
+    if (body === slide?.body && !itemRewrite.changed) {
       return slide;
     }
 
     changed = true;
-    return { ...slide, body };
+    const rewrittenSlide = { ...slide, body };
+    if (slide && Object.hasOwn(slide, 'items')) {
+      rewrittenSlide.items = itemRewrite.items;
+    }
+    return rewrittenSlide;
   });
 
   return {

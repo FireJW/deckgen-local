@@ -9,6 +9,7 @@ import {
 import path from 'node:path';
 import { materializeLocalImageAssets } from '../../assets/images.mjs';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
 import { isSwissRendererHint, resolveSwissTheme } from '../guizang-swiss/theme.mjs';
 
@@ -405,8 +406,8 @@ const renderEvidenceSvg = ({ evidenceRefs, x, y, color }) => {
 
 const renderSlideNotes = (slide) => {
   const notes = [];
-  const body = String(slide?.body ?? '').trimEnd();
-  const evidenceRefs = formatEvidenceRefs(slide?.evidence_refs);
+  const body = slideMarkdownBody(slide).trimEnd();
+  const evidenceRefs = formatEvidenceRefs(collectSlideEvidenceRefs(slide));
 
   if (body) {
     notes.push(body);
@@ -420,21 +421,22 @@ const renderSlideNotes = (slide) => {
 
 const renderSlideSvg = (slide, index, visualTheme) => {
   const isCover = index === 0 || slide?.role === 'cover';
+  const body = slideMarkdownBody(slide);
   const background = isCover ? visualTheme.coverBackground : visualTheme.background;
   const headlineColor = isCover ? visualTheme.coverHeadlineColor : visualTheme.headlineColor;
   const bodyColor = isCover ? visualTheme.coverBodyColor : visualTheme.bodyColor;
   const accent = isCover ? visualTheme.coverAccent : visualTheme.accent;
   const muted = isCover ? visualTheme.coverMuted : visualTheme.muted;
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
-  const table = isCover ? null : parseMarkdownTable(slide?.body);
+  const table = isCover ? null : parseMarkdownTable(body);
   const quote = !isCover && slide?.layout_intent === 'quote' && !table
-    ? parseBlockquoteBody(slide?.body)
+    ? parseBlockquoteBody(body)
     : null;
   const image = !isCover && slide?.layout_intent === 'image' && !table && !quote
-    ? parseMarkdownImageBody(slide?.body)
+    ? parseMarkdownImageBody(body)
     : null;
   const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote && !image;
-  const bodyLines = table || textSplit || quote || image ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
+  const bodyLines = table || textSplit || quote || image ? [] : wrapText(body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
@@ -478,7 +480,7 @@ const renderSlideSvg = (slide, index, visualTheme) => {
     });
   } else if (textSplit) {
     bodySvg = renderTextSplitSvg({
-      body: slide?.body,
+      body,
       x: 120,
       y: bodyStartY,
       width: 1040,
@@ -496,7 +498,7 @@ const renderSlideSvg = (slide, index, visualTheme) => {
     ).join('\n  ');
   }
   const evidenceSvg = renderEvidenceSvg({
-    evidenceRefs: slide?.evidence_refs,
+    evidenceRefs: collectSlideEvidenceRefs(slide),
     x: 120,
     y: 748,
     color: muted

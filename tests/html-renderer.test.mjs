@@ -309,6 +309,42 @@ test('renderHtmlDeck renders structured and legacy evidence references', () => {
   assert.match(html, /#deck\[data-renderer\] \.slide-evidence-ref \{[^}]*-webkit-line-clamp: 2/);
 });
 
+test('renderHtmlDeck renders structured slide items when body is absent', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Structured Table',
+    items: [{
+      kind: 'table',
+      markdown: [
+        '| Rank | Symbol |',
+        '|---:|---|',
+        '| 1 | `000988.SZ` |'
+      ].join('\n'),
+      evidence_refs: ['primary']
+    }],
+    evidence_refs: [],
+    layout_intent: 'evidence'
+  };
+  const styleA = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  });
+  const swiss = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  });
+
+  assert.match(styleA, /<table>/);
+  assert.match(styleA, /<th>Rank<\/th>/);
+  assert.match(styleA, /source: primary/);
+  assert.match(swiss, /data-layout="S20"/);
+  assert.match(swiss, /<table>/);
+  assert.match(swiss, /source: primary/);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

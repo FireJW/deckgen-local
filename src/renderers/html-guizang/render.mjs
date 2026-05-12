@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { isSwissRendererHint } from '../guizang-swiss/theme.mjs';
 import { renderSwissHtmlDeck } from './swiss.mjs';
 
@@ -242,7 +243,8 @@ const renderMarkdownImage = (image) => {
   ].filter(Boolean).join('\n');
 };
 
-const renderBody = (body) => {
+const renderBody = (slide) => {
+  const body = slideMarkdownBody(slide);
   if (typeof body !== 'string' || body.length === 0) {
     return '';
   }
@@ -319,8 +321,8 @@ const renderSlide = (slide, index, totalSlides, title) => {
     '  <div class="slide-copy">',
     `    <div class="kicker slide-kicker" data-anim>${escapeHtml(label)} / ${escapeHtml(role)}</div>`,
     `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
-    renderBody(slide.body),
-    renderEvidenceRefs(slide.evidence_refs),
+    renderBody(slide),
+    renderEvidenceRefs(collectSlideEvidenceRefs(slide)),
     '  </div>',
     '  <div class="foot">',
     `    <span class="title">${escapeHtml(title)}</span>`,
