@@ -14,6 +14,7 @@ const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
 const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'evidence_refs', 'layout_intent']);
+const allowedThemeKeys = new Set(['renderer_hint', 'tone']);
 const allowedSourceRefTypes = new Set(['local_file']);
 
 export function validateDeckContract(contract) {
@@ -79,8 +80,20 @@ function validateDeckContractInternal(contract) {
     return fail('hard_constraints must be an array');
   }
 
+  for (const [index, hardConstraint] of contract.hard_constraints.entries()) {
+    if (!isNonEmptyString(hardConstraint)) {
+      return fail(`hard_constraints[${index}] must be a non-empty string`);
+    }
+  }
+
   if (!isObject(contract.theme)) {
     return fail('theme must be an object');
+  }
+
+  for (const key of Object.keys(contract.theme)) {
+    if (!allowedThemeKeys.has(key)) {
+      return fail(`theme has unexpected key: ${key}`);
+    }
   }
 
   if (!isNonEmptyString(contract.theme.renderer_hint)) {

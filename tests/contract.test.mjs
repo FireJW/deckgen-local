@@ -77,7 +77,10 @@ const malformedContracts = [
     ]
   })],
   ['hard_constraints is not an array', () => ({ ...validContract(), hard_constraints: 'none' })],
+  ['hard_constraints item is empty', () => ({ ...validContract(), hard_constraints: [' '] })],
+  ['hard_constraints item is not a string', () => ({ ...validContract(), hard_constraints: [42] })],
   ['theme is null', () => ({ ...validContract(), theme: null })],
+  ['theme has unexpected key', () => ({ ...validContract(), theme: { renderer_hint: 'clean', accent: 'blue' } })],
   ['theme renderer_hint is empty', () => ({ ...validContract(), theme: { renderer_hint: ' ' } })],
   ['theme tone is not a string', () => ({ ...validContract(), theme: { renderer_hint: 'clean', tone: 3 } })],
   ['outputs is empty', () => ({ ...validContract(), outputs: [] })],

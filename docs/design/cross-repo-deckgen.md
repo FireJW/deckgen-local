@@ -323,6 +323,11 @@ without treating one output as the source for the other.
 be unique within a deck so renderer anchors, screenshots, and generated PPTX
 slide assets stay deterministic.
 
+`hard_constraints[]` items must be non-empty strings. `theme` is also strict:
+it must include a non-empty `renderer_hint`, may include string `tone`, and
+rejects unknown keys so renderer-specific configuration does not drift into
+the shared contract without an explicit schema change.
+
 `source_refs[]` items are strict objects with `type`, `path`, `role`, and
 optional `id`. Current adapters emit `type: "local_file"`, `path` must be an
 absolute local path, and `id` / `role` / `path` values must stay unique across
