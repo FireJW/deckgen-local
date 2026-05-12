@@ -68,9 +68,9 @@ const attachPrimarySourceEvidence = (slides) => slides.map((slide, index) => {
     ...slide,
     evidence_refs: [sourceEvidence],
     items: Array.isArray(slide.items)
-      ? slide.items.map((item) => ({
+      ? slide.items.map((item, itemIndex) => ({
         ...item,
-        evidence_refs: [sourceEvidence]
+        evidence_refs: [{ id: `${slide.id}-item-${itemIndex + 1}-source`, source_ref: 'primary' }]
       }))
       : slide.items
   };

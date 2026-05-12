@@ -160,6 +160,8 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix}.body must be a string when present`);
     }
 
+    const slideEvidenceIds = new Set();
+
     if (Object.hasOwn(slide, 'items')) {
       if (!Array.isArray(slide.items) || slide.items.length === 0) {
         return fail(`${prefix}.items must be a non-empty array when present`);
@@ -169,7 +171,8 @@ function validateDeckContractInternal(contract) {
         items: slide.items,
         prefix: `${prefix}.items`,
         knownSourceRefKeys,
-        knownSourceRefIds
+        knownSourceRefIds,
+        seenEvidenceObjectIds: slideEvidenceIds
       });
       if (!slideItemsValidation.ok) {
         return slideItemsValidation;
@@ -184,7 +187,8 @@ function validateDeckContractInternal(contract) {
       evidenceRefs: slide.evidence_refs,
       prefix: `${prefix}.evidence_refs`,
       knownSourceRefKeys,
-      knownSourceRefIds
+      knownSourceRefIds,
+      seenObjectIds: slideEvidenceIds
     });
     if (!evidenceRefsValidation.ok) {
       return evidenceRefsValidation;
@@ -268,7 +272,7 @@ function validateSourceRefs(sourceRefs) {
   return { ok: true };
 }
 
-function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefIds }) {
+function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefIds, seenEvidenceObjectIds }) {
   for (const [index, item] of items.entries()) {
     const itemPrefix = `${prefix}[${index}]`;
 
@@ -334,7 +338,8 @@ function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefI
         evidenceRefs: item.evidence_refs,
         prefix: `${itemPrefix}.evidence_refs`,
         knownSourceRefKeys,
-        knownSourceRefIds
+        knownSourceRefIds,
+        seenObjectIds: seenEvidenceObjectIds
       });
       if (!evidenceRefsValidation.ok) {
         return evidenceRefsValidation;
@@ -428,9 +433,7 @@ function collectSourceRefIds(sourceRefs) {
   return ids;
 }
 
-function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownSourceRefIds }) {
-  const seenObjectIds = new Set();
-
+function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownSourceRefIds, seenObjectIds = new Set() }) {
   for (const [index, evidenceRef] of evidenceRefs.entries()) {
     const itemPrefix = `${prefix}[${index}]`;
 

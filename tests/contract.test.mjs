@@ -248,6 +248,50 @@ test('validateDeckContract rejects malformed structured table slide items', () =
   assert.match(result.error, /rows\[0\]/i);
 });
 
+test('validateDeckContract rejects duplicate evidence object ids across slide items', () => {
+  const result = validateDeckContract({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{
+      ...validSlide(),
+      evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'Slide claim.' }],
+      items: [{
+        kind: 'paragraph',
+        text: 'Item claim.',
+        evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'Item claim.' }]
+      }]
+    }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /id must be unique within the slide/i);
+});
+
+test('validateDeckContract rejects duplicate evidence object ids across sibling items', () => {
+  const result = validateDeckContract({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{
+      ...validSlide(),
+      items: [
+        {
+          kind: 'paragraph',
+          text: 'First claim.',
+          evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'First claim.' }]
+        },
+        {
+          kind: 'paragraph',
+          text: 'Second claim.',
+          evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'Second claim.' }]
+        }
+      ]
+    }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /id must be unique within the slide/i);
+});
+
 test('validateDeckContract rejects malformed data without throwing', () => {
   for (const [name, makeContract] of malformedContracts) {
     let result;
