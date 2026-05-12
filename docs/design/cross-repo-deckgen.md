@@ -318,6 +318,11 @@ without treating one output as the source for the other.
 
 ## Reference Item Validation
 
+`slides[]` items are strict objects with `id`, `role`, `headline`,
+`layout_intent`, `evidence_refs`, and optional `body`. Slide `id` values must
+be unique within a deck so renderer anchors, screenshots, and generated PPTX
+slide assets stay deterministic.
+
 `source_refs[]` items are strict objects with `type`, `path`, `role`, and
 optional `id`. Current adapters emit `type: "local_file"`, `path` must be an
 absolute local path, and `id` / `role` / `path` values must stay unique across

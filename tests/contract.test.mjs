@@ -86,7 +86,16 @@ const malformedContracts = [
   ['outputs contains unknown mode', () => ({ ...validContract(), outputs: ['pdf'] })],
   ['slides is empty', () => ({ ...validContract(), target_slide_count: 0, slides: [] })],
   ['slide is null', () => ({ ...validContract(), slides: [null] })],
+  ['slide has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), extra: true }] })],
   ['slide id is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), id: '' }] })],
+  ['slide id is duplicated', () => ({
+    ...validContract(),
+    target_slide_count: 2,
+    slides: [
+      validSlide(),
+      { ...validSlide(), role: 'content', headline: 'Second slide', body: 'Frame two' }
+    ]
+  })],
   ['slide role is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), role: 1 }] })],
   ['slide headline is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), headline: ' ' }] })],
   ['slide layout_intent is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), layout_intent: '' }] })],

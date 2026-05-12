@@ -13,6 +13,7 @@ const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
+const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'evidence_refs', 'layout_intent']);
 const allowedSourceRefTypes = new Set(['local_file']);
 
 export function validateDeckContract(contract) {
@@ -113,6 +114,8 @@ function validateDeckContractInternal(contract) {
     return fail('target_slide_count must equal slides.length');
   }
 
+  const seenSlideIds = new Set();
+
   for (const [index, slide] of contract.slides.entries()) {
     const prefix = `slides[${index}]`;
 
@@ -120,11 +123,23 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix} must be an object`);
     }
 
+    for (const key of Object.keys(slide)) {
+      if (!allowedSlideKeys.has(key)) {
+        return fail(`${prefix} has unexpected key: ${key}`);
+      }
+    }
+
     for (const key of ['id', 'role', 'headline', 'layout_intent']) {
       if (!isNonEmptyString(slide[key])) {
         return fail(`${prefix}.${key} must be a non-empty string`);
       }
     }
+
+    const slideId = slide.id.trim();
+    if (seenSlideIds.has(slideId)) {
+      return fail(`${prefix}.id must be unique`);
+    }
+    seenSlideIds.add(slideId);
 
     if (Object.hasOwn(slide, 'body') && typeof slide.body !== 'string') {
       return fail(`${prefix}.body must be a string when present`);
