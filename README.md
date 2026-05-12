@@ -24,6 +24,10 @@ Generated slide contracts also carry structured `items[]` blocks alongside the
 legacy `body` text. Current HTML and PPTX renderers keep `body` as the primary
 compatibility path, but fall back to `items[]` when `body` is absent; local
 image items are copied and rewritten the same way as Markdown image bodies.
+Item fields are kind-specific: `paragraph` and `quote` use `text`, `bullets`
+uses `points`, `image` uses `src` plus optional `alt`, and `table` uses
+`markdown` or structured `headers`/`rows`. All item kinds may carry
+`evidence_refs`.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html

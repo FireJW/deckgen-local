@@ -221,6 +221,26 @@ test('validateDeckContract rejects malformed slide items', () => {
   assert.match(result.error, /items/i);
 });
 
+test('validateDeckContract rejects fields that do not belong to the slide item kind', () => {
+  const invalidItems = [
+    { item: { kind: 'paragraph', text: 'Claim', src: 'visual.png' }, field: 'src' },
+    { item: { kind: 'quote', text: 'Quote', rows: [['Not a quote field']] }, field: 'rows' },
+    { item: { kind: 'bullets', points: ['First signal'], text: 'Not a bullet field' }, field: 'text' },
+    { item: { kind: 'image', src: 'visual.png', markdown: '| A |\n| - |' }, field: 'markdown' },
+    { item: { kind: 'table', headers: ['A'], rows: [['B']], text: 'Not a table field' }, field: 'text' }
+  ];
+
+  for (const { item, field } of invalidItems) {
+    const result = validateDeckContract({
+      ...validContract(),
+      slides: [{ ...validSlide(), items: [item] }]
+    });
+
+    assert.equal(result.ok, false, `${item.kind}.${field}`);
+    assert.match(result.error, new RegExp(`${field}.*${item.kind}`, 'i'), `${item.kind}.${field}`);
+  }
+});
+
 test('validateDeckContract rejects malformed bullet slide items', () => {
   const result = validateDeckContract({
     ...validContract(),

@@ -349,10 +349,11 @@ screenshots, and generated PPTX slide assets stay deterministic. When present,
 source-ref rules as the parent slide. Renderers still prefer `body` for
 backward compatibility, but when `body` is absent they serialize `items[]` into
 the same Markdown-shaped rendering path. Image items participate in the same
-local asset-copy step as Markdown image bodies. Table items may either carry a
-legacy non-empty `markdown` table or a structured `headers[]` plus `rows[][]`
-shape; structured rows must match the header width so table renderers do not
-silently drop cells.
+local asset-copy step as Markdown image bodies. Item fields are kind-specific:
+`paragraph` and `quote` accept `text`; `bullets` accepts `points[]`; `image`
+accepts `src` and optional `alt`; `table` accepts either `markdown` or a
+structured `headers[]` plus `rows[][]` shape. Structured rows must match the
+header width so table renderers do not silently drop cells.
 
 `hard_constraints[]` items must be non-empty strings. `theme` is also strict:
 it must include a non-empty `renderer_hint`, may include string `tone`, and

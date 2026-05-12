@@ -16,6 +16,13 @@ const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote'])
 const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent']);
 const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'headers', 'rows', 'points', 'evidence_refs']);
 const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table', 'bullets']);
+const allowedSlideItemKeysByKind = new Map([
+  ['paragraph', new Set(['kind', 'text', 'evidence_refs'])],
+  ['quote', new Set(['kind', 'text', 'evidence_refs'])],
+  ['image', new Set(['kind', 'src', 'alt', 'evidence_refs'])],
+  ['table', new Set(['kind', 'markdown', 'headers', 'rows', 'evidence_refs'])],
+  ['bullets', new Set(['kind', 'points', 'evidence_refs'])]
+]);
 const allowedThemeKeys = new Set(['renderer_hint', 'tone']);
 const allowedSourceRefTypes = new Set(['local_file']);
 
@@ -293,6 +300,13 @@ function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefI
     const kind = item.kind.trim();
     if (!allowedSlideItemKinds.has(kind)) {
       return fail(`${itemPrefix}.kind must be one of paragraph, quote, image, table, bullets`);
+    }
+
+    const allowedKindKeys = allowedSlideItemKeysByKind.get(kind);
+    for (const key of Object.keys(item)) {
+      if (!allowedKindKeys.has(key)) {
+        return fail(`${itemPrefix}.${key} is not allowed for ${kind} items`);
+      }
     }
 
     if (kind === 'paragraph' || kind === 'quote') {
