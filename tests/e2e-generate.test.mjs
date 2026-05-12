@@ -142,6 +142,24 @@ test('generate writes a run bundle with html and qc report', () => {
   assert.match(readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8'), /class="slide-evidence-refs"/);
 });
 
+test('generate can emit machine-readable json output for callers', () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-json-output-'));
+  const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp, '--json']);
+
+  assert.equal(run.status, 0, run.stderr);
+  assert.doesNotMatch(run.stdout, /^written /m);
+  const result = JSON.parse(run.stdout);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.command, 'generate');
+  assert.equal(result.source_type, 'generic-markdown');
+  assert.deepEqual(result.outputs, ['html']);
+  assert.equal(result.pptxPaths.length, 0);
+  assert.ok(existsSync(result.runDir));
+  assert.equal(result.htmlPath, path.join(result.runDir, 'html', 'index.html'));
+  assert.equal(result.qcReportPath, path.join(result.runDir, 'qc_report.md'));
+});
+
 test('generate writes guizang html motion asset next to index.html', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
   const run = runGenerate(['--source', source, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);

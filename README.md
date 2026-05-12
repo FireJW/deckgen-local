@@ -57,6 +57,13 @@ the command line instead of editing the source Markdown:
 node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --profile briefing --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master
 ```
 
+Add `--json` when another script or Codex session needs a stable machine-readable
+result instead of parsing `written <run-dir>`:
+
+```powershell
+node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master --json
+```
+
 Directory sources are supported when they include an explicit
 `deckgen.source.json` marker. This keeps cross-repo package detection
 fail-closed instead of guessing from directory names.

@@ -19,6 +19,7 @@ test('prints help', () => {
   assert.match(help.stdout, /--source/);
   assert.match(help.stdout, /--output/);
   assert.match(help.stdout, /--theme/);
+  assert.match(help.stdout, /--json/);
 });
 
 test('unsupported command exits non-zero with stderr', () => {

@@ -189,6 +189,11 @@ the source artifact:
 node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master
 ```
 
+Callers that need stable automation output can add `--json`. The CLI then emits
+a JSON object containing `runDir`, `outputs`, `htmlPath`, `pptxPaths`, and
+`qcReportPath`; without `--json`, it keeps the human-oriented `written <runDir>`
+line for backward compatibility.
+
 Generic Markdown sources can pass the hint through supported YAML frontmatter:
 
 ```yaml

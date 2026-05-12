@@ -10,7 +10,7 @@ import {
 } from './generate.mjs';
 import { loadSourcePackage } from './source-loader.mjs';
 
-const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--theme <renderer-hint>] [--workdir <path>] [--ppt-master-path <path>]`;
+const help = `deckgen generate --source <path> --profile briefing|learning|article --output html|pptx|both [--theme <renderer-hint>] [--workdir <path>] [--ppt-master-path <path>] [--json]`;
 const args = process.argv.slice(2);
 const [command] = args;
 const isHelpFlag = (token) => token === '--help' || token === '-h';
@@ -34,14 +34,19 @@ const parseGenerateFlags = (tokens) => {
     ['--ppt-master-path', 'pptMasterPath']
   ]);
 
-  for (let index = 0; index < tokens.length; index += 2) {
+  for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
-    const value = tokens[index + 1];
 
     if (!flag?.startsWith('--')) {
       fail(`Unexpected argument: ${flag ?? ''}`);
     }
 
+    if (flag === '--json') {
+      options.json = true;
+      continue;
+    }
+
+    const value = tokens[index + 1];
     if (value === undefined || value.startsWith('--')) {
       fail(`Missing value for ${flag}.`);
     }
@@ -52,6 +57,7 @@ const parseGenerateFlags = (tokens) => {
     }
 
     options[optionKey] = value;
+    index += 1;
   }
 
   return options;
@@ -140,7 +146,7 @@ const commandGenerate = (tokens) => {
   };
 
   try {
-    const { runDir } = writeGenerateBundle({
+    const { runDir, htmlPath, pptxPaths } = writeGenerateBundle({
       workdir: options.workdir,
       request,
       sourceManifest: sourcePackage.sourceManifest,
@@ -149,6 +155,22 @@ const commandGenerate = (tokens) => {
       sourcePath: sourcePackage.sourcePath,
       config
     });
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify({
+        ok: true,
+        command: 'generate',
+        source_type: sourcePackage.sourceType,
+        profile: sourcePackage.profile,
+        output: options.output,
+        outputs: concreteOutputs,
+        runDir,
+        htmlPath,
+        pptxPaths,
+        qcReportPath: path.join(runDir, 'qc_report.md')
+      }, null, 2)}\n`);
+      return;
+    }
+
     process.stdout.write(`written ${runDir}\n`);
   } catch (error) {
     if (error instanceof DeckgenUserError) {
