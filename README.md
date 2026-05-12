@@ -132,9 +132,10 @@ npm run preflight:ppt-master -- --ppt-master-path D:\Users\rickylu\dev\ppt-maste
 ```
 
 Run the combined run-bundle smoke when you want one local gate that checks the
-generated `deck_contract.json`, `content.md`, `qc_report.md`, and every sibling
-output requested by the contract. It verifies `html/index.html` for HTML output
-and runs structural PPTX validation for PPTX output:
+traceability files (`request.json`, `source_manifest.json`), generated
+`deck_contract.json`, `content.md`, `qc_report.md`, and every sibling output
+requested by the contract. It verifies `html/index.html` for HTML output and
+runs structural PPTX validation for PPTX output:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>

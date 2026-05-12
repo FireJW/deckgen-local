@@ -8,6 +8,8 @@ import {
   validatePptxSmokeResult
 } from './pptx-structural-smoke.mjs';
 
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
 const fileSummary = (filePath) => {
   const resolvedPath = path.resolve(filePath);
   try {
@@ -23,6 +25,36 @@ const fileSummary = (filePath) => {
     return { ok: true, path: resolvedPath, bytes: stats.size };
   } catch (error) {
     return { ok: false, path: resolvedPath, error: error.message };
+  }
+};
+
+const parseJsonFile = (filePath) => {
+  const file = fileSummary(filePath);
+  if (!file.ok) {
+    return { ...file, validation: { ok: false, errors: [file.error] } };
+  }
+
+  try {
+    const data = JSON.parse(readFileSync(filePath, 'utf8'));
+    if (!isObject(data)) {
+      return {
+        ...file,
+        ok: false,
+        validation: { ok: false, errors: ['json root must be an object'] }
+      };
+    }
+
+    return {
+      ...file,
+      validation: { ok: true, errors: [] },
+      data
+    };
+  } catch (error) {
+    return {
+      ...file,
+      ok: false,
+      validation: { ok: false, errors: [`invalid json: ${error.message}`] }
+    };
   }
 };
 
@@ -109,6 +141,8 @@ export function inspectDeckRunBundle({ runDir } = {}) {
     runDirOk,
     expectedOutputs,
     expectedSlides,
+    request: parseJsonFile(path.join(resolvedRunDir, 'request.json')),
+    sourceManifest: parseJsonFile(path.join(resolvedRunDir, 'source_manifest.json')),
     contract,
     content: fileSummary(path.join(resolvedRunDir, 'content.md')),
     qcReport: fileSummary(path.join(resolvedRunDir, 'qc_report.md')),
@@ -126,6 +160,22 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
 
   if (!summary.contract?.ok || !summary.contract?.validation?.ok) {
     errors.push(`deck_contract.json is invalid: ${(summary.contract?.validation?.errors ?? [summary.contract?.error ?? 'unknown error']).join('; ')}`);
+  }
+
+  if (!summary.request?.ok || !summary.request?.validation?.ok) {
+    errors.push(`request.json is missing or invalid: ${(summary.request?.validation?.errors ?? [summary.request?.error ?? 'unknown error']).join('; ')}`);
+  } else if (Array.isArray(summary.request.data.outputs) && Array.isArray(summary.expectedOutputs)) {
+    const requestOutputs = [...summary.request.data.outputs].sort();
+    const contractOutputs = [...summary.expectedOutputs].sort();
+    if (JSON.stringify(requestOutputs) !== JSON.stringify(contractOutputs)) {
+      errors.push(`request.json outputs ${requestOutputs.join(',')} do not match deck_contract.json outputs ${contractOutputs.join(',')}`);
+    }
+  }
+
+  if (!summary.sourceManifest?.ok || !summary.sourceManifest?.validation?.ok) {
+    errors.push(`source_manifest.json is missing or invalid: ${(summary.sourceManifest?.validation?.errors ?? [summary.sourceManifest?.error ?? 'unknown error']).join('; ')}`);
+  } else if (!isObject(summary.sourceManifest.data.primary) || typeof summary.sourceManifest.data.primary.path !== 'string' || summary.sourceManifest.data.primary.path.trim() === '') {
+    errors.push('source_manifest.json primary.path must be a non-empty string');
   }
 
   if (!summary.content?.ok) {

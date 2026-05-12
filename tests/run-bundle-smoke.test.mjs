@@ -87,8 +87,37 @@ const validContract = (outputs = ['html', 'pptx']) => ({
   outputs
 });
 
-const makeRunBundle = ({ outputs = ['html', 'pptx'], html = true, pptx = true } = {}) => {
+const makeRunBundle = ({
+  outputs = ['html', 'pptx'],
+  html = true,
+  pptx = true,
+  request = true,
+  requestOutputs = outputs,
+  sourceManifest = true,
+  sourceManifestPrimaryPath = 'D:/source.md'
+} = {}) => {
   const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-run-smoke-'));
+  if (request) {
+    writeFileSync(path.join(runDir, 'request.json'), `${JSON.stringify({
+      command: 'generate',
+      source: 'fixtures/generic-markdown/briefing.md',
+      source_type: 'generic-markdown',
+      profile: 'briefing',
+      output: outputs.length === 2 ? 'both' : outputs[0],
+      outputs: requestOutputs,
+      workdir: path.dirname(runDir)
+    }, null, 2)}\n`, 'utf8');
+  }
+  if (sourceManifest) {
+    writeFileSync(path.join(runDir, 'source_manifest.json'), `${JSON.stringify({
+      type: 'generic-markdown',
+      primary: {
+        path: sourceManifestPrimaryPath,
+        bytes: 42,
+        modified_at: new Date(0).toISOString()
+      }
+    }, null, 2)}\n`, 'utf8');
+  }
   writeFileSync(path.join(runDir, 'content.md'), '# Run Smoke Deck\n\nVerified bundle.', 'utf8');
   writeFileSync(path.join(runDir, 'qc_report.md'), '# QC\n\nvalidation: PASS', 'utf8');
   writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify(validContract(outputs), null, 2)}\n`, 'utf8');
@@ -126,6 +155,34 @@ test('inspectDeckRunBundle fails closed when a requested sibling output is missi
 
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /html\/index\.html/i);
+});
+
+test('inspectDeckRunBundle fails closed when traceability files are missing', () => {
+  const runDir = makeRunBundle({ request: false, sourceManifest: false });
+  const summary = inspectDeckRunBundle({ runDir });
+  const validation = validateDeckRunBundleSmokeResult(summary);
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /request\.json/i);
+  assert.match(validation.errors.join('\n'), /source_manifest\.json/i);
+});
+
+test('inspectDeckRunBundle rejects traceability drift in request and source manifest files', () => {
+  const outputMismatchRunDir = makeRunBundle({ requestOutputs: ['html'] });
+  const outputMismatch = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({
+    runDir: outputMismatchRunDir
+  }));
+
+  assert.equal(outputMismatch.ok, false);
+  assert.match(outputMismatch.errors.join('\n'), /request\.json outputs/i);
+
+  const sourcePathMissingRunDir = makeRunBundle({ sourceManifestPrimaryPath: ' ' });
+  const sourcePathMissing = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({
+    runDir: sourcePathMissingRunDir
+  }));
+
+  assert.equal(sourcePathMissing.ok, false);
+  assert.match(sourcePathMissing.errors.join('\n'), /source_manifest\.json primary\.path/i);
 });
 
 test('deck-run-smoke script emits json and exits non-zero on invalid bundles', () => {
