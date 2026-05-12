@@ -62,6 +62,20 @@ const malformedContracts = [
       { type: 'local_file', path: 'D:/source.md', role: 'supporting', id: 'supporting' }
     ]
   })],
+  ['source_refs item has duplicate role', () => ({
+    ...validContract(),
+    source_refs: [
+      { type: 'local_file', path: 'D:/source-a.md', role: 'primary', id: 'main-a' },
+      { type: 'local_file', path: 'D:/source-b.md', role: 'primary', id: 'main-b' }
+    ]
+  })],
+  ['source_refs item id collides with another role', () => ({
+    ...validContract(),
+    source_refs: [
+      { type: 'local_file', path: 'D:/source-a.md', role: 'primary', id: 'main-a' },
+      { type: 'local_file', path: 'D:/source-b.md', role: 'supporting', id: 'primary' }
+    ]
+  })],
   ['hard_constraints is not an array', () => ({ ...validContract(), hard_constraints: 'none' })],
   ['theme is null', () => ({ ...validContract(), theme: null })],
   ['theme renderer_hint is empty', () => ({ ...validContract(), theme: { renderer_hint: ' ' } })],

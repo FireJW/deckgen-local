@@ -320,15 +320,16 @@ without treating one output as the source for the other.
 
 `source_refs[]` items are strict objects with `type`, `path`, `role`, and
 optional `id`. Current adapters emit `type: "local_file"`, `path` must be an
-absolute local path, `path` values must be unique, and optional `id` values
-must be unique when present.
+absolute local path, and `id` / `role` / `path` values must stay unique across
+the source refs so legacy string evidence does not become ambiguous. Optional
+`id` values must be unique when present.
 
 `slides[].evidence_refs[]` may still be a non-empty string for legacy adapter
 compatibility, or an object with `id` and optional `source_ref`, `locator`, and
 `quote`. Object evidence `id` values must be unique within the slide. When
 object-form `source_ref` is present, it must match a declared source ref `id`
 so structured evidence stays keyed to explicit source items. Legacy string
-evidence can still match a source ref `id`, `role`, or `path`. Optional
-`locator` and `quote` values must be non-empty strings when present. Unknown
-keys are rejected so downstream renderers do not silently accept drifted
-evidence contracts.
+evidence can still match a source ref `id`, `role`, or `path` when that label
+is unique across the source refs. Optional `locator` and `quote` values must
+be non-empty strings when present. Unknown keys are rejected so downstream
+renderers do not silently accept drifted evidence contracts.

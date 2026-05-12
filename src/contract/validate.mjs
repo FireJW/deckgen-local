@@ -149,8 +149,7 @@ function validateDeckContractInternal(contract) {
 }
 
 function validateSourceRefs(sourceRefs) {
-  const seenIds = new Set();
-  const seenPaths = new Set();
+  const seenLegacyKeys = new Map();
 
   for (const [index, sourceRef] of sourceRefs.entries()) {
     const prefix = `source_refs[${index}]`;
@@ -175,8 +174,20 @@ function validateSourceRefs(sourceRefs) {
       return fail(`${prefix}.type must be local_file`);
     }
 
-    if (!isAbsolute(sourceRef.path.trim())) {
+    const path = sourceRef.path.trim();
+    if (!isAbsolute(path)) {
       return fail(`${prefix}.path must be an absolute path`);
+    }
+
+    const pathValidation = registerLegacyKey({
+      seenLegacyKeys,
+      index,
+      prefix,
+      field: 'path',
+      value: path
+    });
+    if (pathValidation) {
+      return pathValidation;
     }
 
     if (Object.hasOwn(sourceRef, 'id') && !isNonEmptyString(sourceRef.id)) {
@@ -184,21 +195,44 @@ function validateSourceRefs(sourceRefs) {
     }
 
     if (Object.hasOwn(sourceRef, 'id')) {
-      const id = sourceRef.id.trim();
-      if (seenIds.has(id)) {
-        return fail(`${prefix}.id must be unique`);
+      const idValidation = registerLegacyKey({
+        seenLegacyKeys,
+        index,
+        prefix,
+        field: 'id',
+        value: sourceRef.id.trim()
+      });
+      if (idValidation) {
+        return idValidation;
       }
-      seenIds.add(id);
     }
 
-    const path = sourceRef.path.trim();
-    if (seenPaths.has(path)) {
-      return fail(`${prefix}.path must be unique`);
+    const roleValidation = registerLegacyKey({
+      seenLegacyKeys,
+      index,
+      prefix,
+      field: 'role',
+      value: sourceRef.role.trim()
+    });
+    if (roleValidation) {
+      return roleValidation;
     }
-    seenPaths.add(path);
   }
 
   return { ok: true };
+}
+
+function registerLegacyKey({ seenLegacyKeys, index, prefix, field, value }) {
+  const existing = seenLegacyKeys.get(value);
+  if (existing && existing.index !== index) {
+    return fail(`${prefix}.${field} must be unique across source_refs; collides with ${existing.prefix}.${existing.field}`);
+  }
+
+  if (!existing) {
+    seenLegacyKeys.set(value, { index, prefix, field });
+  }
+
+  return undefined;
 }
 
 function collectSourceRefKeys(sourceRefs) {
