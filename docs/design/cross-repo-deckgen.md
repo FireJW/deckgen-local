@@ -338,9 +338,12 @@ without treating one output as the source for the other.
 ## Reference Item Validation
 
 `slides[]` items are strict objects with `id`, `role`, `headline`,
-`layout_intent`, `evidence_refs`, and optional `body`. Slide `id` values must
-be unique within a deck so renderer anchors, screenshots, and generated PPTX
-slide assets stay deterministic.
+`layout_intent`, `evidence_refs`, optional `body`, and optional structured
+`items[]`. Slide `id` values must be unique within a deck so renderer anchors,
+screenshots, and generated PPTX slide assets stay deterministic. When present,
+`items[]` is a non-empty array of `paragraph`, `quote`, `image`, or `table`
+blocks, and each block may carry its own `evidence_refs[]` using the same
+source-ref rules as the parent slide.
 
 `hard_constraints[]` items must be non-empty strings. `theme` is also strict:
 it must include a non-empty `renderer_hint`, may include string `tone`, and

@@ -68,6 +68,49 @@ const imageHeadline = (section) => {
   return `Image: ${image?.alt || image?.src || 'Visual'}`;
 };
 
+const quoteItemText = (section) =>
+  sectionLines(section)
+    .map(cleanQuoteLine)
+    .filter(Boolean)
+    .join('\n');
+
+const buildSlideItems = (section) => {
+  if (isQuoteSection(section)) {
+    return [{
+      kind: 'quote',
+      text: quoteItemText(section) || section,
+      evidence_refs: []
+    }];
+  }
+
+  if (isImageSection(section)) {
+    const image = parseMarkdownImageLine(sectionLines(section)[0]);
+    return [{
+      kind: 'image',
+      src: image?.src ?? '',
+      alt: image?.alt ?? '',
+      evidence_refs: []
+    }];
+  }
+
+  if (sectionLines(section).length >= 2) {
+    const lines = sectionLines(section);
+    if (lines[0].includes('|') && lines[1].includes('|') && isTableSeparator(lines[1])) {
+      return [{
+        kind: 'table',
+        markdown: section,
+        evidence_refs: []
+      }];
+    }
+  }
+
+  return [{
+    kind: 'paragraph',
+    text: section,
+    evidence_refs: []
+  }];
+};
+
 const summarizeHeadline = (section, index) => {
   if (isQuoteSection(section)) {
     return quoteHeadline(section);
@@ -119,6 +162,7 @@ export function buildDeckPlan(input) {
     role: 'content',
     headline: summarizeHeadline(section, index),
     body: section,
+    items: buildSlideItems(section),
     evidence_refs: [],
     layout_intent: isQuoteSection(section) ? 'quote' : (isImageSection(section) ? 'image' : contentLayout)
   }));
@@ -129,6 +173,7 @@ export function buildDeckPlan(input) {
       role: 'cover',
       headline: normalizedTitle,
       body: normalizedAudience,
+      items: buildSlideItems(normalizedAudience),
       evidence_refs: [],
       layout_intent: 'hero_dark'
     },

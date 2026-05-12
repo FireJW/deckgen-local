@@ -13,7 +13,9 @@ const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
-const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'evidence_refs', 'layout_intent']);
+const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent']);
+const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'evidence_refs']);
+const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table']);
 const allowedThemeKeys = new Set(['renderer_hint', 'tone']);
 const allowedSourceRefTypes = new Set(['local_file']);
 
@@ -158,6 +160,22 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix}.body must be a string when present`);
     }
 
+    if (Object.hasOwn(slide, 'items')) {
+      if (!Array.isArray(slide.items) || slide.items.length === 0) {
+        return fail(`${prefix}.items must be a non-empty array when present`);
+      }
+
+      const slideItemsValidation = validateSlideItems({
+        items: slide.items,
+        prefix: `${prefix}.items`,
+        knownSourceRefKeys,
+        knownSourceRefIds
+      });
+      if (!slideItemsValidation.ok) {
+        return slideItemsValidation;
+      }
+    }
+
     if (!Array.isArray(slide.evidence_refs)) {
       return fail(`${prefix}.evidence_refs must be an array`);
     }
@@ -244,6 +262,70 @@ function validateSourceRefs(sourceRefs) {
     });
     if (roleValidation) {
       return roleValidation;
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefIds }) {
+  for (const [index, item] of items.entries()) {
+    const itemPrefix = `${prefix}[${index}]`;
+
+    if (!isObject(item)) {
+      return fail(`${itemPrefix} must be an object`);
+    }
+
+    for (const key of Object.keys(item)) {
+      if (!allowedSlideItemKeys.has(key)) {
+        return fail(`${itemPrefix} has unexpected key: ${key}`);
+      }
+    }
+
+    if (!isNonEmptyString(item.kind)) {
+      return fail(`${itemPrefix}.kind must be a non-empty string`);
+    }
+
+    const kind = item.kind.trim();
+    if (!allowedSlideItemKinds.has(kind)) {
+      return fail(`${itemPrefix}.kind must be one of paragraph, quote, image, table`);
+    }
+
+    if (kind === 'paragraph' || kind === 'quote') {
+      if (!isNonEmptyString(item.text)) {
+        return fail(`${itemPrefix}.text must be a non-empty string`);
+      }
+    }
+
+    if (kind === 'image') {
+      if (!isNonEmptyString(item.src)) {
+        return fail(`${itemPrefix}.src must be a non-empty string`);
+      }
+      if (Object.hasOwn(item, 'alt') && typeof item.alt !== 'string') {
+        return fail(`${itemPrefix}.alt must be a string when present`);
+      }
+    }
+
+    if (kind === 'table') {
+      if (!isNonEmptyString(item.markdown)) {
+        return fail(`${itemPrefix}.markdown must be a non-empty string`);
+      }
+    }
+
+    if (Object.hasOwn(item, 'evidence_refs')) {
+      if (!Array.isArray(item.evidence_refs)) {
+        return fail(`${itemPrefix}.evidence_refs must be an array when present`);
+      }
+
+      const evidenceRefsValidation = validateEvidenceRefs({
+        evidenceRefs: item.evidence_refs,
+        prefix: `${itemPrefix}.evidence_refs`,
+        knownSourceRefKeys,
+        knownSourceRefIds
+      });
+      if (!evidenceRefsValidation.ok) {
+        return evidenceRefsValidation;
+      }
     }
   }
 

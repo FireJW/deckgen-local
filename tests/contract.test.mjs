@@ -157,11 +157,36 @@ test('validateDeckContract accepts a valid deck contract', () => {
   }), { ok: true });
 });
 
+test('validateDeckContract accepts structured slide items with evidence refs', () => {
+  assert.deepEqual(validateDeckContract({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{
+      ...validSlide(),
+      items: [{
+        kind: 'paragraph',
+        text: 'Grounded claim.',
+        evidence_refs: [{ id: 'ev1', source_ref: 'primary', quote: 'Grounded claim.' }]
+      }]
+    }]
+  }), { ok: true });
+});
+
 test('validateDeckContract rejects unexpected top-level keys', () => {
   const result = validateDeckContract({ ...validContract(), unexpected: 'field' });
 
   assert.equal(result.ok, false);
   assert.match(result.error, /unexpected top-level key/);
+});
+
+test('validateDeckContract rejects malformed slide items', () => {
+  const result = validateDeckContract({
+    ...validContract(),
+    slides: [{ ...validSlide(), items: [{ kind: 'unsupported', text: 'x' }] }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /items/i);
 });
 
 test('validateDeckContract rejects malformed data without throwing', () => {
@@ -258,6 +283,21 @@ test('buildDeckPlan maps leading blockquote sections to quote layout', () => {
   assert.equal(plan.slides[1].layout_intent, 'quote');
   assert.equal(plan.slides[1].headline, 'Quote: Markets reprice before filings.');
   assert.equal(plan.slides[1].body, '> Markets reprice before filings.\n> Evidence stays local.');
+});
+
+test('buildDeckPlan emits structured slide items for content slides', () => {
+  const plan = buildDeckPlan({
+    title: 'Item report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: 'Point'
+  });
+
+  assert.deepEqual(plan.slides[1].items, [{
+    kind: 'paragraph',
+    text: 'Point',
+    evidence_refs: []
+  }]);
 });
 
 test('buildDeckPlan maps markdown image sections to image layout', () => {

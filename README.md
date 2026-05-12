@@ -16,6 +16,9 @@ Single-line Markdown image sections (`![alt](path)`) are promoted to image
 slides. Local image paths are copied into each generated output bundle under
 `assets/images/` and rewritten to output-relative paths. Remote image URLs and
 data URIs are preserved but not downloaded.
+Generated slide contracts also carry structured `items[]` blocks alongside the
+legacy `body` text so future renderers can read block-level content without
+dropping compatibility with the current HTML and PPTX paths.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
