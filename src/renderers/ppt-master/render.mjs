@@ -131,6 +131,8 @@ const splitTableRow = (line) =>
     .split('|')
     .map((cell) => cell.trim());
 
+const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
+
 const isTableSeparator = (line) => {
   const cells = splitTableRow(line);
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
@@ -158,6 +160,21 @@ const parseMarkdownTable = (body) => {
     headers: splitTableRow(tableLines[0]),
     rows: tableLines.slice(2).map((line) => splitTableRow(line))
   };
+};
+
+const parseMarkdownBulletList = (body) => {
+  const lines = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.split('\n').map((line) => line.trim()).filter(Boolean));
+
+  const bulletLines = lines.find((items) => items.length > 0 && items.every(isBulletLine));
+  if (!bulletLines) {
+    return null;
+  }
+
+  return bulletLines.map((line) => line.replace(/^[-*+]\s+/, '').replace(/^\d+[.)]\s+/, '').trim()).filter(Boolean);
 };
 
 const cleanCellText = (value) => String(value ?? '')
@@ -386,6 +403,31 @@ const renderTableSvg = ({
   ].join('\n  ');
 };
 
+const renderBulletsSvg = ({
+  bullets,
+  x,
+  y,
+  width,
+  bodyColor,
+  accent,
+  line = defaultPptVisualTheme.line,
+  fill = defaultPptVisualTheme.tableFill,
+  panelRadius = defaultPptVisualTheme.panelRadius
+}) => {
+  const height = Math.max(220, bullets.length * 72 + 64);
+  const lineHeight = 44;
+  const points = bullets.slice(0, 8).flatMap((bullet) => wrapText(bullet, 48, 2));
+  return [
+    '<g class="ppt-bullets">',
+    `  <rect x="${x}" y="${y}" width="${width}" height="${height}"${roundedAttrs(panelRadius)} fill="${fill}" stroke="${line}" stroke-width="2"/>`,
+    `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
+    ...points.map((lineText, index) =>
+      `<text x="${x + 42}" y="${y + 58 + index * lineHeight}" font-family="Arial, sans-serif" font-size="26" fill="${bodyColor}">&#8226; ${escapeXml(lineText)}</text>`
+    ),
+    '</g>'
+  ].join('\n  ');
+};
+
 const renderEvidenceSvg = ({ evidenceRefs, x, y, color }) => {
   const lines = formatEvidenceRefs(evidenceRefs)
     .slice(0, 3)
@@ -429,14 +471,17 @@ const renderSlideSvg = (slide, index, visualTheme) => {
   const muted = isCover ? visualTheme.coverMuted : visualTheme.muted;
   const headlineLines = wrapText(slide?.headline, isCover ? 24 : 34, isCover ? 3 : 2);
   const table = isCover ? null : parseMarkdownTable(body);
+  const bullets = !isCover && !table && slide?.layout_intent !== 'quote' && slide?.layout_intent !== 'image'
+    ? parseMarkdownBulletList(body)
+    : null;
   const quote = !isCover && slide?.layout_intent === 'quote' && !table
     ? parseBlockquoteBody(body)
     : null;
   const image = !isCover && slide?.layout_intent === 'image' && !table && !quote
     ? parseMarkdownImageBody(body)
     : null;
-  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote && !image;
-  const bodyLines = table || textSplit || quote || image ? [] : wrapText(body, 52, isCover ? 4 : 7);
+  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote && !image && !bullets;
+  const bodyLines = table || textSplit || quote || image || bullets ? [] : wrapText(body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
@@ -469,6 +514,18 @@ const renderSlideSvg = (slide, index, visualTheme) => {
   } else if (image) {
     bodySvg = renderImageSvg({
       image,
+      x: 120,
+      y: bodyStartY,
+      width: 1040,
+      bodyColor,
+      accent,
+      line: visualTheme.line,
+      fill: visualTheme.tableFill,
+      panelRadius: visualTheme.panelRadius
+    });
+  } else if (bullets) {
+    bodySvg = renderBulletsSvg({
+      bullets,
       x: 120,
       y: bodyStartY,
       width: 1040,

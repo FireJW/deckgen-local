@@ -172,6 +172,20 @@ test('validateDeckContract accepts structured slide items with evidence refs', (
   }), { ok: true });
 });
 
+test('validateDeckContract accepts structured bullet slide items', () => {
+  assert.deepEqual(validateDeckContract({
+    ...validContract(),
+    slides: [{
+      ...validSlide(),
+      items: [{
+        kind: 'bullets',
+        points: ['First signal', 'Second signal'],
+        evidence_refs: []
+      }]
+    }]
+  }), { ok: true });
+});
+
 test('validateDeckContract rejects unexpected top-level keys', () => {
   const result = validateDeckContract({ ...validContract(), unexpected: 'field' });
 
@@ -187,6 +201,16 @@ test('validateDeckContract rejects malformed slide items', () => {
 
   assert.equal(result.ok, false);
   assert.match(result.error, /items/i);
+});
+
+test('validateDeckContract rejects malformed bullet slide items', () => {
+  const result = validateDeckContract({
+    ...validContract(),
+    slides: [{ ...validSlide(), items: [{ kind: 'bullets', points: ['First signal', ' '] }] }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /points/i);
 });
 
 test('validateDeckContract rejects malformed data without throwing', () => {
@@ -298,6 +322,26 @@ test('buildDeckPlan emits structured slide items for content slides', () => {
     text: 'Point',
     evidence_refs: []
   }]);
+});
+
+test('buildDeckPlan emits bullet items for markdown list sections', () => {
+  const plan = buildDeckPlan({
+    title: 'Bullet report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: [
+      '## Signals',
+      '- Demand strengthened',
+      '- Margins expanded'
+    ].join('\n')
+  });
+
+  assert.deepEqual(plan.slides[1].items, [{
+    kind: 'bullets',
+    points: ['Demand strengthened', 'Margins expanded'],
+    evidence_refs: []
+  }]);
+  assert.equal(plan.slides[1].body, '## Signals\n- Demand strengthened\n- Margins expanded');
 });
 
 test('buildDeckPlan maps markdown image sections to image layout', () => {

@@ -345,6 +345,37 @@ test('renderHtmlDeck renders structured slide items when body is absent', () => 
   assert.match(swiss, /source: primary/);
 });
 
+test('renderHtmlDeck renders structured bullet items as lists when body is absent', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Structured Bullets',
+    items: [{
+      kind: 'bullets',
+      points: ['Demand strengthened', 'Margins expanded'],
+      evidence_refs: []
+    }],
+    evidence_refs: [],
+    layout_intent: 'evidence'
+  };
+  const styleA = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  });
+  const swiss = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  });
+
+  assert.match(styleA, /<ul class="deckgen-list">/);
+  assert.match(styleA, /<li>Demand strengthened<\/li>/);
+  assert.match(styleA, /<li>Margins expanded<\/li>/);
+  assert.match(swiss, /<ul class="deckgen-swiss-list">/);
+  assert.match(swiss, /<li>Demand strengthened<\/li>/);
+});
+
 test('renderHtmlDeck deduplicates slide and item evidence references', () => {
   const html = renderHtmlDeck({
     title: 'Evidence Dedup',

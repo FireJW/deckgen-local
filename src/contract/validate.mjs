@@ -14,8 +14,8 @@ const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
 const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent']);
-const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'evidence_refs']);
-const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table']);
+const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'points', 'evidence_refs']);
+const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table', 'bullets']);
 const allowedThemeKeys = new Set(['renderer_hint', 'tone']);
 const allowedSourceRefTypes = new Set(['local_file']);
 
@@ -288,12 +288,24 @@ function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefI
 
     const kind = item.kind.trim();
     if (!allowedSlideItemKinds.has(kind)) {
-      return fail(`${itemPrefix}.kind must be one of paragraph, quote, image, table`);
+      return fail(`${itemPrefix}.kind must be one of paragraph, quote, image, table, bullets`);
     }
 
     if (kind === 'paragraph' || kind === 'quote') {
       if (!isNonEmptyString(item.text)) {
         return fail(`${itemPrefix}.text must be a non-empty string`);
+      }
+    }
+
+    if (kind === 'bullets') {
+      if (!Array.isArray(item.points) || item.points.length === 0) {
+        return fail(`${itemPrefix}.points must be a non-empty array`);
+      }
+
+      for (const [pointIndex, point] of item.points.entries()) {
+        if (!isNonEmptyString(point)) {
+          return fail(`${itemPrefix}.points[${pointIndex}] must be a non-empty string`);
+        }
       }
     }
 

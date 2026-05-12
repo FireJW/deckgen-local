@@ -54,6 +54,24 @@ const isImageSection = (section) => {
   return lines.length === 1 && parseMarkdownImageLine(lines[0]) !== null;
 };
 
+const isHeadingLine = (line) => /^#{1,6}\s+\S/.test(line);
+const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
+const cleanBulletLine = (line) => line.replace(/^[-*+]\s+/, '').replace(/^\d+[.)]\s+/, '').trim();
+
+const contentLines = (section) => {
+  const lines = sectionLines(section);
+  return lines.length > 1 && isHeadingLine(lines[0]) ? lines.slice(1) : lines;
+};
+
+const bulletPoints = (section) => {
+  const lines = contentLines(section);
+  if (lines.length === 0 || !lines.every(isBulletLine)) {
+    return [];
+  }
+
+  return lines.map(cleanBulletLine).filter(Boolean);
+};
+
 const cleanQuoteLine = (line) => line.replace(/^>\s?/, '').trim();
 
 const quoteHeadline = (section) => {
@@ -75,6 +93,15 @@ const quoteItemText = (section) =>
     .join('\n');
 
 const buildSlideItems = (section) => {
+  const points = bulletPoints(section);
+  if (points.length > 0) {
+    return [{
+      kind: 'bullets',
+      points,
+      evidence_refs: []
+    }];
+  }
+
   if (isQuoteSection(section)) {
     return [{
       kind: 'quote',

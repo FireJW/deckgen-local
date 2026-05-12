@@ -146,6 +146,8 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .deckgen-figure { margin: 0; display: grid; gap: 12px; max-width: min(100%, 960px); }
   #deck[data-renderer] .deckgen-figure img { display: block; width: 100%; max-height: min(52vh, 520px); object-fit: contain; background: rgba(var(--ink-rgb), 0.06); border: 1px solid rgba(var(--ink-rgb), 0.14); }
   #deck[data-renderer] .deckgen-figure figcaption { font-family: var(--mono); font-size: 0.78rem; line-height: 1.4; color: rgba(var(--ink-rgb), 0.64); }
+  #deck[data-renderer] .deckgen-list { margin: 0; padding-left: 1.3rem; display: grid; gap: 10px; max-width: 820px; }
+  #deck[data-renderer] .deckgen-list li { margin: 0; line-height: 1.55; }
   #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
   #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
   #deck[data-renderer] table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
@@ -176,6 +178,8 @@ const splitTableRow = (line) =>
     .split('|')
     .map((cell) => cell.trim());
 
+const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
+
 const isTableSeparator = (line) => {
   const cells = splitTableRow(line);
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
@@ -205,6 +209,12 @@ const renderMarkdownTable = (lines) => {
     '</div>'
   ].join('\n');
 };
+
+const renderMarkdownList = (lines) => [
+  '<ul class="deckgen-list">',
+  ...lines.map((line) => `<li>${renderInline(line.replace(/^[-*+]\s+/, '').replace(/^\d+[.)]\s+/, '').trim())}</li>`),
+  '</ul>'
+].join('\n');
 
 const isBlockquoteBlock = (lines) =>
   lines.length > 0 && lines.every((line) => line.startsWith('>'));
@@ -261,6 +271,9 @@ const renderBody = (slide) => {
       }
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
+      }
+      if (lines.length > 0 && lines.every(isBulletLine)) {
+        return renderMarkdownList(lines);
       }
       if (isBlockquoteBlock(lines)) {
         return renderBlockquote(lines);

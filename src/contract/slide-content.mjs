@@ -34,6 +34,18 @@ const serializeImageItem = (item) => {
 
 const serializeTableItem = (item) => isNonEmptyString(item?.markdown) ? item.markdown.trim() : '';
 
+const serializeBulletsItem = (item) => {
+  if (!Array.isArray(item?.points) || item.points.length === 0) {
+    return '';
+  }
+
+  return item.points
+    .map((point) => String(point ?? '').trim())
+    .filter(Boolean)
+    .map((point) => `- ${point}`)
+    .join('\n');
+};
+
 const serializeItem = (item) => {
   const kind = String(item?.kind ?? '').trim();
 
@@ -51,6 +63,10 @@ const serializeItem = (item) => {
 
   if (kind === 'table') {
     return serializeTableItem(item);
+  }
+
+  if (kind === 'bullets') {
+    return serializeBulletsItem(item);
   }
 
   return '';

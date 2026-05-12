@@ -231,6 +231,48 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(notes, /source: primary/);
 });
 
+test('renderPptMasterDeck renders structured bullet items when body is absent', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-bullets-ppt-project-${Date.now()}`);
+  const bulletsContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Structured Bullets',
+        body: '',
+        items: [{
+          kind: 'bullets',
+          points: ['Demand strengthened', 'Margins expanded'],
+          evidence_refs: []
+        }],
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: bulletsContract,
+    content: '# Structured Bullets',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-bullets"/);
+  assert.match(svg, /Demand strengthened/);
+  assert.match(svg, /Margins expanded/);
+});
+
 test('renderPptMasterDeck truncates long pptx table cells to stay within columns', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

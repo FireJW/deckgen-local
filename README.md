@@ -10,6 +10,8 @@ Contract slides with `layout_intent: "text_split"` render as a local
 two-column HTML layout, used by the `learning` profile for concept and
 explanation slides. Standard Markdown table blocks in slide bodies render as
 HTML tables instead of raw pipe-delimited text.
+Markdown list sections are normalized into structured `bullets` items and
+render as real lists in HTML and PPTX rather than paragraph text with hyphens.
 Leading Markdown blockquote sections (`>` lines) are promoted to quote slides
 and render as quote layouts in HTML and PPTX.
 Single-line Markdown image sections (`![alt](path)`) are promoted to image

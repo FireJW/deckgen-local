@@ -58,6 +58,8 @@ const splitTableRow = (line) =>
     .split('|')
     .map((cell) => cell.trim());
 
+const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
+
 const isTableSeparator = (line) => {
   const cells = splitTableRow(line);
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
@@ -87,6 +89,12 @@ const renderMarkdownTable = (lines) => {
     '</div>'
   ].join('\n');
 };
+
+const renderMarkdownList = (lines) => [
+  '<ul class="deckgen-swiss-list">',
+  ...lines.map((line) => `<li>${renderInline(line.replace(/^[-*+]\s+/, '').replace(/^\d+[.)]\s+/, '').trim())}</li>`),
+  '</ul>'
+].join('\n');
 
 const isBlockquoteBlock = (lines) =>
   lines.length > 0 && lines.every((line) => line.startsWith('>'));
@@ -150,6 +158,9 @@ const renderBody = (slide) => {
       }
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
+      }
+      if (lines.length > 0 && lines.every(isBulletLine)) {
+        return renderMarkdownList(lines);
       }
       if (isBlockquoteBlock(lines)) {
         return renderBlockquote(lines);
@@ -239,6 +250,8 @@ const renderDeckgenSwissOverrides = (theme) => `
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure{margin:0;display:grid;gap:10px;max-width:100%}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure img{display:block;width:100%;max-height:58vh;object-fit:contain;border:1px solid var(--grey-2);background:var(--grey-1)}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure figcaption{font-family:var(--mono);font-size:12px;line-height:1.4;color:var(--grey-3)}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-list{margin:0;padding-left:1.2rem;display:grid;gap:10px;max-width:74ch}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-list li{margin:0;line-height:1.5}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-footnote{margin-top:auto;font-family:var(--mono);font-size:12px;line-height:1.45;color:var(--grey-3);display:grid;gap:4px}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-table-wrap{max-width:100%;overflow:hidden;border:1px solid var(--grey-2)}
   #deck[data-renderer="html-guizang-swiss"] table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;line-height:1.35}

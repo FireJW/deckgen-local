@@ -341,8 +341,8 @@ without treating one output as the source for the other.
 `layout_intent`, `evidence_refs`, optional `body`, and optional structured
 `items[]`. Slide `id` values must be unique within a deck so renderer anchors,
 screenshots, and generated PPTX slide assets stay deterministic. When present,
-`items[]` is a non-empty array of `paragraph`, `quote`, `image`, or `table`
-blocks, and each block may carry its own `evidence_refs[]` using the same
+`items[]` is a non-empty array of `paragraph`, `bullets`, `quote`, `image`, or
+`table` blocks, and each block may carry its own `evidence_refs[]` using the same
 source-ref rules as the parent slide. Renderers still prefer `body` for
 backward compatibility, but when `body` is absent they serialize `items[]` into
 the same Markdown-shaped rendering path. Image items participate in the same
