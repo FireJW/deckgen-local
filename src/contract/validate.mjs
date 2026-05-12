@@ -14,7 +14,7 @@ const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
 const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent']);
-const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'points', 'evidence_refs']);
+const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'headers', 'rows', 'points', 'evidence_refs']);
 const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table', 'bullets']);
 const allowedThemeKeys = new Set(['renderer_hint', 'tone']);
 const allowedSourceRefTypes = new Set(['local_file']);
@@ -319,8 +319,9 @@ function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefI
     }
 
     if (kind === 'table') {
-      if (!isNonEmptyString(item.markdown)) {
-        return fail(`${itemPrefix}.markdown must be a non-empty string`);
+      const tableValidation = validateTableItem({ item, prefix: itemPrefix });
+      if (tableValidation) {
+        return tableValidation;
       }
     }
 
@@ -342,6 +343,50 @@ function validateSlideItems({ items, prefix, knownSourceRefKeys, knownSourceRefI
   }
 
   return { ok: true };
+}
+
+function validateTableItem({ item, prefix }) {
+  const hasMarkdown = isNonEmptyString(item.markdown);
+  const hasStructuredShape = Object.hasOwn(item, 'headers') || Object.hasOwn(item, 'rows');
+
+  if (!hasMarkdown && !hasStructuredShape) {
+    return fail(`${prefix}.markdown must be a non-empty string or headers/rows must define a structured table`);
+  }
+
+  if (!hasStructuredShape) {
+    return undefined;
+  }
+
+  if (!Array.isArray(item.headers) || item.headers.length === 0) {
+    return fail(`${prefix}.headers must be a non-empty array`);
+  }
+
+  for (const [headerIndex, header] of item.headers.entries()) {
+    if (!isNonEmptyString(header)) {
+      return fail(`${prefix}.headers[${headerIndex}] must be a non-empty string`);
+    }
+  }
+
+  if (!Array.isArray(item.rows) || item.rows.length === 0) {
+    return fail(`${prefix}.rows must be a non-empty array`);
+  }
+
+  for (const [rowIndex, row] of item.rows.entries()) {
+    const rowPrefix = `${prefix}.rows[${rowIndex}]`;
+    if (!Array.isArray(row)) {
+      return fail(`${rowPrefix} must be an array`);
+    }
+    if (row.length !== item.headers.length) {
+      return fail(`${rowPrefix} must contain ${item.headers.length} cells`);
+    }
+    for (const [cellIndex, cell] of row.entries()) {
+      if (typeof cell !== 'string') {
+        return fail(`${rowPrefix}[${cellIndex}] must be a string`);
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function registerLegacyKey({ seenLegacyKeys, index, prefix, field, value }) {

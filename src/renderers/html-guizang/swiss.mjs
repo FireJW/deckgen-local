@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { splitMarkdownTableRow } from '../../contract/markdown-table.mjs';
 import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { resolveSwissTheme } from '../guizang-swiss/theme.mjs';
 
@@ -51,12 +52,7 @@ const renderThemeVars = (theme) => [
 ].join('');
 
 const splitTableRow = (line) =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
+  splitMarkdownTableRow(line);
 
 const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
 

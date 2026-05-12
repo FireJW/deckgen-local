@@ -9,6 +9,7 @@ import {
 import path from 'node:path';
 import { materializeLocalImageAssets } from '../../assets/images.mjs';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
+import { splitMarkdownTableRow } from '../../contract/markdown-table.mjs';
 import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
 import { isSwissRendererHint, resolveSwissTheme } from '../guizang-swiss/theme.mjs';
@@ -124,12 +125,7 @@ const wrapText = (value, maxChars, maxLines) => {
 const slideStem = (slide, index) => `${String(index + 1).padStart(2, '0')}_${slugPart(slide?.id, 'slide')}`;
 
 const splitTableRow = (line) =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
+  splitMarkdownTableRow(line);
 
 const isBulletLine = (line) => /^[-*+]\s+\S/.test(line) || /^\d+[.)]\s+\S/.test(line);
 

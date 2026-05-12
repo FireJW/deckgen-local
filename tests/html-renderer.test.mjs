@@ -345,6 +345,45 @@ test('renderHtmlDeck renders structured slide items when body is absent', () => 
   assert.match(swiss, /source: primary/);
 });
 
+test('renderHtmlDeck renders structured table headers and rows when body is absent', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Structured Table',
+    items: [{
+      kind: 'table',
+      headers: ['Rank', 'Symbol', 'Score'],
+      rows: [
+        ['1', '000988.SZ', '75.05'],
+        ['2', 'Research | Data', '72.10']
+      ],
+      evidence_refs: ['primary']
+    }],
+    evidence_refs: [],
+    layout_intent: 'evidence'
+  };
+  const styleA = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  });
+  const swiss = renderHtmlDeck({
+    title: 'Structured Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  });
+
+  assert.match(styleA, /<table>/);
+  assert.match(styleA, /<th>Symbol<\/th>/);
+  assert.match(styleA, /<td>000988\.SZ<\/td>/);
+  assert.match(styleA, /<td>Research \| Data<\/td>/);
+  assert.match(styleA, /source: primary/);
+  assert.match(swiss, /data-layout="S20"/);
+  assert.match(swiss, /<th>Score<\/th>/);
+  assert.match(swiss, /<td>Research \| Data<\/td>/);
+  assert.match(swiss, /<td>72\.10<\/td>/);
+});
+
 test('renderHtmlDeck renders structured bullet items as lists when body is absent', () => {
   const slide = {
     id: 's01',

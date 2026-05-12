@@ -32,7 +32,40 @@ const serializeImageItem = (item) => {
   return `![${alt}](${src})`;
 };
 
-const serializeTableItem = (item) => isNonEmptyString(item?.markdown) ? item.markdown.trim() : '';
+const serializeMarkdownTableCell = (value) =>
+  String(value ?? '')
+    .replace(/\r\n/g, ' ')
+    .replace(/\r/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replaceAll('|', '\\|');
+
+const serializeStructuredTableItem = (item) => {
+  if (!Array.isArray(item?.headers) || item.headers.length === 0 || !Array.isArray(item?.rows) || item.rows.length === 0) {
+    return '';
+  }
+
+  const headers = item.headers.map(serializeMarkdownTableCell);
+  const rows = item.rows
+    .filter((row) => Array.isArray(row))
+    .map((row) => row.map(serializeMarkdownTableCell));
+
+  if (rows.length === 0) {
+    return '';
+  }
+
+  return [
+    `| ${headers.join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    ...rows.map((row) => `| ${row.join(' | ')} |`)
+  ].join('\n');
+};
+
+const serializeTableItem = (item) =>
+  isNonEmptyString(item?.markdown)
+    ? item.markdown.trim()
+    : serializeStructuredTableItem(item);
 
 const serializeBulletsItem = (item) => {
   if (!Array.isArray(item?.points) || item.points.length === 0) {

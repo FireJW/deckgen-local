@@ -186,6 +186,24 @@ test('validateDeckContract accepts structured bullet slide items', () => {
   }), { ok: true });
 });
 
+test('validateDeckContract accepts structured table slide items', () => {
+  assert.deepEqual(validateDeckContract({
+    ...validContract(),
+    slides: [{
+      ...validSlide(),
+      items: [{
+        kind: 'table',
+        headers: ['Rank', 'Symbol', 'Score'],
+        rows: [
+          ['1', '000988.SZ', '75.05'],
+          ['2', '600519.SH', '72.10']
+        ],
+        evidence_refs: []
+      }]
+    }]
+  }), { ok: true });
+});
+
 test('validateDeckContract rejects unexpected top-level keys', () => {
   const result = validateDeckContract({ ...validContract(), unexpected: 'field' });
 
@@ -211,6 +229,23 @@ test('validateDeckContract rejects malformed bullet slide items', () => {
 
   assert.equal(result.ok, false);
   assert.match(result.error, /points/i);
+});
+
+test('validateDeckContract rejects malformed structured table slide items', () => {
+  const result = validateDeckContract({
+    ...validContract(),
+    slides: [{
+      ...validSlide(),
+      items: [{
+        kind: 'table',
+        headers: ['Rank', 'Symbol'],
+        rows: [['1']]
+      }]
+    }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.error, /rows\[0\]/i);
 });
 
 test('validateDeckContract rejects malformed data without throwing', () => {

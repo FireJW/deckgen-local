@@ -231,6 +231,57 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(notes, /source: primary/);
 });
 
+test('renderPptMasterDeck renders structured table headers and rows when body is absent', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-structured-table-ppt-project-${Date.now()}`);
+  const structuredContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Structured Table',
+        body: '',
+        items: [{
+          kind: 'table',
+          headers: ['Rank', 'Symbol', 'Score'],
+          rows: [
+            ['1', '000988.SZ', '75.05'],
+            ['2', 'Research | Data', '72.10']
+          ],
+          evidence_refs: ['primary']
+        }],
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: structuredContract,
+    content: '# Structured Table',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  const notes = readFileSync(path.join(outputDir, 'notes', '02_s02.md'), 'utf8');
+  assert.match(svg, /class="ppt-table"/);
+  assert.match(svg, />Symbol</);
+  assert.match(svg, />000988\.SZ</);
+  assert.match(svg, />Research \| Data</);
+  assert.match(svg, />72\.10</);
+  assert.match(notes, /\| Rank \| Symbol \| Score \|/);
+  assert.match(notes, /source: primary/);
+});
+
 test('renderPptMasterDeck renders structured bullet items when body is absent', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

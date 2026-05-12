@@ -9,7 +9,9 @@ guizang shell with fixed theme presets; it does not convert HTML into PPTX.
 Contract slides with `layout_intent: "text_split"` render as a local
 two-column HTML layout, used by the `learning` profile for concept and
 explanation slides. Standard Markdown table blocks in slide bodies render as
-HTML tables instead of raw pipe-delimited text.
+HTML tables instead of raw pipe-delimited text. Structured `table` items can
+also use `headers` and `rows`; they are serialized through the same table path
+for HTML and PPTX.
 Markdown list sections are normalized into structured `bullets` items and
 render as real lists in HTML and PPTX rather than paragraph text with hyphens.
 Leading Markdown blockquote sections (`>` lines) are promoted to quote slides
@@ -166,8 +168,10 @@ Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI req
 Configure the checkout with `--ppt-master-path`, `DECKGEN_PPT_MASTER_PATH`, or a sibling directory named `../ppt-master` from the repo root. The wrapper calls `skills/ppt-master/scripts/svg_to_pptx.py` and verifies `ppt-master/exports/*.pptx` before reporting success.
 Standard Markdown table blocks are mapped into SVG table blocks before the
 upstream exporter runs, so PPTX output does not receive raw pipe-delimited text
-for common report tables. Slides with `layout_intent: "text_split"` are mapped
-into two-column SVG blocks before `ppt-master` exports the PPTX.
+for common report tables. Structured table items with `headers` and `rows` use
+the same SVG table block when `body` is absent. Slides with
+`layout_intent: "text_split"` are mapped into two-column SVG blocks before
+`ppt-master` exports the PPTX.
 Slides with `layout_intent: "image"` are mapped into editable SVG image
 blocks. When the Markdown image points at a local file, the asset is copied
 under `ppt-master/assets/images/` and emitted as an SVG `<image>` element so

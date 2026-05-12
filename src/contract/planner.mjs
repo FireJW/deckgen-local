@@ -1,4 +1,5 @@
 import { allowedProfiles, deckContractSchemaVersion } from './schema.mjs';
+import { splitMarkdownTableRow } from './markdown-table.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -13,11 +14,7 @@ const splitSourceText = (sourceText) =>
     .slice(0, 6);
 
 const splitTableRow = (line) =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
+  splitMarkdownTableRow(line)
     .map((cell) => cell.trim().replace(/`([^`]*)`/g, '$1'))
     .filter(Boolean);
 

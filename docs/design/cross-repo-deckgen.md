@@ -305,8 +305,11 @@ When a slide body contains a standard Markdown table block, the project writer
 maps it into an SVG table group for `ppt-master` instead of passing raw
 pipe-delimited Markdown text through to the slide image. Long table cell text is
 compacted and ellipsized to keep fixed-width SVG columns readable. Slides with
-`layout_intent: "text_split"` are mapped into two-column SVG blocks so learning
-profile concept/explanation slides keep their contract layout in PPTX output.
+structured `table` items may also supply `headers[]` and `rows[][]`; when
+`body` is absent those rows are serialized into the same Markdown-shaped table
+path for HTML and PPTX. Slides with `layout_intent: "text_split"` are mapped
+into two-column SVG blocks so learning profile concept/explanation slides keep
+their contract layout in PPTX output.
 Slides with `layout_intent: "image"` are mapped into SVG image placeholder
 blocks when no local source path is available. During CLI generation, local
 Markdown image files are resolved relative to the source Markdown/package file,
@@ -346,7 +349,10 @@ screenshots, and generated PPTX slide assets stay deterministic. When present,
 source-ref rules as the parent slide. Renderers still prefer `body` for
 backward compatibility, but when `body` is absent they serialize `items[]` into
 the same Markdown-shaped rendering path. Image items participate in the same
-local asset-copy step as Markdown image bodies.
+local asset-copy step as Markdown image bodies. Table items may either carry a
+legacy non-empty `markdown` table or a structured `headers[]` plus `rows[][]`
+shape; structured rows must match the header width so table renderers do not
+silently drop cells.
 
 `hard_constraints[]` items must be non-empty strings. `theme` is also strict:
 it must include a non-empty `renderer_hint`, may include string `tone`, and
