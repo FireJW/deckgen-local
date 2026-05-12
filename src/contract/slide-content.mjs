@@ -1,3 +1,5 @@
+import { formatEvidenceRef } from './evidence.mjs';
+
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
 
 const normalizeMarkdown = (value) =>
@@ -71,15 +73,24 @@ export const slideMarkdownBody = (slide) => {
 
 export const collectSlideEvidenceRefs = (slide) => {
   const refs = [];
+  const seen = new Set();
+  const pushRef = (ref) => {
+    const key = formatEvidenceRef(ref);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    refs.push(ref);
+  };
 
   if (Array.isArray(slide?.evidence_refs)) {
-    refs.push(...slide.evidence_refs);
+    slide.evidence_refs.forEach(pushRef);
   }
 
   if (Array.isArray(slide?.items)) {
     for (const item of slide.items) {
       if (Array.isArray(item?.evidence_refs)) {
-        refs.push(...item.evidence_refs);
+        item.evidence_refs.forEach(pushRef);
       }
     }
   }

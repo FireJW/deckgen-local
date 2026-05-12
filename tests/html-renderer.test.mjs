@@ -345,6 +345,31 @@ test('renderHtmlDeck renders structured slide items when body is absent', () => 
   assert.match(swiss, /source: primary/);
 });
 
+test('renderHtmlDeck deduplicates slide and item evidence references', () => {
+  const html = renderHtmlDeck({
+    title: 'Evidence Dedup',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'Evidence-backed Claim',
+        body: 'The claim stays grounded.',
+        items: [{
+          kind: 'paragraph',
+          text: 'The claim stays grounded.',
+          evidence_refs: [{ id: 'ev1', source_ref: 'primary', locator: 'p. 2', quote: 'Verified claim.' }]
+        }],
+        evidence_refs: [{ id: 'ev1', source_ref: 'primary', locator: 'p. 2', quote: 'Verified claim.' }],
+        layout_intent: 'evidence'
+      }
+    ]
+  });
+
+  const matches = html.match(/ev1 \| source: primary \| p\. 2 \| Verified claim\./g) ?? [];
+  assert.equal(matches.length, 1);
+});
+
 test('buildQcReport renders source validation and html lines', () => {
   const report = buildQcReport({
     sourcePath: 'fixtures/generic-markdown/briefing.md',

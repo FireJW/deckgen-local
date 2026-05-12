@@ -20,6 +20,11 @@ test('buildGenericMarkdownPackage builds valid content and contract', () => {
   assert.ok(result.contract.slides.slice(1).every((slide) =>
     JSON.stringify(slide.evidence_refs) === JSON.stringify([{ id: `${slide.id}-source`, source_ref: 'primary' }])
   ));
+  assert.ok(result.contract.slides.slice(1).every((slide) =>
+    slide.items.every((item) =>
+      JSON.stringify(item.evidence_refs) === JSON.stringify([{ id: `${slide.id}-source`, source_ref: 'primary' }])
+    )
+  ));
   assert.equal(validateDeckContract(result.contract).ok, true);
   assert.ok(result.content.includes('Why this matters'));
 });
