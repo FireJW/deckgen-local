@@ -9,6 +9,7 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
   const slideCount = Number(summary.slideCount ?? 0);
   const textLength = Number(summary.textLength ?? 0);
   const overflowItems = Array.isArray(summary.overflowItems) ? summary.overflowItems : [];
+  const brokenImageItems = Array.isArray(summary.brokenImageItems) ? summary.brokenImageItems : [];
   const deckElementPresent = summary.deckElementPresent === true;
   const navElementPresent = summary.navElementPresent === true;
   const backgroundCanvasCount = Number(summary.backgroundCanvasCount ?? 0);
@@ -74,6 +75,16 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
     const label = overflowItems.length === 1 ? 'text element' : 'text elements';
     const verb = overflowItems.length === 1 ? 'appears' : 'appear';
     errors.push(`${overflowItems.length} ${label} ${verb} to overflow`);
+  }
+
+  if (brokenImageItems.length > 0) {
+    const label = brokenImageItems.length === 1 ? 'image appears' : 'images appear';
+    const sources = brokenImageItems
+      .slice(0, 5)
+      .map((item) => String(item?.src ?? '').trim())
+      .filter(Boolean)
+      .join(', ');
+    errors.push(`${brokenImageItems.length} ${label} broken${sources ? `: ${sources}` : ''}`);
   }
 
   if (!screenshotPath || !Number.isFinite(screenshotBytes) || screenshotBytes < 1) {

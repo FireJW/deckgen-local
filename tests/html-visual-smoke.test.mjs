@@ -57,6 +57,57 @@ test('validateVisualSmokeResult accepts Swiss renderer markers', () => {
   assert.deepEqual(result, { ok: true, errors: [] });
 });
 
+test('validateVisualSmokeResult accepts loaded deck images', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Image Deck',
+    renderer: 'html-guizang-swiss',
+    slideCount: 2,
+    textLength: 120,
+    overflowItems: [],
+    brokenImageItems: [],
+    imageCount: 1,
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 0,
+    hasSwissLayouts: true,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
+    screenshotPath: '.tmp/deckgen-visual-smoke/image.png',
+    screenshotBytes: 12400
+  }, {
+    expectedTitle: 'Image Deck',
+    expectedSlides: 2
+  });
+
+  assert.deepEqual(result, { ok: true, errors: [] });
+});
+
+test('validateVisualSmokeResult rejects broken deck images', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Image Deck',
+    renderer: 'html-guizang-swiss',
+    slideCount: 2,
+    textLength: 120,
+    overflowItems: [],
+    brokenImageItems: [{ src: 'assets/images/missing.png', alt: 'Missing visual' }],
+    imageCount: 1,
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 0,
+    hasSwissLayouts: true,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
+    screenshotPath: '.tmp/deckgen-visual-smoke/image.png',
+    screenshotBytes: 12400
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), /1 image appears broken/);
+  assert.match(result.errors.join('\n'), /assets\/images\/missing\.png/);
+});
+
 test('validateVisualSmokeResult rejects missing guizang shell and local assets', () => {
   const result = validateVisualSmokeResult({
     title: 'Deck Generator Briefing',

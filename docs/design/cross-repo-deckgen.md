@@ -241,6 +241,8 @@ a generated `html/index.html` with Playwright, captures a screenshot under
 - slide count is positive and matches the expected count when provided
 - body text is non-empty
 - text elements do not visibly overflow their slide bounds
+- every deck image finishes loading and exposes positive natural dimensions,
+  catching broken copied local image assets
 - screenshot file exists and has bytes
 
 The script intentionally keeps Playwright out of repo dependencies. Use

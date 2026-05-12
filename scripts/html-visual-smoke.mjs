@@ -139,6 +139,17 @@ const summarizePage = async (page, htmlPath, screenshotPath) => {
         clientHeight: element.clientHeight,
         scrollHeight: element.scrollHeight
       }));
+    const images = Array.from(document.images);
+    const brokenImageItems = images
+      .filter((image) => !image.complete || image.naturalWidth < 1 || image.naturalHeight < 1)
+      .slice(0, 10)
+      .map((image) => ({
+        src: image.getAttribute('src') ?? image.currentSrc ?? '',
+        alt: image.getAttribute('alt') ?? '',
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight
+      }));
 
     return {
       title: document.title,
@@ -152,6 +163,8 @@ const summarizePage = async (page, htmlPath, screenshotPath) => {
         .filter(Boolean),
       slideCount: document.querySelectorAll('.slide').length,
       textLength: document.body.innerText.trim().length,
+      imageCount: images.length,
+      brokenImageItems,
       overflowItems
     };
   });

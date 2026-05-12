@@ -85,6 +85,8 @@ Run the browser/screenshot smoke against a generated `html/index.html` when
 layout regressions matter. The repo does not vendor Playwright, so pass a local
 or bundled `node_modules` directory that contains `playwright`; if Playwright's
 managed browser cache is missing, pass an installed browser executable.
+The smoke also checks deck images: every `<img>` must finish loading with
+positive natural dimensions, so copied local image assets cannot silently break.
 
 ```powershell
 npm run smoke:html -- `
