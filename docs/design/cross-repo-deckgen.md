@@ -151,9 +151,11 @@ Leading Markdown blockquote sections are normalized into `layout_intent:
 `S09`, and PPTX emits a dedicated quote SVG block.
 Single-line Markdown image sections are normalized into `layout_intent:
 "image"` slides. Style A and Swiss render them as `<figure>` blocks, Swiss maps
-them to `S13`, and PPTX emits an editable image placeholder SVG that preserves
-the source path. This first pass does not copy local image assets or fetch
-remote images.
+them to `S13`, and local image files are copied into each sibling output under
+`assets/images/` before rendering. HTML rewrites `<img>` sources to the copied
+asset path. PPTX rewrites the slide body for the ppt-master project and emits an
+SVG `<image>` element that the upstream native exporter can embed. Remote image
+URLs and data URIs are preserved but not downloaded.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 
@@ -300,9 +302,11 @@ compacted and ellipsized to keep fixed-width SVG columns readable. Slides with
 `layout_intent: "text_split"` are mapped into two-column SVG blocks so learning
 profile concept/explanation slides keep their contract layout in PPTX output.
 Slides with `layout_intent: "image"` are mapped into SVG image placeholder
-blocks that preserve the original Markdown image path without attempting asset
-resolution. This keeps PPTX generation deterministic while leaving real asset
-copying and raster embedding for a later slice.
+blocks when no local source path is available. During CLI generation, local
+Markdown image files are resolved relative to the source Markdown/package file,
+copied into `ppt-master/assets/images/`, and emitted as SVG `<image>` elements
+with output-relative `href` values. Missing local image files fail closed so
+PPTX generation cannot report success with a silently absent visual.
 Structured and legacy `evidence_refs` are emitted into both slide SVGs and
 per-slide note Markdown so editable PPTX projects keep citation context.
 

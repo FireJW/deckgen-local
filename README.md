@@ -13,8 +13,9 @@ HTML tables instead of raw pipe-delimited text.
 Leading Markdown blockquote sections (`>` lines) are promoted to quote slides
 and render as quote layouts in HTML and PPTX.
 Single-line Markdown image sections (`![alt](path)`) are promoted to image
-slides. The first pass preserves the image path in HTML and PPTX placeholder
-output, but does not copy image assets or download remote images.
+slides. Local image paths are copied into each generated output bundle under
+`assets/images/` and rewritten to output-relative paths. Remote image URLs and
+data URIs are preserved but not downloaded.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
@@ -155,8 +156,10 @@ upstream exporter runs, so PPTX output does not receive raw pipe-delimited text
 for common report tables. Slides with `layout_intent: "text_split"` are mapped
 into two-column SVG blocks before `ppt-master` exports the PPTX.
 Slides with `layout_intent: "image"` are mapped into editable SVG image
-placeholder blocks that preserve the original Markdown image path for manual
-editing.
+blocks. When the Markdown image points at a local file, the asset is copied
+under `ppt-master/assets/images/` and emitted as an SVG `<image>` element so
+the upstream native exporter can embed it into the generated PPTX. Missing
+local image files fail the run instead of producing a false-success deck.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output pptx --ppt-master-path D:/Users/rickylu/dev/ppt-master

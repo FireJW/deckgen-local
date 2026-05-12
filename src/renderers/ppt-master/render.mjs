@@ -7,6 +7,7 @@ import {
   writeFileSync
 } from 'node:fs';
 import path from 'node:path';
+import { materializeLocalImageAssets } from '../../assets/images.mjs';
 import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 import { inspectPptxFile } from '../../qc/pptx-structural-smoke.mjs';
 import { isSwissRendererHint, resolveSwissTheme } from '../guizang-swiss/theme.mjs';
@@ -316,13 +317,21 @@ const renderImageSvg = ({
 }) => {
   const height = 390;
   const caption = image.alt || image.src;
+  const isMaterializedAsset = String(image.src ?? '').replaceAll('\\', '/').startsWith('assets/images/');
+  const imageElement = isMaterializedAsset
+    ? `  <image href="${escapeXml(image.src)}" x="${x + 42}" y="${y + 112}" width="${width - 84}" height="${height - 166}" preserveAspectRatio="xMidYMid meet"/>`
+    : '';
+  const placeholderText = isMaterializedAsset
+    ? ''
+    : `  <text x="${x + 42}" y="${y + height - 44}" font-family="Arial, sans-serif" font-size="20" fill="${bodyColor}">Image asset placeholder: source path is preserved for editing.</text>`;
   return [
     '<g class="ppt-image">',
     `  <rect x="${x}" y="${y}" width="${width}" height="${height}"${roundedAttrs(panelRadius)} fill="${fill}" stroke="${line}" stroke-width="2"/>`,
     `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
-    `  <text x="${x + 42}" y="${y + 88}" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="${bodyColor}">${escapeXml(caption)}</text>`,
-    `  <text x="${x + 42}" y="${y + 146}" font-family="Arial, sans-serif" font-size="24" fill="${bodyColor}">${escapeXml(image.src)}</text>`,
-    `  <text x="${x + 42}" y="${y + height - 44}" font-family="Arial, sans-serif" font-size="20" fill="${bodyColor}">Image asset placeholder: source path is preserved for editing.</text>`,
+    `  <text x="${x + 42}" y="${y + 68}" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="${bodyColor}">${escapeXml(caption)}</text>`,
+    imageElement,
+    `  <text x="${x + 42}" y="${y + height - 24}" font-family="Arial, sans-serif" font-size="18" fill="${bodyColor}">${escapeXml(image.src)}</text>`,
+    placeholderText,
     '</g>'
   ].join('\n  ');
 };
@@ -596,7 +605,12 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
   }
 
   mkdirSync(projectDir, { recursive: true });
-  const { exportsDir } = writePptMasterProject({ contract, content, projectDir });
+  const materialized = materializeLocalImageAssets({
+    contract,
+    sourcePath: config.sourcePath,
+    outputDir: projectDir
+  });
+  const { exportsDir } = writePptMasterProject({ contract: materialized.contract, content, projectDir });
   const pythonPath = resolvePptMasterPythonPath({
     pptMasterPath,
     pythonPath: config.pythonPath

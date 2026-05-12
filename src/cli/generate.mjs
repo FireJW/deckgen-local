@@ -1,6 +1,7 @@
 import { randomUUID as defaultRandomUUID } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { materializeLocalImageAssets } from '../assets/images.mjs';
 import { validateDeckContract } from '../contract/validate.mjs';
 import { inspectPptMasterEnvironment } from '../integrations/ppt-master.mjs';
 import { buildQcReport } from '../qc/report.mjs';
@@ -100,14 +101,23 @@ export const writeGenerateBundle = ({
   let pptxPaths = [];
   let pptxQa = [];
   if (contract.outputs.includes('html')) {
-    const htmlDir = path.join(runDir, 'html');
-    mkdirSync(htmlDir);
-    htmlPath = path.join(htmlDir, 'index.html');
-    writeFileSync(htmlPath, renderHtmlDeck(contract), 'utf8');
-    for (const asset of getHtmlGuizangAssetFiles()) {
-      const assetPath = path.join(htmlDir, asset.relativePath);
-      mkdirSync(path.dirname(assetPath), { recursive: true });
-      copyFileSync(asset.sourcePath, assetPath);
+    try {
+      const htmlDir = path.join(runDir, 'html');
+      mkdirSync(htmlDir);
+      const htmlAssets = materializeLocalImageAssets({
+        contract,
+        sourcePath,
+        outputDir: htmlDir
+      });
+      htmlPath = path.join(htmlDir, 'index.html');
+      writeFileSync(htmlPath, renderHtmlDeck(htmlAssets.contract), 'utf8');
+      for (const asset of getHtmlGuizangAssetFiles()) {
+        const assetPath = path.join(htmlDir, asset.relativePath);
+        mkdirSync(path.dirname(assetPath), { recursive: true });
+        copyFileSync(asset.sourcePath, assetPath);
+      }
+    } catch (error) {
+      throw new DeckgenUserError(error.message);
     }
   }
 
@@ -116,7 +126,7 @@ export const writeGenerateBundle = ({
       const pptxResult = renderPptMasterDeck({
         contract,
         content,
-        config,
+        config: { ...config, sourcePath },
         outputDir: path.join(runDir, 'ppt-master')
       });
       pptxPaths = pptxResult.pptxPaths;

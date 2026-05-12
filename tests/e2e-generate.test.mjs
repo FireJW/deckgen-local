@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -120,6 +120,11 @@ process.exit(run.status ?? 0);
   ].join('\r\n'), 'utf8');
   return commandPath;
 };
+
+const tinyPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lJ4QfQAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 test('generate writes a run bundle with html and qc report', () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-local-'));
@@ -333,6 +338,73 @@ test('generate writes sibling Swiss html and pptx outputs for both mode', () => 
   assert.match(html, /data-swiss-theme="swiss-ikb"/);
   const svg = readFileSync(path.join(runDir, 'ppt-master', 'svg_final', '02_s02.svg'), 'utf8');
   assert.match(svg, /data-renderer="ppt-master-swiss"/);
+});
+
+test('generate copies local markdown image assets into sibling html and pptx outputs', () => {
+  const sourceRoot = mkdtempSync(path.join(os.tmpdir(), 'deckgen-image-source-'));
+  const assetsDir = path.join(sourceRoot, 'assets');
+  mkdirSync(assetsDir, { recursive: true });
+  writeFileSync(path.join(assetsDir, 'revenue bridge.png'), tinyPng);
+  const imageSource = path.join(sourceRoot, 'image-briefing.md');
+  writeFileSync(imageSource, [
+    '---',
+    'title: Image Asset Deck',
+    '---',
+    '',
+    '![Revenue bridge](assets/revenue%20bridge.png)'
+  ].join('\n'), 'utf8');
+
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-image-output-'));
+  const pptMasterPath = makeFakePptMaster(2);
+  const pythonPath = makeFakePython();
+  const run = runGenerate(
+    ['--source', imageSource, '--profile', 'briefing', '--output', 'both', '--workdir', tmp, '--ppt-master-path', pptMasterPath],
+    { env: { DECKGEN_PPT_MASTER_PYTHON: pythonPath } }
+  );
+
+  assert.equal(run.status, 0, run.stderr);
+  const runDir = writtenRunDir(run.stdout);
+  const htmlAssetDir = path.join(runDir, 'html', 'assets', 'images');
+  const pptAssetDir = path.join(runDir, 'ppt-master', 'assets', 'images');
+  const htmlAssets = readdirSync(htmlAssetDir);
+  const pptAssets = readdirSync(pptAssetDir);
+
+  assert.equal(htmlAssets.length, 1);
+  assert.equal(pptAssets.length, 1);
+  assert.deepEqual(readFileSync(path.join(htmlAssetDir, htmlAssets[0])), tinyPng);
+  assert.deepEqual(readFileSync(path.join(pptAssetDir, pptAssets[0])), tinyPng);
+
+  const html = readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8');
+  assert.match(html, /src="assets\/images\/[^"]+\.png"/);
+  assert.doesNotMatch(html, /assets\/revenue%20bridge\.png/);
+
+  const svg = readFileSync(path.join(runDir, 'ppt-master', 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /<image\b/);
+  assert.match(svg, /href="assets\/images\/[^"]+\.png"/);
+  assert.doesNotMatch(svg, /Image asset placeholder/);
+
+  const rootContract = JSON.parse(readFileSync(path.join(runDir, 'deck_contract.json'), 'utf8'));
+  assert.equal(rootContract.slides[1].body, '![Revenue bridge](assets/revenue%20bridge.png)');
+});
+
+test('generate reports missing local image assets as user errors', () => {
+  const sourceRoot = mkdtempSync(path.join(os.tmpdir(), 'deckgen-missing-image-source-'));
+  const imageSource = path.join(sourceRoot, 'missing-image.md');
+  writeFileSync(imageSource, [
+    '---',
+    'title: Missing Image Deck',
+    '---',
+    '',
+    '![Missing visual](assets/missing.png)'
+  ].join('\n'), 'utf8');
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'deckgen-missing-image-output-'));
+  const run = runGenerate(['--source', imageSource, '--profile', 'briefing', '--output', 'html', '--workdir', tmp]);
+
+  assert.notEqual(run.status, 0);
+  assert.doesNotMatch(run.stdout, /written/);
+  assert.match(run.stderr, /Image asset not found/);
+  assert.match(run.stderr, /Usage:/);
+  assert.doesNotMatch(run.stderr, /at materializeLocalImageAssets/);
 });
 
 test('generate uses unique run directories for two html runs under one workdir', () => {
