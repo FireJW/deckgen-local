@@ -142,6 +142,9 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .slide p { margin: 0; font-size: 1.16rem; line-height: 1.72; }
   #deck[data-renderer] blockquote { margin: 0; padding: 24px 28px; border-left: 3px solid currentColor; font-family: var(--serif-zh); font-size: clamp(1.5rem, 3vw, 3rem); line-height: 1.26; background: rgba(var(--paper-rgb), 0.08); }
   #deck[data-renderer] .light blockquote { background: rgba(var(--ink-rgb), 0.05); }
+  #deck[data-renderer] .deckgen-figure { margin: 0; display: grid; gap: 12px; max-width: min(100%, 960px); }
+  #deck[data-renderer] .deckgen-figure img { display: block; width: 100%; max-height: min(52vh, 520px); object-fit: contain; background: rgba(var(--ink-rgb), 0.06); border: 1px solid rgba(var(--ink-rgb), 0.14); }
+  #deck[data-renderer] .deckgen-figure figcaption { font-family: var(--mono); font-size: 0.78rem; line-height: 1.4; color: rgba(var(--ink-rgb), 0.64); }
   #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
   #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
   #deck[data-renderer] table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
@@ -205,6 +208,21 @@ const renderMarkdownTable = (lines) => {
 const isBlockquoteBlock = (lines) =>
   lines.length > 0 && lines.every((line) => line.startsWith('>'));
 
+const parseMarkdownImageLine = (line) => {
+  const match = String(line ?? '').trim().match(/^!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const alt = match[1].trim();
+  const src = match[2].trim();
+  if (!src) {
+    return null;
+  }
+
+  return { alt, src };
+};
+
 const renderBlockquote = (lines) => {
   const quote = lines
     .map((line) => line.replace(/^>\s?/, '').trim())
@@ -212,6 +230,16 @@ const renderBlockquote = (lines) => {
     .map(renderInline)
     .join('<br>');
   return `<blockquote>${quote}</blockquote>`;
+};
+
+const renderMarkdownImage = (image) => {
+  const caption = image.alt || image.src;
+  return [
+    '<figure class="deckgen-figure">',
+    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy">`,
+    caption ? `  <figcaption>${escapeHtml(caption)}</figcaption>` : '',
+    '</figure>'
+  ].filter(Boolean).join('\n');
 };
 
 const renderBody = (body) => {
@@ -225,6 +253,10 @@ const renderBody = (body) => {
     .split(/\n{2,}/)
     .map((paragraph) => {
       const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
+      const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
+      if (image) {
+        return renderMarkdownImage(image);
+      }
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
       }

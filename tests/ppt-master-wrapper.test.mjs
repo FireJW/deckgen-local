@@ -294,6 +294,43 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.doesNotMatch(svg, /&gt; Markets/);
 });
 
+test('renderPptMasterDeck maps image slides into pptx image placeholder svg blocks', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-image-ppt-project-${Date.now()}`);
+  const imageContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Image: Revenue bridge',
+        body: '![Revenue bridge](assets/revenue-bridge.png)',
+        layout_intent: 'image'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: imageContract,
+    content: '# Image',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-image"/);
+  assert.match(svg, /Revenue bridge/);
+  assert.match(svg, /assets\/revenue-bridge\.png/);
+  assert.doesNotMatch(svg, /!\[Revenue bridge\]/);
+});
+
 test('renderPptMasterDeck carries evidence references into svg and notes', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

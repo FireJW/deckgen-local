@@ -29,9 +29,29 @@ const isTableSeparator = (line) => {
 const sectionLines = (section) =>
   section.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 
+const parseMarkdownImageLine = (line) => {
+  const match = String(line ?? '').trim().match(/^!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const alt = match[1].trim();
+  const src = match[2].trim();
+  if (!src) {
+    return null;
+  }
+
+  return { alt, src };
+};
+
 const isQuoteSection = (section) => {
   const lines = sectionLines(section);
   return lines.length > 0 && lines[0].startsWith('>');
+};
+
+const isImageSection = (section) => {
+  const lines = sectionLines(section);
+  return lines.length === 1 && parseMarkdownImageLine(lines[0]) !== null;
 };
 
 const cleanQuoteLine = (line) => line.replace(/^>\s?/, '').trim();
@@ -43,9 +63,18 @@ const quoteHeadline = (section) => {
   return quote ? `Quote: ${quote}` : 'Quote';
 };
 
+const imageHeadline = (section) => {
+  const image = parseMarkdownImageLine(sectionLines(section)[0]);
+  return `Image: ${image?.alt || image?.src || 'Visual'}`;
+};
+
 const summarizeHeadline = (section, index) => {
   if (isQuoteSection(section)) {
     return quoteHeadline(section);
+  }
+
+  if (isImageSection(section)) {
+    return imageHeadline(section);
   }
 
   const lines = sectionLines(section);
@@ -91,7 +120,7 @@ export function buildDeckPlan(input) {
     headline: summarizeHeadline(section, index),
     body: section,
     evidence_refs: [],
-    layout_intent: isQuoteSection(section) ? 'quote' : contentLayout
+    layout_intent: isQuoteSection(section) ? 'quote' : (isImageSection(section) ? 'image' : contentLayout)
   }));
 
   const slides = [

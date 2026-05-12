@@ -215,6 +215,32 @@ const parseBlockquoteBody = (body) => {
     .filter(Boolean);
 };
 
+const parseMarkdownImageBody = (body) => {
+  const lines = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length !== 1) {
+    return null;
+  }
+
+  const match = lines[0].match(/^!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const alt = match[1].trim();
+  const src = match[2].trim();
+  if (!src) {
+    return null;
+  }
+
+  return { alt, src };
+};
+
 const roundedAttrs = (radius) => radius > 0 ? ` rx="${radius}"` : '';
 
 const renderQuoteSvg = ({
@@ -273,6 +299,30 @@ const renderTextSplitSvg = ({
     `  <rect x="${x + columnWidth + gap}" y="${y}" width="${columnWidth}" height="${panelHeight}"${roundedAttrs(panelRadius)} fill="${secondaryFill}" stroke="${secondaryStroke}" stroke-width="2"/>`,
     `  ${renderColumnText(leftText, x)}`,
     `  ${renderColumnText(rightText, x + columnWidth + gap)}`,
+    '</g>'
+  ].join('\n  ');
+};
+
+const renderImageSvg = ({
+  image,
+  x,
+  y,
+  width,
+  bodyColor,
+  accent,
+  line = defaultPptVisualTheme.line,
+  fill = defaultPptVisualTheme.tableFill,
+  panelRadius = defaultPptVisualTheme.panelRadius
+}) => {
+  const height = 390;
+  const caption = image.alt || image.src;
+  return [
+    '<g class="ppt-image">',
+    `  <rect x="${x}" y="${y}" width="${width}" height="${height}"${roundedAttrs(panelRadius)} fill="${fill}" stroke="${line}" stroke-width="2"/>`,
+    `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
+    `  <text x="${x + 42}" y="${y + 88}" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="${bodyColor}">${escapeXml(caption)}</text>`,
+    `  <text x="${x + 42}" y="${y + 146}" font-family="Arial, sans-serif" font-size="24" fill="${bodyColor}">${escapeXml(image.src)}</text>`,
+    `  <text x="${x + 42}" y="${y + height - 44}" font-family="Arial, sans-serif" font-size="20" fill="${bodyColor}">Image asset placeholder: source path is preserved for editing.</text>`,
     '</g>'
   ].join('\n  ');
 };
@@ -371,8 +421,11 @@ const renderSlideSvg = (slide, index, visualTheme) => {
   const quote = !isCover && slide?.layout_intent === 'quote' && !table
     ? parseBlockquoteBody(slide?.body)
     : null;
-  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote;
-  const bodyLines = table || textSplit || quote ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
+  const image = !isCover && slide?.layout_intent === 'image' && !table && !quote
+    ? parseMarkdownImageBody(slide?.body)
+    : null;
+  const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote && !image;
+  const bodyLines = table || textSplit || quote || image ? [] : wrapText(slide?.body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
   const bodyStartY = headlineStartY + (headlineLines.length * (isCover ? 76 : 58)) + 52;
 
@@ -401,6 +454,18 @@ const renderSlideSvg = (slide, index, visualTheme) => {
       bodyColor,
       accent,
       line: visualTheme.line
+    });
+  } else if (image) {
+    bodySvg = renderImageSvg({
+      image,
+      x: 120,
+      y: bodyStartY,
+      width: 1040,
+      bodyColor,
+      accent,
+      line: visualTheme.line,
+      fill: visualTheme.tableFill,
+      panelRadius: visualTheme.panelRadius
     });
   } else if (textSplit) {
     bodySvg = renderTextSplitSvg({

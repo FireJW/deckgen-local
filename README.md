@@ -12,6 +12,9 @@ explanation slides. Standard Markdown table blocks in slide bodies render as
 HTML tables instead of raw pipe-delimited text.
 Leading Markdown blockquote sections (`>` lines) are promoted to quote slides
 and render as quote layouts in HTML and PPTX.
+Single-line Markdown image sections (`![alt](path)`) are promoted to image
+slides. The first pass preserves the image path in HTML and PPTX placeholder
+output, but does not copy image assets or download remote images.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
@@ -151,6 +154,9 @@ Standard Markdown table blocks are mapped into SVG table blocks before the
 upstream exporter runs, so PPTX output does not receive raw pipe-delimited text
 for common report tables. Slides with `layout_intent: "text_split"` are mapped
 into two-column SVG blocks before `ppt-master` exports the PPTX.
+Slides with `layout_intent: "image"` are mapped into editable SVG image
+placeholder blocks that preserve the original Markdown image path for manual
+editing.
 
 ```bash
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output pptx --ppt-master-path D:/Users/rickylu/dev/ppt-master

@@ -90,6 +90,21 @@ const renderMarkdownTable = (lines) => {
 const isBlockquoteBlock = (lines) =>
   lines.length > 0 && lines.every((line) => line.startsWith('>'));
 
+const parseMarkdownImageLine = (line) => {
+  const match = String(line ?? '').trim().match(/^!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const alt = match[1].trim();
+  const src = match[2].trim();
+  if (!src) {
+    return null;
+  }
+
+  return { alt, src };
+};
+
 const renderBlockquote = (lines) => {
   const quote = lines
     .map((line) => line.replace(/^>\s?/, '').trim())
@@ -97,6 +112,16 @@ const renderBlockquote = (lines) => {
     .map(renderInline)
     .join('<br>');
   return `<blockquote>${quote}</blockquote>`;
+};
+
+const renderMarkdownImage = (image) => {
+  const caption = image.alt || image.src;
+  return [
+    '<figure class="deckgen-swiss-figure">',
+    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy">`,
+    caption ? `  <figcaption>${escapeHtml(caption)}</figcaption>` : '',
+    '</figure>'
+  ].filter(Boolean).join('\n');
 };
 
 const bodyContainsTable = (body) =>
@@ -117,6 +142,10 @@ const renderBody = (body) => {
     .split(/\n{2,}/)
     .map((paragraph) => {
       const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
+      const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
+      if (image) {
+        return renderMarkdownImage(image);
+      }
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
       }
@@ -136,6 +165,7 @@ const swissLayoutForSlide = (slide) => {
   const layout = stableClassPart(slide?.layout_intent, 'default');
   if (role === 'cover' || layout === 'hero-dark') return 'SWISS-COVER-ASCII';
   if (layout === 'quote') return 'S09';
+  if (layout === 'image') return 'S13';
   if (bodyContainsTable(slide?.body)) return 'S20';
   if (layout === 'text-split') return 'S03';
   return 'S19';
@@ -164,7 +194,8 @@ const renderSlide = (slide, index, total, title) => {
   const copyClass = [
     'deckgen-swiss-copy',
     layout === 'S03' ? 'deckgen-swiss-split' : '',
-    layout === 'S09' ? 'deckgen-swiss-quote' : ''
+    layout === 'S09' ? 'deckgen-swiss-quote' : '',
+    layout === 'S13' ? 'deckgen-swiss-image' : ''
   ].filter(Boolean).join(' ');
 
   return [
@@ -197,9 +228,15 @@ const renderDeckgenSwissOverrides = (theme) => `
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-split .deckgen-swiss-footnote{grid-column:2}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-quote{max-width:92ch}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-quote h2{font-size:clamp(2rem,4.4vw,5rem)}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-image{max-width:100%;grid-template-columns:minmax(0,0.7fr) minmax(0,1fr);column-gap:48px;align-items:start}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-image .t-meta{grid-column:1 / -1}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-copy.deckgen-swiss-image .deckgen-swiss-body{grid-column:2}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-body{display:grid;gap:14px;max-width:74ch}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-body p{margin:0;line-height:1.5}
   #deck[data-renderer="html-guizang-swiss"] blockquote{margin:0;padding:0 0 0 24px;border-left:4px solid var(--accent);font-size:clamp(1.7rem,3.8vw,4.8rem);font-weight:300;line-height:1.12;color:var(--ink)}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure{margin:0;display:grid;gap:10px;max-width:100%}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure img{display:block;width:100%;max-height:58vh;object-fit:contain;border:1px solid var(--grey-2);background:var(--grey-1)}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure figcaption{font-family:var(--mono);font-size:12px;line-height:1.4;color:var(--grey-3)}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-footnote{margin-top:auto;font-family:var(--mono);font-size:12px;line-height:1.45;color:var(--grey-3);display:grid;gap:4px}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-table-wrap{max-width:100%;overflow:hidden;border:1px solid var(--grey-2)}
   #deck[data-renderer="html-guizang-swiss"] table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;line-height:1.35}

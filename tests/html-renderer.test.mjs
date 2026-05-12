@@ -130,6 +130,37 @@ test('renderHtmlDeck renders quote slides as blockquotes in Style A and Swiss', 
   assert.match(swiss, /<blockquote>Markets reprice before filings\.<br>Evidence stays local\.<\/blockquote>/);
 });
 
+test('renderHtmlDeck renders image slides as figures in Style A and Swiss', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Image: Revenue bridge',
+    body: '![Revenue bridge](assets/revenue-bridge.png)',
+    evidence_refs: [],
+    layout_intent: 'image'
+  };
+  const styleA = renderHtmlDeck({
+    title: 'Image Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  });
+  const swiss = renderHtmlDeck({
+    title: 'Image Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  });
+
+  assert.match(styleA, /class="slide light slide-content layout-image"/);
+  assert.match(styleA, /<figure class="deckgen-figure">/);
+  assert.match(styleA, /<img src="assets\/revenue-bridge\.png" alt="Revenue bridge"/);
+  assert.match(styleA, /<figcaption>Revenue bridge<\/figcaption>/);
+  assert.doesNotMatch(styleA, /!\[Revenue bridge\]/);
+  assert.match(swiss, /data-layout="S13"/);
+  assert.match(swiss, /class="deckgen-swiss-copy deckgen-swiss-image"/);
+  assert.match(swiss, /<figure class="deckgen-swiss-figure">/);
+  assert.match(swiss, /<img src="assets\/revenue-bridge\.png" alt="Revenue bridge"/);
+});
+
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',

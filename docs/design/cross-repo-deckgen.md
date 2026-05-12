@@ -149,6 +149,11 @@ as compact reference lines under the slide body.
 Leading Markdown blockquote sections are normalized into `layout_intent:
 "quote"` slides. Style A renders them as quote blocks, Swiss maps them to
 `S09`, and PPTX emits a dedicated quote SVG block.
+Single-line Markdown image sections are normalized into `layout_intent:
+"image"` slides. Style A and Swiss render them as `<figure>` blocks, Swiss maps
+them to `S13`, and PPTX emits an editable image placeholder SVG that preserves
+the source path. This first pass does not copy local image assets or fetch
+remote images.
 
 The renderer currently adapts the upstream MIT theme palette values for:
 
@@ -294,6 +299,10 @@ pipe-delimited Markdown text through to the slide image. Long table cell text is
 compacted and ellipsized to keep fixed-width SVG columns readable. Slides with
 `layout_intent: "text_split"` are mapped into two-column SVG blocks so learning
 profile concept/explanation slides keep their contract layout in PPTX output.
+Slides with `layout_intent: "image"` are mapped into SVG image placeholder
+blocks that preserve the original Markdown image path without attempting asset
+resolution. This keeps PPTX generation deterministic while leaving real asset
+copying and raster embedding for a later slice.
 Structured and legacy `evidence_refs` are emitted into both slide SVGs and
 per-slide note Markdown so editable PPTX projects keep citation context.
 

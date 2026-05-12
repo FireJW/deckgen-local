@@ -260,6 +260,19 @@ test('buildDeckPlan maps leading blockquote sections to quote layout', () => {
   assert.equal(plan.slides[1].body, '> Markets reprice before filings.\n> Evidence stays local.');
 });
 
+test('buildDeckPlan maps markdown image sections to image layout', () => {
+  const plan = buildDeckPlan({
+    title: 'Visual report',
+    audience: 'leadership',
+    profile: 'briefing',
+    sourceText: '![Revenue bridge](assets/revenue-bridge.png)'
+  });
+
+  assert.equal(plan.slides[1].layout_intent, 'image');
+  assert.equal(plan.slides[1].headline, 'Image: Revenue bridge');
+  assert.equal(plan.slides[1].body, '![Revenue bridge](assets/revenue-bridge.png)');
+});
+
 test('buildDeckPlan rejects invalid inputs with clear errors', () => {
   for (const [name, input, message] of invalidPlannerInputs) {
     assert.throws(() => buildDeckPlan(input), message, name);
