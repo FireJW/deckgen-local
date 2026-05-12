@@ -105,14 +105,17 @@ The Phase 1 bundle shape is:
 `source_manifest.json` records the local source files used for the run.
 `content.md` is the normalized grounded source text. `deck_contract.json` is the
 validated renderer contract. `html/index.html` is the current browser preview
-output. `qc_report.md` records validation and output checks.
+output. `qc_report.md` records validation and output checks. `run_result.json`
+records the machine-readable generation result, including `runDir`, `outputs`,
+`htmlPath`, `pptxPaths`, and `qcReportPath`.
 
 `scripts/deck-run-smoke.mjs` validates a completed run bundle as a single
 contract-driven gate. It reads `request.json`, `source_manifest.json`, and
-`deck_contract.json`, validates the contract, checks that `request.outputs`
-still matches `contract.outputs`, requires `source_manifest.primary.path`, checks
-`content.md` and `qc_report.md`, then verifies each sibling output named by
-`contract.outputs`: `html/index.html` for HTML and the newest
+`deck_contract.json`, validates the contract, checks that `request.outputs` and
+`run_result.json.outputs` still match `contract.outputs`, requires
+`source_manifest.primary.path`, checks `content.md`, `run_result.json`, and
+`qc_report.md`, then verifies each sibling output named by `contract.outputs`:
+`html/index.html` for HTML and the newest
 `ppt-master/exports/*.pptx` with structural PPTX validation for PPTX.
 
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
@@ -192,7 +195,8 @@ node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <s
 Callers that need stable automation output can add `--json`. The CLI then emits
 a JSON object containing `runDir`, `outputs`, `htmlPath`, `pptxPaths`, and
 `qcReportPath`; without `--json`, it keeps the human-oriented `written <runDir>`
-line for backward compatibility.
+line for backward compatibility. The same shape is persisted as
+`run_result.json` inside the run bundle.
 
 Generic Markdown sources can pass the hint through supported YAML frontmatter:
 

@@ -144,5 +144,19 @@ export const writeGenerateBundle = ({
     pptxQa
   }), 'utf8');
 
-  return { runDir, validation, htmlPath, pptxPaths, pptxQa };
+  const result = {
+    ok: true,
+    command: 'generate',
+    source_type: request.source_type,
+    profile: request.profile,
+    output: request.output,
+    outputs: contract.outputs,
+    runDir,
+    htmlPath,
+    pptxPaths,
+    qcReportPath: path.join(runDir, 'qc_report.md')
+  };
+  writeJson(path.join(runDir, 'run_result.json'), result);
+
+  return { ...result, validation, pptxQa };
 };

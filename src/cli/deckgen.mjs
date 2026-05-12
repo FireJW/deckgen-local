@@ -146,7 +146,7 @@ const commandGenerate = (tokens) => {
   };
 
   try {
-    const { runDir, htmlPath, pptxPaths } = writeGenerateBundle({
+    const result = writeGenerateBundle({
       workdir: options.workdir,
       request,
       sourceManifest: sourcePackage.sourceManifest,
@@ -157,21 +157,14 @@ const commandGenerate = (tokens) => {
     });
     if (options.json) {
       process.stdout.write(`${JSON.stringify({
-        ok: true,
-        command: 'generate',
-        source_type: sourcePackage.sourceType,
-        profile: sourcePackage.profile,
-        output: options.output,
-        outputs: concreteOutputs,
-        runDir,
-        htmlPath,
-        pptxPaths,
-        qcReportPath: path.join(runDir, 'qc_report.md')
+        ...result,
+        validation: undefined,
+        pptxQa: undefined
       }, null, 2)}\n`);
       return;
     }
 
-    process.stdout.write(`written ${runDir}\n`);
+    process.stdout.write(`written ${result.runDir}\n`);
   } catch (error) {
     if (error instanceof DeckgenUserError) {
       fail(error.message);

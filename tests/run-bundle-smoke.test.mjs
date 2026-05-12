@@ -93,6 +93,8 @@ const makeRunBundle = ({
   pptx = true,
   request = true,
   requestOutputs = outputs,
+  runResult = true,
+  runResultOutputs = outputs,
   sourceManifest = true,
   sourceManifestPrimaryPath = 'D:/source.md'
 } = {}) => {
@@ -106,6 +108,17 @@ const makeRunBundle = ({
       output: outputs.length === 2 ? 'both' : outputs[0],
       outputs: requestOutputs,
       workdir: path.dirname(runDir)
+    }, null, 2)}\n`, 'utf8');
+  }
+  if (runResult) {
+    writeFileSync(path.join(runDir, 'run_result.json'), `${JSON.stringify({
+      ok: true,
+      command: 'generate',
+      outputs: runResultOutputs,
+      runDir,
+      htmlPath: html ? path.join(runDir, 'html', 'index.html') : '',
+      pptxPaths: pptx ? [path.join(runDir, 'ppt-master', 'exports', 'deck.pptx')] : [],
+      qcReportPath: path.join(runDir, 'qc_report.md')
     }, null, 2)}\n`, 'utf8');
   }
   if (sourceManifest) {
@@ -158,12 +171,13 @@ test('inspectDeckRunBundle fails closed when a requested sibling output is missi
 });
 
 test('inspectDeckRunBundle fails closed when traceability files are missing', () => {
-  const runDir = makeRunBundle({ request: false, sourceManifest: false });
+  const runDir = makeRunBundle({ request: false, runResult: false, sourceManifest: false });
   const summary = inspectDeckRunBundle({ runDir });
   const validation = validateDeckRunBundleSmokeResult(summary);
 
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /request\.json/i);
+  assert.match(validation.errors.join('\n'), /run_result\.json/i);
   assert.match(validation.errors.join('\n'), /source_manifest\.json/i);
 });
 
@@ -183,6 +197,14 @@ test('inspectDeckRunBundle rejects traceability drift in request and source mani
 
   assert.equal(sourcePathMissing.ok, false);
   assert.match(sourcePathMissing.errors.join('\n'), /source_manifest\.json primary\.path/i);
+});
+
+test('inspectDeckRunBundle rejects drift in persisted run result files', () => {
+  const runDir = makeRunBundle({ runResultOutputs: ['html'] });
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /run_result\.json outputs/i);
 });
 
 test('deck-run-smoke script emits json and exits non-zero on invalid bundles', () => {

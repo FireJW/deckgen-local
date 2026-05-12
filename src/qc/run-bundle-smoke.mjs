@@ -142,6 +142,7 @@ export function inspectDeckRunBundle({ runDir } = {}) {
     expectedOutputs,
     expectedSlides,
     request: parseJsonFile(path.join(resolvedRunDir, 'request.json')),
+    runResult: parseJsonFile(path.join(resolvedRunDir, 'run_result.json')),
     sourceManifest: parseJsonFile(path.join(resolvedRunDir, 'source_manifest.json')),
     contract,
     content: fileSummary(path.join(resolvedRunDir, 'content.md')),
@@ -169,6 +170,38 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
     const contractOutputs = [...summary.expectedOutputs].sort();
     if (JSON.stringify(requestOutputs) !== JSON.stringify(contractOutputs)) {
       errors.push(`request.json outputs ${requestOutputs.join(',')} do not match deck_contract.json outputs ${contractOutputs.join(',')}`);
+    }
+  }
+
+  if (!summary.runResult?.ok || !summary.runResult?.validation?.ok) {
+    errors.push(`run_result.json is missing or invalid: ${(summary.runResult?.validation?.errors ?? [summary.runResult?.error ?? 'unknown error']).join('; ')}`);
+  } else {
+    if (typeof summary.runResult.data.runDir !== 'string' || summary.runResult.data.runDir.trim() !== summary.runDir) {
+      errors.push(`run_result.json runDir must match ${summary.runDir}`);
+    }
+
+    if (Array.isArray(summary.runResult.data.outputs) && Array.isArray(summary.expectedOutputs)) {
+      const resultOutputs = [...summary.runResult.data.outputs].sort();
+      const contractOutputs = [...summary.expectedOutputs].sort();
+      if (JSON.stringify(resultOutputs) !== JSON.stringify(contractOutputs)) {
+        errors.push(`run_result.json outputs ${resultOutputs.join(',')} do not match deck_contract.json outputs ${contractOutputs.join(',')}`);
+      }
+    }
+
+    if (summary.expectedOutputs.includes('html')) {
+      const expectedHtmlPath = path.join(summary.runDir, 'html', 'index.html');
+      if (typeof summary.runResult.data.htmlPath !== 'string' || path.resolve(summary.runResult.data.htmlPath) !== expectedHtmlPath) {
+        errors.push(`run_result.json htmlPath must match ${expectedHtmlPath}`);
+      }
+    }
+
+    if (summary.expectedOutputs.includes('pptx')) {
+      const expectedPptxDir = path.join(summary.runDir, 'ppt-master', 'exports');
+      if (!Array.isArray(summary.runResult.data.pptxPaths) || summary.runResult.data.pptxPaths.length === 0) {
+        errors.push('run_result.json pptxPaths must contain at least one artifact path');
+      } else if (!summary.runResult.data.pptxPaths.every((pptxPath) => path.resolve(pptxPath).startsWith(path.resolve(expectedPptxDir)))) {
+        errors.push(`run_result.json pptxPaths must point inside ${expectedPptxDir}`);
+      }
     }
   }
 

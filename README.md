@@ -64,6 +64,9 @@ result instead of parsing `written <run-dir>`:
 node D:\Users\rickylu\dev\deckgen-local\src\cli\deckgen.mjs generate --source <source-file-or-package-dir> --output both --theme swiss-ikb --ppt-master-path D:\Users\rickylu\dev\ppt-master --json
 ```
 
+The same result shape is also written to `run_result.json` inside the generated
+run bundle.
+
 Directory sources are supported when they include an explicit
 `deckgen.source.json` marker. This keeps cross-repo package detection
 fail-closed instead of guessing from directory names.
@@ -140,9 +143,9 @@ npm run preflight:ppt-master -- --ppt-master-path D:\Users\rickylu\dev\ppt-maste
 
 Run the combined run-bundle smoke when you want one local gate that checks the
 traceability files (`request.json`, `source_manifest.json`), generated
-`deck_contract.json`, `content.md`, `qc_report.md`, and every sibling output
-requested by the contract. It verifies `html/index.html` for HTML output and
-runs structural PPTX validation for PPTX output:
+`run_result.json`, `deck_contract.json`, `content.md`, `qc_report.md`, and every
+sibling output requested by the contract. It verifies `html/index.html` for HTML
+output and runs structural PPTX validation for PPTX output:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>

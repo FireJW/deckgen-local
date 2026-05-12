@@ -139,6 +139,16 @@ test('generate writes a run bundle with html and qc report', () => {
   assert.ok(existsSync(path.join(runDir, 'content.md')));
   assert.ok(existsSync(path.join(runDir, 'deck_contract.json')));
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
+  assert.ok(existsSync(path.join(runDir, 'run_result.json')));
+  const runResult = JSON.parse(readFileSync(path.join(runDir, 'run_result.json'), 'utf8'));
+  assert.equal(runResult.ok, true);
+  assert.equal(runResult.source_type, 'generic-markdown');
+  assert.equal(runResult.profile, 'briefing');
+  assert.equal(runResult.output, 'html');
+  assert.equal(runResult.runDir, runDir);
+  assert.equal(runResult.htmlPath, path.join(runDir, 'html', 'index.html'));
+  assert.deepEqual(runResult.pptxPaths, []);
+  assert.equal(runResult.qcReportPath, path.join(runDir, 'qc_report.md'));
   assert.match(readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8'), /class="slide-evidence-refs"/);
 });
 
