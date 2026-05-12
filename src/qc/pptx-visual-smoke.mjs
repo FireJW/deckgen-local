@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { inflateSync } from 'node:zlib';
 
 const defaultPowerPointPaths = [
   'C:\\Program Files\\Microsoft Office\\root\\Office16\\POWERPNT.EXE',
@@ -128,14 +129,156 @@ export function inspectPngFile(filePath) {
     throw new Error(`Screenshot is not a PNG file: ${resolvedPath}`);
   }
 
-  const ihdrLength = buffer.readUInt32BE(8);
-  const chunkType = buffer.toString('ascii', 12, 16);
-  if (ihdrLength !== 13 || chunkType !== 'IHDR') {
-    throw new Error(`Screenshot PNG is missing an IHDR header: ${resolvedPath}`);
+  const colorTypeChannels = new Map([
+    [0, 1],
+    [2, 3],
+    [3, 1],
+    [4, 2],
+    [6, 4]
+  ]);
+  const paethPredictor = (left, up, upLeft) => {
+    const p = left + up - upLeft;
+    const pa = Math.abs(p - left);
+    const pb = Math.abs(p - up);
+    const pc = Math.abs(p - upLeft);
+    if (pa <= pb && pa <= pc) return left;
+    if (pb <= pc) return up;
+    return upLeft;
+  };
+  const unfilterRow = (filterType, row, prevRow, bytesPerPixel) => {
+    const output = Buffer.alloc(row.length);
+    for (let index = 0; index < row.length; index += 1) {
+      const raw = row[index];
+      const left = index >= bytesPerPixel ? output[index - bytesPerPixel] : 0;
+      const up = prevRow[index] ?? 0;
+      const upLeft = index >= bytesPerPixel ? prevRow[index - bytesPerPixel] ?? 0 : 0;
+      let value;
+
+      switch (filterType) {
+        case 0:
+          value = raw;
+          break;
+        case 1:
+          value = (raw + left) & 0xff;
+          break;
+        case 2:
+          value = (raw + up) & 0xff;
+          break;
+        case 3:
+          value = (raw + Math.floor((left + up) / 2)) & 0xff;
+          break;
+        case 4:
+          value = (raw + paethPredictor(left, up, upLeft)) & 0xff;
+          break;
+        default:
+          throw new Error(`Screenshot PNG uses unsupported filter type ${filterType}: ${resolvedPath}`);
+      }
+
+      output[index] = value;
+    }
+    return output;
+  };
+
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const idatParts = [];
+  let seenIend = false;
+
+  while (offset + 12 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const nextOffset = dataEnd + 4;
+
+    if (nextOffset > buffer.length) {
+      throw new Error(`Screenshot PNG is truncated: ${resolvedPath}`);
+    }
+
+    if (chunkType === 'IHDR') {
+      if (length !== 13) {
+        throw new Error(`Screenshot PNG is missing an IHDR header: ${resolvedPath}`);
+      }
+      width = buffer.readUInt32BE(dataStart);
+      height = buffer.readUInt32BE(dataStart + 4);
+      bitDepth = buffer[dataStart + 8];
+      colorType = buffer[dataStart + 9];
+    } else if (chunkType === 'IDAT') {
+      idatParts.push(buffer.subarray(dataStart, dataEnd));
+    } else if (chunkType === 'IEND') {
+      seenIend = true;
+      break;
+    }
+
+    offset = nextOffset;
   }
 
-  const imageWidth = buffer.readUInt32BE(16);
-  const imageHeight = buffer.readUInt32BE(20);
+  if (!seenIend) {
+    throw new Error(`Screenshot PNG is missing an IEND chunk: ${resolvedPath}`);
+  }
+
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+    throw new Error(`Screenshot PNG has invalid dimensions: ${resolvedPath}`);
+  }
+
+  if (bitDepth !== 8) {
+    throw new Error(`Screenshot PNG uses unsupported bit depth ${bitDepth}: ${resolvedPath}`);
+  }
+
+  const bytesPerPixel = colorTypeChannels.get(colorType);
+  if (!bytesPerPixel) {
+    throw new Error(`Screenshot PNG uses unsupported color type ${colorType}: ${resolvedPath}`);
+  }
+
+  if (idatParts.length < 1) {
+    throw new Error(`Screenshot PNG is missing image data: ${resolvedPath}`);
+  }
+
+  const inflated = inflateSync(Buffer.concat(idatParts));
+  const rowLength = width * bytesPerPixel;
+  const expectedLength = height * (rowLength + 1);
+  if (inflated.length < expectedLength) {
+    throw new Error(`Screenshot PNG image data is truncated: ${resolvedPath}`);
+  }
+
+  const colorCounts = new Map();
+  let totalPixels = 0;
+  let dominantColorCount = 0;
+  let prevRow = Buffer.alloc(rowLength);
+
+  for (let rowIndex = 0; rowIndex < height; rowIndex += 1) {
+    const rowOffset = rowIndex * (rowLength + 1);
+    const filterType = inflated[rowOffset];
+    const row = inflated.subarray(rowOffset + 1, rowOffset + 1 + rowLength);
+    const recon = unfilterRow(filterType, row, prevRow, bytesPerPixel);
+
+    for (let pixelIndex = 0; pixelIndex < width; pixelIndex += 1) {
+      const pixelOffset = pixelIndex * bytesPerPixel;
+      const key = colorType === 3
+        ? `index:${recon[pixelOffset]}`
+        : `${recon[pixelOffset]},${recon[pixelOffset + 1] ?? 0},${recon[pixelOffset + 2] ?? 0},${recon[pixelOffset + 3] ?? 255}`;
+      const nextCount = (colorCounts.get(key) ?? 0) + 1;
+      colorCounts.set(key, nextCount);
+      if (nextCount > dominantColorCount) {
+        dominantColorCount = nextCount;
+      }
+      totalPixels += 1;
+    }
+
+    prevRow = recon;
+  }
+
+  const imageWidth = width;
+  const imageHeight = height;
+  const pixelUniqueColorCount = colorCounts.size;
+  const pixelBlankRatio = totalPixels > 0 ? 1 - (dominantColorCount / totalPixels) : 1;
+  if (pixelUniqueColorCount < 2 || pixelBlankRatio < 0.001) {
+    throw new Error(`Screenshot PNG appears nearly blank: ${resolvedPath}`);
+  }
+
   if (!Number.isInteger(imageWidth) || !Number.isInteger(imageHeight) || imageWidth < 1 || imageHeight < 1) {
     throw new Error(`Screenshot PNG has invalid dimensions: ${resolvedPath}`);
   }
@@ -143,7 +286,10 @@ export function inspectPngFile(filePath) {
   return {
     screenshotMime: 'image/png',
     imageWidth,
-    imageHeight
+    imageHeight,
+    pixelUniqueColorCount,
+    pixelDominantColorCount: dominantColorCount,
+    pixelBlankRatio
   };
 }
 
@@ -216,6 +362,7 @@ export function exportSlidesWithPowerPoint(options = {}) {
   });
   const run = spawn('powershell.exe', [
     '-NoProfile',
+    '-Sta',
     '-ExecutionPolicy',
     'Bypass',
     '-Command',
@@ -287,6 +434,7 @@ export function exportFirstSlideWithPowerPoint(options = {}) {
   });
   const run = spawn('powershell.exe', [
     '-NoProfile',
+    '-Sta',
     '-ExecutionPolicy',
     'Bypass',
     '-Command',

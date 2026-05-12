@@ -135,6 +135,11 @@ On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
 smoke to export a slide as a PNG and verify a real screenshot artifact exists.
 It defaults to slide 1; pass `--slide <n>` when checking a later table or
 two-column slide, or `--all-slides` to export and validate one PNG per slide:
+the PNG check validates dimensions and pixel diversity, rejecting near-blank
+exports instead of accepting any syntactically valid image.
+This smoke uses the PowerPoint COM automation API and must run from an
+interactive Windows logon session; service-like or detached sessions can fail
+before opening PowerPoint with COM error `80070520`.
 
 ```powershell
 npm run smoke:pptx:visual -- `
