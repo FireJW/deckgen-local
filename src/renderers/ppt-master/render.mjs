@@ -122,6 +122,58 @@ const wrapText = (value, maxChars, maxLines) => {
   return lines.length ? lines : [''];
 };
 
+const wrapTextWithOverflow = (value, maxChars, maxLines) => {
+  const words = String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+  const lines = [];
+  let current = '';
+  let truncated = false;
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+      if (lines.length === maxLines) {
+        truncated = true;
+        current = '';
+        break;
+      }
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    if (lines.length < maxLines) {
+      lines.push(current);
+    } else {
+      truncated = true;
+    }
+  }
+
+  return {
+    lines: lines.length ? lines : [''],
+    truncated
+  };
+};
+
+const appendEllipsis = (line, maxChars) => {
+  const text = String(line ?? '').trim();
+  if (!text) {
+    return '...';
+  }
+
+  if (text.length < maxChars) {
+    return `${text}...`;
+  }
+
+  return `${text.slice(0, Math.max(1, maxChars - 3)).trimEnd()}...`;
+};
+
 const slideStem = (slide, index) => `${String(index + 1).padStart(2, '0')}_${slugPart(slide?.id, 'slide')}`;
 
 const splitTableRow = (line) =>
@@ -301,11 +353,16 @@ const renderTextSplitSvg = ({
   const panelHeight = 420;
   const lineHeight = 36;
   const textY = y + 66;
-  const renderColumnText = (value, columnX) => wrapText(value, 34, 8)
-    .map((line, lineIndex) =>
+  const renderColumnText = (value, columnX) => {
+    const wrapped = wrapTextWithOverflow(value, 34, 8);
+    const lines = wrapped.truncated
+      ? [...wrapped.lines.slice(0, -1), appendEllipsis(wrapped.lines.at(-1), 34)]
+      : wrapped.lines;
+    return lines.map((line, lineIndex) =>
       `<text x="${columnX + 34}" y="${textY + lineIndex * lineHeight}" font-family="Arial, sans-serif" font-size="27" fill="${bodyColor}">${escapeXml(line)}</text>`
     )
-    .join('\n    ');
+      .join('\n    ');
+  };
 
   return [
     '<g class="ppt-text-split">',
