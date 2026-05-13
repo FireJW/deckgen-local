@@ -1,10 +1,77 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { slideMarkdownBody } from '../contract/slide-content.mjs';
+
+const normalizeText = (text) => String(text ?? '')
+  .replace(/[\u2022\u25e6\u2043\u2219]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const normalizeContractMarkdownLine = (line) => {
+  const trimmedLine = String(line ?? '').trim();
+  if (!trimmedLine || /^[\s|:-]+$/.test(trimmedLine)) {
+    return '';
+  }
+
+  return normalizeText(trimmedLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^>\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+    .replace(/^\|\s*/, '')
+    .replace(/\s*\|$/, '')
+    .replace(/\s*\|\s*/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replaceAll('**', '')
+    .replaceAll('__', '')
+    .replaceAll('`', ''));
+};
+
+const contractMarkdownTextSnippets = (markdown) => String(markdown ?? '')
+  .replace(/\r\n/g, '\n')
+  .replace(/\r/g, '\n')
+  .split('\n')
+  .map(normalizeContractMarkdownLine)
+  .filter(Boolean);
+
+export function inferExpectedTextForRunDir(runDir) {
+  const contractPath = path.join(path.resolve(runDir ?? ''), 'deck_contract.json');
+  if (!existsSync(contractPath)) {
+    return undefined;
+  }
+
+  try {
+    const contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+    const expectedText = [];
+    const addText = (text) => {
+      const normalizedText = normalizeText(text);
+      if (normalizedText && !expectedText.includes(normalizedText)) {
+        expectedText.push(normalizedText);
+      }
+    };
+
+    addText(contract?.title);
+    if (Array.isArray(contract?.slides)) {
+      for (const slide of contract.slides) {
+        addText(slide?.headline);
+        for (const snippet of contractMarkdownTextSnippets(slideMarkdownBody(slide))) {
+          addText(snippet);
+        }
+      }
+    }
+
+    return expectedText.length > 0 ? expectedText : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function validateVisualSmokeResult(summary = {}, options = {}) {
   const errors = [];
   const title = String(summary.title ?? '').trim();
   const renderer = String(summary.renderer ?? '').trim();
+  const pageText = normalizeText(summary.pageText ?? '');
   const isSwiss = renderer === 'html-guizang-swiss';
   const slideCount = Number(summary.slideCount ?? 0);
   const textLength = Number(summary.textLength ?? 0);
@@ -19,6 +86,11 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
   const hasSwissLayouts = summary.hasSwissLayouts === true;
   const screenshotPath = String(summary.screenshotPath ?? '').trim();
   const screenshotBytes = Number(summary.screenshotBytes ?? 0);
+  const expectedText = Array.isArray(options.expectedText)
+    ? options.expectedText
+    : options.expectedText === undefined
+      ? []
+      : [options.expectedText];
 
   if (!title) {
     errors.push('title is empty');
@@ -69,6 +141,13 @@ export function validateVisualSmokeResult(summary = {}, options = {}) {
 
   if (!Number.isFinite(textLength) || textLength < 1) {
     errors.push('page text is empty');
+  }
+
+  for (const text of expectedText) {
+    const normalizedExpectedText = normalizeText(text);
+    if (normalizedExpectedText && !pageText.includes(normalizedExpectedText)) {
+      errors.push(`expected page text not found: ${normalizedExpectedText}`);
+    }
   }
 
   if (overflowItems.length > 0) {
@@ -167,6 +246,10 @@ export function inferExpectedVisualSmokeOptionsForRunDir(runDir) {
       inferred.expectedSlides = contract.target_slide_count;
     } else if (Array.isArray(contract?.slides) && contract.slides.length > 0) {
       inferred.expectedSlides = contract.slides.length;
+    }
+    const expectedText = inferExpectedTextForRunDir(runDir);
+    if (Array.isArray(expectedText) && expectedText.length > 0) {
+      inferred.expectedText = expectedText;
     }
     return inferred;
   } catch {

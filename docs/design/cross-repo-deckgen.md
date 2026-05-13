@@ -133,8 +133,13 @@ off the default structural path while still allowing a single command to fail
 closed on visual QA when a machine is configured for it. The HTML browser flags
 and PPTX visual flags also imply their respective visual gate, so callers can
 enable the check by passing the same options they would pass to the dedicated
-smoke command. `--pptx-expected-text <text>` can be repeated to require key
-slide text in the extracted PPTX XML during the same run-bundle validation.
+smoke command. HTML expected-text flags also imply the HTML visual gate because
+that content-level check runs against browser-rendered page text.
+`--html-expected-text <text>` can be repeated to require key visible page text
+during the same run-bundle validation. `--html-expected-text-from-contract`
+derives that expected HTML text from `deck_contract.json.title` plus slide
+headlines and body text. `--pptx-expected-text <text>` can be repeated to require
+key slide text in the extracted PPTX XML during the same run-bundle validation.
 `--pptx-expected-text-from-contract` derives that expected text from
 `deck_contract.json.title` plus slide headlines and body text.
 
@@ -277,6 +282,9 @@ a generated `html/index.html` with Playwright, captures a screenshot under
   script regressions
 - slide count is positive and matches the expected count when provided
 - body text is non-empty
+- expected text snippets are present in the browser-rendered page text when
+  callers provide `--expected-text`, or when `--expected-text-from-contract`
+  derives snippets from the run bundle contract
 - text elements do not visibly overflow their slide bounds
 - every deck image finishes loading and exposes positive natural dimensions,
   catching broken copied local image assets
@@ -290,6 +298,9 @@ Playwright-managed browser cache is unavailable. The default viewport is
 mobile-sized output. Pass `--run-dir <dir>` to point at a deckgen run bundle, or
 `--html <path>` for a direct `html/index.html` check. In run-dir mode, omitted
 title and slide-count expectations are inferred from `deck_contract.json`.
+Callers can also pass repeated `--expected-text <text>` flags to require visible
+page text, or `--expected-text-from-contract` to derive expected text from
+`deck_contract.json.title` plus slide headlines and body text.
 
 ## PPTX Structural QA
 

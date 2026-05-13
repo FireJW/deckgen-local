@@ -15,6 +15,7 @@ test('validateVisualSmokeResult accepts nonempty deck screenshots with expected 
   const result = validateVisualSmokeResult({
     title: 'Deck Generator Briefing',
     renderer: 'html-guizang',
+    pageText: 'Deck Generator Briefing\ninternal briefing\nWhy this matters\nShared deck generation should not live inside a business repo.',
     slideCount: 4,
     textLength: 320,
     overflowItems: [],
@@ -28,10 +29,35 @@ test('validateVisualSmokeResult accepts nonempty deck screenshots with expected 
     screenshotBytes: 12400
   }, {
     expectedTitle: 'Deck Generator Briefing',
-    expectedSlides: 4
+    expectedSlides: 4,
+    expectedText: ['Deck Generator Briefing', 'Why this matters']
   });
 
   assert.deepEqual(result, { ok: true, errors: [] });
+});
+
+test('validateVisualSmokeResult rejects missing expected page text', () => {
+  const result = validateVisualSmokeResult({
+    title: 'Deck Generator Briefing',
+    renderer: 'html-guizang',
+    pageText: 'Deck Generator Briefing\ninternal briefing\nWhy this matters',
+    slideCount: 4,
+    textLength: 320,
+    overflowItems: [],
+    deckElementPresent: true,
+    navElementPresent: true,
+    backgroundCanvasCount: 2,
+    localMotionImportPresent: true,
+    localMotionAssetBytes: 12400,
+    externalScriptSrcs: [],
+    screenshotPath: '.tmp/deckgen-visual-smoke/briefing.png',
+    screenshotBytes: 12400
+  }, {
+    expectedText: ['HTML preview and PPTX export should share one content contract.']
+  });
+
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join('\n'), /HTML preview and PPTX export should share one content contract/i);
 });
 
 test('validateVisualSmokeResult accepts Swiss renderer markers', () => {
@@ -232,6 +258,37 @@ test('inferExpectedVisualSmokeOptionsForRunDir reads title and slide count from 
 
   assert.deepEqual(inferExpectedVisualSmokeOptionsForRunDir(runDir), {
     expectedTitle: 'Contract Title',
-    expectedSlides: 3
+    expectedSlides: 3,
+    expectedText: ['Contract Title']
+  });
+});
+
+test('inferExpectedVisualSmokeOptionsForRunDir derives expected text from deck contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-html-text-contract-'));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
+    title: 'Contract Title',
+    target_slide_count: 3,
+    slides: [
+      {
+        headline: 'Why this matters',
+        body: 'Shared deck generation should not live inside a business repo.'
+      },
+      {
+        headline: 'Next step',
+        body: 'HTML preview and PPTX export should share one content contract.'
+      }
+    ]
+  }, null, 2)}\n`, 'utf8');
+
+  assert.deepEqual(inferExpectedVisualSmokeOptionsForRunDir(runDir), {
+    expectedTitle: 'Contract Title',
+    expectedSlides: 3,
+    expectedText: [
+      'Contract Title',
+      'Why this matters',
+      'Shared deck generation should not live inside a business repo.',
+      'Next step',
+      'HTML preview and PPTX export should share one content contract.'
+    ]
   });
 });

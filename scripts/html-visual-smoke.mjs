@@ -13,6 +13,7 @@ import {
 
 const usage = [
   'html-visual-smoke --html <path> | --run-dir <dir> [--expected-title <title>] [--expected-slides <n>]',
+  '                  [--expected-text <text> ...] [--expected-text-from-contract]',
   '                  [--screenshot-out <path>] [--module-dir <node_modules>]',
   '                  [--browser-executable <path>] [--viewport <width>x<height>]'
 ].join('\n');
@@ -29,15 +30,16 @@ const parseArgs = (tokens) => {
     ['--run-dir', 'runDir'],
     ['--expected-title', 'expectedTitle'],
     ['--expected-slides', 'expectedSlides'],
+    ['--expected-text', 'expectedText'],
     ['--screenshot-out', 'screenshotOut'],
     ['--module-dir', 'moduleDir'],
     ['--browser-executable', 'browserExecutable'],
     ['--viewport', 'viewport']
   ]);
+  const booleanFlags = new Set(['--expected-text-from-contract']);
 
-  for (let index = 0; index < tokens.length; index += 2) {
+  for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
-    const value = tokens[index + 1];
 
     if (flag === '--help' || flag === '-h') {
       process.stdout.write(`${usage}\n`);
@@ -48,6 +50,12 @@ const parseArgs = (tokens) => {
       fail(`Unexpected argument: ${flag ?? ''}`);
     }
 
+    if (booleanFlags.has(flag)) {
+      options.expectedTextFromContract = true;
+      continue;
+    }
+
+    const value = tokens[index + 1];
     if (value === undefined || value.startsWith('--')) {
       fail(`Missing value for ${flag}.`);
     }
@@ -57,7 +65,12 @@ const parseArgs = (tokens) => {
       fail(`Unsupported option: ${flag}`);
     }
 
-    options[key] = value;
+    if (key === 'expectedText') {
+      options.expectedText = [...(options.expectedText ?? []), value];
+    } else {
+      options[key] = value;
+    }
+    index += 1;
   }
 
   const targetCount = [options.htmlPath, options.runDir]
@@ -68,6 +81,10 @@ const parseArgs = (tokens) => {
 
   if (targetCount > 1) {
     fail('Pass only one of --html or --run-dir.');
+  }
+
+  if (options.expectedTextFromContract && !options.runDir) {
+    fail('--expected-text-from-contract requires --run-dir.');
   }
 
   if (options.expectedSlides !== undefined) {
@@ -113,6 +130,7 @@ const summarizePage = async (page, htmlPath, screenshotPath) => {
     ? statSync(motionAssetPath).size
     : 0;
   const summary = await page.evaluate(() => {
+    const pageText = document.body.innerText.trim();
     const textElements = Array.from(document.querySelectorAll('.slide h1, .slide h2, .slide p, .slide-kicker, .chrome, .foot, #nav'));
     const appearsOverflowing = (element) => {
       const rect = element.getBoundingClientRect();
@@ -163,7 +181,8 @@ const summarizePage = async (page, htmlPath, screenshotPath) => {
         .map((script) => script.src)
         .filter(Boolean),
       slideCount: document.querySelectorAll('.slide').length,
-      textLength: document.body.innerText.trim().length,
+      pageText,
+      textLength: pageText.length,
       imageCount: images.length,
       brokenImageItems,
       overflowItems
@@ -213,9 +232,17 @@ const main = async () => {
     const inferred = options.runDir
       ? inferExpectedVisualSmokeOptionsForRunDir(path.resolve(options.runDir))
       : {};
+    if (options.expectedTextFromContract && (!Array.isArray(inferred.expectedText) || inferred.expectedText.length === 0)) {
+      fail('Could not infer expected HTML text from deck_contract.json.');
+    }
+    const expectedText = [
+      ...(options.expectedTextFromContract ? inferred.expectedText : []),
+      ...(Array.isArray(options.expectedText) ? options.expectedText : [])
+    ];
     const validation = validateVisualSmokeResult(summary, {
       expectedTitle: options.expectedTitle ?? inferred.expectedTitle,
-      expectedSlides: options.expectedSlides ?? inferred.expectedSlides
+      expectedSlides: options.expectedSlides ?? inferred.expectedSlides,
+      expectedText
     });
 
     process.stdout.write(`${JSON.stringify({ ...summary, ...validation }, null, 2)}\n`);

@@ -170,6 +170,12 @@ const appendOption = (args, flag, value) => {
   }
 };
 
+const appendRepeatedOptions = (args, flag, values = []) => {
+  for (const value of Array.isArray(values) ? values : [values]) {
+    appendOption(args, flag, value);
+  }
+};
+
 const includesSourceManifestPrimaryPath = (sourceRefs = [], primaryPath) => sourceRefs.some((sourceRef) =>
   isObject(sourceRef) &&
   sourceRef.type === 'local_file' &&
@@ -255,6 +261,10 @@ export function runDeckRunVisualSmokeGates({
     appendOption(args, '--module-dir', htmlVisualOptions.moduleDir);
     appendOption(args, '--browser-executable', htmlVisualOptions.browserExecutable);
     appendOption(args, '--viewport', htmlVisualOptions.viewport);
+    if (htmlVisualOptions.expectedTextFromContract) {
+      args.push('--expected-text-from-contract');
+    }
+    appendRepeatedOptions(args, '--expected-text', htmlVisualOptions.expectedText);
     visual.html = runVisualSmokeCommand({
       command: nodePath,
       args,

@@ -10,6 +10,7 @@ import { inferExpectedTextForRunDir } from '../src/qc/pptx-structural-smoke.mjs'
 const usage = [
   'deck-run-smoke --run-dir <deckgen-run-dir>',
   '               [--include-html-visual] [--include-pptx-visual]',
+  '               [--html-expected-text <text> ...] [--html-expected-text-from-contract]',
   '               [--pptx-expected-text <text> ...] [--pptx-expected-text-from-contract]',
   '               [--module-dir <node_modules>] [--browser-executable <path>] [--viewport <width>x<height>]',
   '               [--pptx-slide <n> | --pptx-visual-all-slides] [--powerpoint-executable <path>]'
@@ -28,11 +29,12 @@ const parseArgs = (tokens) => {
     ['--module-dir', 'moduleDir'],
     ['--browser-executable', 'browserExecutable'],
     ['--viewport', 'viewport'],
+    ['--html-expected-text', 'htmlExpectedText'],
     ['--pptx-slide', 'pptxVisualSlide'],
     ['--pptx-expected-text', 'pptxExpectedText'],
     ['--powerpoint-executable', 'powerPointExecutable']
   ]);
-  const booleanFlags = new Set(['--pptx-expected-text-from-contract']);
+  const booleanFlags = new Set(['--html-expected-text-from-contract', '--pptx-expected-text-from-contract']);
 
   for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
@@ -58,7 +60,11 @@ const parseArgs = (tokens) => {
     }
 
     if (booleanFlags.has(flag)) {
-      options.pptxExpectedTextFromContract = true;
+      if (flag === '--html-expected-text-from-contract') {
+        options.htmlExpectedTextFromContract = true;
+      } else if (flag === '--pptx-expected-text-from-contract') {
+        options.pptxExpectedTextFromContract = true;
+      }
       continue;
     }
 
@@ -74,6 +80,8 @@ const parseArgs = (tokens) => {
 
     if (key === 'pptxExpectedText') {
       options.pptxExpectedText = [...(options.pptxExpectedText ?? []), value];
+    } else if (key === 'htmlExpectedText') {
+      options.htmlExpectedText = [...(options.htmlExpectedText ?? []), value];
     } else {
       options[key] = value;
     }
@@ -85,6 +93,10 @@ const parseArgs = (tokens) => {
   }
 
   if (options.moduleDir !== undefined || options.browserExecutable !== undefined || options.viewport !== undefined) {
+    options.includeHtmlVisual = true;
+  }
+
+  if (options.htmlExpectedTextFromContract || (Array.isArray(options.htmlExpectedText) && options.htmlExpectedText.length > 0)) {
     options.includeHtmlVisual = true;
   }
 
@@ -132,7 +144,9 @@ if (options.includeHtmlVisual || options.includePptxVisual) {
     htmlVisualOptions: {
       moduleDir: options.moduleDir,
       browserExecutable: options.browserExecutable,
-      viewport: options.viewport
+      viewport: options.viewport,
+      expectedText: options.htmlExpectedText,
+      expectedTextFromContract: options.htmlExpectedTextFromContract
     },
     pptxVisualOptions: {
       slide: options.pptxVisualSlide,

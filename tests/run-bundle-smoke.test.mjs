@@ -309,7 +309,9 @@ test('runDeckRunVisualSmokeGates executes requested sibling visual smoke command
     htmlVisualOptions: {
       moduleDir: 'D:/node_modules',
       browserExecutable: 'D:/Browser/msedge.exe',
-      viewport: '390x844'
+      viewport: '390x844',
+      expectedTextFromContract: true,
+      expectedText: ['Run Smoke Deck', 'Verified bundle']
     },
     pptxVisualOptions: {
       slide: 2,
@@ -331,7 +333,10 @@ test('runDeckRunVisualSmokeGates executes requested sibling visual smoke command
     '--run-dir', path.resolve(runDir),
     '--module-dir', 'D:/node_modules',
     '--browser-executable', 'D:/Browser/msedge.exe',
-    '--viewport', '390x844'
+    '--viewport', '390x844',
+    '--expected-text-from-contract',
+    '--expected-text', 'Run Smoke Deck',
+    '--expected-text', 'Verified bundle'
   ]);
   assert.deepEqual(calls[1].args, [
     path.join(root, 'scripts', 'pptx-visual-smoke.mjs'),
@@ -481,7 +486,8 @@ test('deck-run-smoke script auto-enables html visual smoke when browser options 
     script,
     '--run-dir', runDir,
     '--module-dir', 'C:\\Users\\rickylu\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules',
-    '--browser-executable', 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+    '--browser-executable', 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    '--html-expected-text-from-contract'
   ], { encoding: 'utf8' });
 
   assert.equal(run.status, 0, run.stderr);
