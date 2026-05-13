@@ -213,6 +213,35 @@ export function inferExpectedSlidesForRunDir(runDir) {
   return undefined;
 }
 
+export function inferExpectedTextForRunDir(runDir) {
+  const contractPath = path.join(path.resolve(runDir ?? ''), 'deck_contract.json');
+  if (!existsSync(contractPath)) {
+    return undefined;
+  }
+
+  try {
+    const contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+    const expectedText = [];
+    const addText = (text) => {
+      const normalizedText = normalizeText(text);
+      if (normalizedText && !expectedText.includes(normalizedText)) {
+        expectedText.push(normalizedText);
+      }
+    };
+
+    addText(contract?.title);
+    if (Array.isArray(contract?.slides)) {
+      for (const slide of contract.slides) {
+        addText(slide?.headline);
+      }
+    }
+
+    return expectedText.length > 0 ? expectedText : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function validatePptxSmokeResult(summary = {}, options = {}) {
   const errors = [];
   if (!summary.ok) {

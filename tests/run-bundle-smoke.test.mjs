@@ -422,6 +422,25 @@ test('deck-run-smoke script validates optional pptx expected text', () => {
   assert.match(mismatch.stdout, /Missing thesis/);
 });
 
+test('deck-run-smoke script validates pptx text inferred from the contract', () => {
+  const runDir = makeRunBundle({
+    outputs: ['pptx'],
+    html: false,
+    pptx: true,
+    pptxTextBySlide: ['Run Smoke Deck', 'Verified bundle']
+  });
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--pptx-expected-text-from-contract'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.deepEqual(result.pptx.slideTexts, ['Run Smoke Deck', 'Verified bundle']);
+});
+
 test('deck-run-smoke script auto-enables html visual smoke when browser options are provided', () => {
   const generate = spawnSync(process.execPath, [
     path.join(root, 'src', 'cli', 'deckgen.mjs'),

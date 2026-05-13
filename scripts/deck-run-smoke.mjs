@@ -5,11 +5,12 @@ import {
   runDeckRunVisualSmokeGates,
   validateDeckRunBundleSmokeResult
 } from '../src/qc/run-bundle-smoke.mjs';
+import { inferExpectedTextForRunDir } from '../src/qc/pptx-structural-smoke.mjs';
 
 const usage = [
   'deck-run-smoke --run-dir <deckgen-run-dir>',
   '               [--include-html-visual] [--include-pptx-visual]',
-  '               [--pptx-expected-text <text> ...]',
+  '               [--pptx-expected-text <text> ...] [--pptx-expected-text-from-contract]',
   '               [--module-dir <node_modules>] [--browser-executable <path>] [--viewport <width>x<height>]',
   '               [--pptx-slide <n> | --pptx-visual-all-slides] [--powerpoint-executable <path>]'
 ].join('\n');
@@ -31,6 +32,7 @@ const parseArgs = (tokens) => {
     ['--pptx-expected-text', 'pptxExpectedText'],
     ['--powerpoint-executable', 'powerPointExecutable']
   ]);
+  const booleanFlags = new Set(['--pptx-expected-text-from-contract']);
 
   for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
@@ -52,6 +54,11 @@ const parseArgs = (tokens) => {
 
     if (flag === '--pptx-visual-all-slides') {
       options.pptxVisualAllSlides = true;
+      continue;
+    }
+
+    if (booleanFlags.has(flag)) {
+      options.pptxExpectedTextFromContract = true;
       continue;
     }
 
@@ -95,6 +102,17 @@ const parseArgs = (tokens) => {
       fail('--pptx-slide must be a positive integer.');
     }
     options.pptxVisualSlide = slide;
+  }
+
+  if (options.pptxExpectedTextFromContract) {
+    const inferredExpectedText = inferExpectedTextForRunDir(path.resolve(options.runDir));
+    if (!Array.isArray(inferredExpectedText) || inferredExpectedText.length === 0) {
+      fail('Could not infer PPTX expected text from deck_contract.json.');
+    }
+    options.pptxExpectedText = [
+      ...inferredExpectedText,
+      ...(Array.isArray(options.pptxExpectedText) ? options.pptxExpectedText : [])
+    ];
   }
 
   return options;

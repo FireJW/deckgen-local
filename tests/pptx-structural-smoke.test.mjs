@@ -8,6 +8,7 @@ import { deflateRawSync } from 'node:zlib';
 import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
+  inferExpectedTextForRunDir,
   inspectPptxFile,
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
@@ -79,9 +80,9 @@ const writePptxFixture = (slideCount = 3, options = {}) => {
   return pptxPath;
 };
 
-const writePptxInDirectory = (dir, name, slideCount, mtime) => {
+const writePptxInDirectory = (dir, name, slideCount, mtime, options = {}) => {
   const pptxPath = path.join(dir, name);
-  writeFileSync(pptxPath, createMinimalPptxBytes(slideCount));
+  writeFileSync(pptxPath, createMinimalPptxBytes(slideCount, options));
   utimesSync(pptxPath, mtime, mtime);
   return pptxPath;
 };
@@ -212,6 +213,97 @@ test('pptx structural smoke script validates expected text content', () => {
 
   assert.equal(mismatch.status, 1);
   assert.match(mismatch.stdout, /Missing thesis/);
+});
+
+test('inferExpectedTextForRunDir derives title and slide headlines from the deck contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-text-contract-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  mkdirSync(exportsDir, { recursive: true });
+  writePptxInDirectory(exportsDir, 'run-latest.pptx', 2, new Date('2026-05-10T00:03:00Z'));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
+    schema_version: 'deck-contract/v1',
+    title: 'PPTX Text Deck',
+    audience: 'operators',
+    profile: 'briefing',
+    duration_minutes: 8,
+    target_slide_count: 2,
+    language: 'zh-CN',
+    source_refs: [],
+    hard_constraints: [],
+    theme: { renderer_hint: 'indigo_porcelain' },
+    outputs: ['pptx'],
+    slides: [
+      {
+        id: 's01',
+        role: 'cover',
+        headline: 'PPTX Text Deck',
+        body: 'Body',
+        evidence_refs: [],
+        layout_intent: 'hero_dark'
+      },
+      {
+        id: 's02',
+        role: 'content',
+        headline: 'Key topic',
+        body: 'More body',
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  }, null, 2)}\n`, 'utf8');
+
+  assert.deepEqual(inferExpectedTextForRunDir(runDir), ['PPTX Text Deck', 'Key topic']);
+});
+
+test('pptx structural smoke script validates expected text inferred from the run contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-text-contract-cli-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  mkdirSync(exportsDir, { recursive: true });
+  writePptxInDirectory(exportsDir, 'run-latest.pptx', 2, new Date('2026-05-10T00:03:00Z'), {
+    textBySlide: ['PPTX Text Deck', 'Key topic']
+  });
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
+    schema_version: 'deck-contract/v1',
+    title: 'PPTX Text Deck',
+    audience: 'operators',
+    profile: 'briefing',
+    duration_minutes: 8,
+    target_slide_count: 2,
+    language: 'zh-CN',
+    source_refs: [],
+    hard_constraints: [],
+    theme: { renderer_hint: 'indigo_porcelain' },
+    outputs: ['pptx'],
+    slides: [
+      {
+        id: 's01',
+        role: 'cover',
+        headline: 'PPTX Text Deck',
+        body: 'Body',
+        evidence_refs: [],
+        layout_intent: 'hero_dark'
+      },
+      {
+        id: 's02',
+        role: 'content',
+        headline: 'Key topic',
+        body: 'More body',
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  }, null, 2)}\n`, 'utf8');
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--expected-text-from-contract'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.deepEqual(result.expectedText, ['PPTX Text Deck', 'Key topic']);
 });
 
 test('pptx structural smoke script accepts an exports directory', () => {

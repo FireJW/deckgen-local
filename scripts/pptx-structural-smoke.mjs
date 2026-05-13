@@ -5,12 +5,13 @@ import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
   inferExpectedSlidesForRunDir,
+  inferExpectedTextForRunDir,
   inspectPptxFile,
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
 
 const usage = [
-  'pptx-structural-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir> [--expected-slides <n>] [--expected-text <text> ...]'
+  'pptx-structural-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir> [--expected-slides <n>] [--expected-text <text> ...] [--expected-text-from-contract]'
 ].join('\n');
 
 const fail = (message) => {
@@ -27,20 +28,26 @@ const parseArgs = (tokens) => {
     ['--expected-slides', 'expectedSlides'],
     ['--expected-text', 'expectedText']
   ]);
+  const booleanFlags = new Set(['--expected-text-from-contract']);
 
-  for (let index = 0; index < tokens.length; index += 2) {
+  for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
-    const value = tokens[index + 1];
 
     if (flag === '--help' || flag === '-h') {
       process.stdout.write(`${usage}\n`);
       process.exit(0);
     }
 
+    if (booleanFlags.has(flag)) {
+      options.expectedTextFromContract = true;
+      continue;
+    }
+
     if (!flag?.startsWith('--')) {
       fail(`Unexpected argument: ${flag ?? ''}`);
     }
 
+    const value = tokens[index + 1];
     if (value === undefined || value.startsWith('--')) {
       fail(`Missing value for ${flag}.`);
     }
@@ -55,6 +62,7 @@ const parseArgs = (tokens) => {
     } else {
       options[key] = value;
     }
+    index += 1;
   }
 
   const targetCount = [options.pptxPath, options.exportsDir, options.runDir]
@@ -73,6 +81,10 @@ const parseArgs = (tokens) => {
       fail('--expected-slides must be a positive integer.');
     }
     options.expectedSlides = expectedSlides;
+  }
+
+  if (options.expectedTextFromContract && !options.runDir) {
+    fail('--expected-text-from-contract requires --run-dir.');
   }
 
   return options;
@@ -99,12 +111,22 @@ const summary = inspectPptxFile(pptxPath);
 const expectedSlides = options.expectedSlides ?? (
   options.runDir ? inferExpectedSlidesForRunDir(path.resolve(options.runDir)) : undefined
 );
+const inferredExpectedText = options.expectedTextFromContract
+  ? inferExpectedTextForRunDir(path.resolve(options.runDir))
+  : undefined;
+if (options.expectedTextFromContract && (!Array.isArray(inferredExpectedText) || inferredExpectedText.length === 0)) {
+  fail('Could not infer expected text from deck_contract.json.');
+}
+const expectedText = [
+  ...(Array.isArray(inferredExpectedText) ? inferredExpectedText : []),
+  ...(Array.isArray(options.expectedText) ? options.expectedText : [])
+];
 const validation = validatePptxSmokeResult(summary, {
   expectedSlides,
-  expectedText: options.expectedText
+  expectedText
 });
 
-process.stdout.write(`${JSON.stringify({ ...summary, expectedSlides, expectedText: options.expectedText, ...validation }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ ...summary, expectedSlides, expectedText, ...validation }, null, 2)}\n`);
 if (!validation.ok) {
   process.exitCode = 1;
 }

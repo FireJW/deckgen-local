@@ -167,7 +167,9 @@ PPTX visual smoke reuses the PowerPoint options from `smoke:pptx:visual`.
 These checks are off by default so CI and quick local validation do not require
 Playwright or an interactive PowerPoint session. Pass repeated
 `--pptx-expected-text "<text>"` flags when the same run-bundle smoke should also
-check PPTX slide XML for key text:
+check PPTX slide XML for key text, or pass
+`--pptx-expected-text-from-contract` to derive the expected PPTX text from the
+deck title and slide headlines in `deck_contract.json`:
 Supplying HTML browser flags automatically enables the HTML visual gate, and
 supplying PPTX visual flags automatically enables the PPTX visual gate.
 
@@ -176,6 +178,11 @@ npm run smoke:run -- --run-dir .tmp\deckgen\<run-id> `
   --include-html-visual `
   --module-dir C:\path\to\node_modules `
   --browser-executable "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+```
+
+```powershell
+npm run smoke:run -- --run-dir .tmp\deckgen\<run-id> `
+  --pptx-expected-text-from-contract
 ```
 
 ```powershell
@@ -205,6 +212,15 @@ npm run smoke:pptx -- `
   --run-dir .tmp\deckgen\<run-id> `
   --expected-text "Deck Generator Briefing" `
   --expected-text "HTML preview and PPTX export"
+```
+
+In `--run-dir` mode, `--expected-text-from-contract` derives expected PPTX text
+from `deck_contract.json.title` plus slide headlines:
+
+```powershell
+npm run smoke:pptx -- `
+  --run-dir .tmp\deckgen\<run-id> `
+  --expected-text-from-contract
 ```
 
 On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
