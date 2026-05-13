@@ -136,7 +136,7 @@ enable the check by passing the same options they would pass to the dedicated
 smoke command. `--pptx-expected-text <text>` can be repeated to require key
 slide text in the extracted PPTX XML during the same run-bundle validation.
 `--pptx-expected-text-from-contract` derives that expected text from
-`deck_contract.json.title` plus slide headlines.
+`deck_contract.json.title` plus slide headlines and body text.
 
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
 real local `ppt-master` checkout is configured and produces a `.pptx`:
@@ -306,7 +306,7 @@ script infers the expected count from the run bundle's `deck_contract.json`.
 Callers can add repeated `--expected-text <text>` flags to fail closed when key
 title or body text is missing from the PPTX slide XML. In `--run-dir` mode,
 `--expected-text-from-contract` derives expected text from
-`deck_contract.json.title` plus slide headlines.
+`deck_contract.json.title` plus slide headlines and body text.
 
 Visual smoke for PPTX output lives in `scripts/pptx-visual-smoke.mjs`. On
 Windows machines with Microsoft PowerPoint available, it reuses the structural
@@ -371,8 +371,8 @@ PPTX verification is structural and fail-closed:
 - `[Content_Types].xml` and `ppt/presentation.xml` must exist
 - `ppt/slides/slide*.xml` count must match `deck_contract.json.slides.length`
 - callers can require selected text strings to appear in extracted slide XML
-- callers can derive those required strings from the contract title and slide
-  headlines
+- callers can derive those required strings from the contract title, slide
+  headlines, and body text
 
 The QC report records `pptx_slide_count: PASS actual/expected` for generated
 PPTX artifacts.

@@ -144,6 +144,20 @@ test('validatePptxSmokeResult rejects missing expected pptx text', () => {
   assert.match(validation.errors.join('\n'), /Missing thesis/);
 });
 
+test('validatePptxSmokeResult normalizes pptx bullet glyphs when checking expected text', () => {
+  const validation = validatePptxSmokeResult({
+    ok: true,
+    path: 'sample.pptx',
+    bytes: 10,
+    slideCount: 1,
+    slideTexts: ['HTML preview and PPTX export should share one \u2022 content contract.']
+  }, {
+    expectedText: ['HTML preview and PPTX export should share one content contract.']
+  });
+
+  assert.equal(validation.ok, true, validation.errors.join('\n'));
+});
+
 test('findLatestPptxArtifact discovers the newest pptx in an exports directory', () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-exports-'));
   writeFileSync(path.join(dir, 'notes.txt'), 'ignore me');
@@ -215,7 +229,7 @@ test('pptx structural smoke script validates expected text content', () => {
   assert.match(mismatch.stdout, /Missing thesis/);
 });
 
-test('inferExpectedTextForRunDir derives title and slide headlines from the deck contract', () => {
+test('inferExpectedTextForRunDir derives title, headlines, and body text from the deck contract', () => {
   const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-text-contract-'));
   const exportsDir = path.join(runDir, 'ppt-master', 'exports');
   mkdirSync(exportsDir, { recursive: true });
@@ -252,7 +266,7 @@ test('inferExpectedTextForRunDir derives title and slide headlines from the deck
     ]
   }, null, 2)}\n`, 'utf8');
 
-  assert.deepEqual(inferExpectedTextForRunDir(runDir), ['PPTX Text Deck', 'Key topic']);
+  assert.deepEqual(inferExpectedTextForRunDir(runDir), ['PPTX Text Deck', 'Body', 'Key topic', 'More body']);
 });
 
 test('pptx structural smoke script validates expected text inferred from the run contract', () => {
@@ -260,7 +274,7 @@ test('pptx structural smoke script validates expected text inferred from the run
   const exportsDir = path.join(runDir, 'ppt-master', 'exports');
   mkdirSync(exportsDir, { recursive: true });
   writePptxInDirectory(exportsDir, 'run-latest.pptx', 2, new Date('2026-05-10T00:03:00Z'), {
-    textBySlide: ['PPTX Text Deck', 'Key topic']
+    textBySlide: ['PPTX Text Deck Body', 'Key topic More body']
   });
   writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
     schema_version: 'deck-contract/v1',
@@ -303,7 +317,7 @@ test('pptx structural smoke script validates expected text inferred from the run
   assert.equal(run.status, 0, run.stderr);
   const result = JSON.parse(run.stdout);
   assert.equal(result.ok, true, result.errors.join('\n'));
-  assert.deepEqual(result.expectedText, ['PPTX Text Deck', 'Key topic']);
+  assert.deepEqual(result.expectedText, ['PPTX Text Deck', 'Body', 'Key topic', 'More body']);
 });
 
 test('pptx structural smoke script accepts an exports directory', () => {

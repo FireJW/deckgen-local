@@ -169,7 +169,7 @@ Playwright or an interactive PowerPoint session. Pass repeated
 `--pptx-expected-text "<text>"` flags when the same run-bundle smoke should also
 check PPTX slide XML for key text, or pass
 `--pptx-expected-text-from-contract` to derive the expected PPTX text from the
-deck title and slide headlines in `deck_contract.json`:
+deck title, slide headlines, and slide body text in `deck_contract.json`:
 Supplying HTML browser flags automatically enables the HTML visual gate, and
 supplying PPTX visual flags automatically enables the PPTX visual gate.
 
@@ -215,7 +215,7 @@ npm run smoke:pptx -- `
 ```
 
 In `--run-dir` mode, `--expected-text-from-contract` derives expected PPTX text
-from `deck_contract.json.title` plus slide headlines:
+from `deck_contract.json.title` plus slide headlines and body text:
 
 ```powershell
 npm run smoke:pptx -- `

@@ -427,7 +427,7 @@ test('deck-run-smoke script validates pptx text inferred from the contract', () 
     outputs: ['pptx'],
     html: false,
     pptx: true,
-    pptxTextBySlide: ['Run Smoke Deck', 'Verified bundle']
+    pptxTextBySlide: ['Run Smoke Deck operators', 'Verified bundle HTML and PPTX are siblings.']
   });
   const run = spawnSync(process.execPath, [
     script,
@@ -438,7 +438,8 @@ test('deck-run-smoke script validates pptx text inferred from the contract', () 
   assert.equal(run.status, 0, run.stderr);
   const result = JSON.parse(run.stdout);
   assert.equal(result.ok, true, result.errors.join('\n'));
-  assert.deepEqual(result.pptx.slideTexts, ['Run Smoke Deck', 'Verified bundle']);
+  assert.deepEqual(result.pptx.slideTexts, ['Run Smoke Deck operators', 'Verified bundle HTML and PPTX are siblings.']);
+  assert.deepEqual(result.pptx.validation.errors, []);
 });
 
 test('deck-run-smoke script auto-enables html visual smoke when browser options are provided', () => {

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { inflateRawSync } from 'node:zlib';
+import { slideMarkdownBody } from '../contract/slide-content.mjs';
 
 const findEndOfCentralDirectory = (buffer) => {
   const earliestOffset = Math.max(0, buffer.length - 22 - 0xffff);
@@ -31,7 +32,38 @@ const decodeXmlText = (text) => text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|
   return match;
 });
 
-const normalizeText = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
+const normalizeText = (text) => String(text ?? '')
+  .replace(/[\u2022\u25e6\u2043\u2219]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const normalizeContractMarkdownLine = (line) => {
+  const trimmedLine = String(line ?? '').trim();
+  if (!trimmedLine || /^[\s|:-]+$/.test(trimmedLine)) {
+    return '';
+  }
+
+  return normalizeText(trimmedLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^>\s*/, '')
+    .replace(/^[-*+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+    .replace(/^\|\s*/, '')
+    .replace(/\s*\|$/, '')
+    .replace(/\s*\|\s*/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replaceAll('**', '')
+    .replaceAll('__', '')
+    .replaceAll('`', ''));
+};
+
+const contractMarkdownTextSnippets = (markdown) => String(markdown ?? '')
+  .replace(/\r\n/g, '\n')
+  .replace(/\r/g, '\n')
+  .split('\n')
+  .map(normalizeContractMarkdownLine)
+  .filter(Boolean);
 
 const readZipEntryData = (buffer, entry) => {
   const localHeaderOffset = entry.localHeaderOffset;
@@ -233,6 +265,9 @@ export function inferExpectedTextForRunDir(runDir) {
     if (Array.isArray(contract?.slides)) {
       for (const slide of contract.slides) {
         addText(slide?.headline);
+        for (const snippet of contractMarkdownTextSnippets(slideMarkdownBody(slide))) {
+          addText(snippet);
+        }
       }
     }
 
