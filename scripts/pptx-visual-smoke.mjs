@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
+  inferExpectedSlidesForRunDir,
   inspectPptxFile,
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
@@ -126,13 +127,17 @@ const resolvePptxPath = (options) => {
 
 const main = async () => {
   const options = parseArgs(process.argv.slice(2));
+  const runDir = options.runDir ? path.resolve(options.runDir) : undefined;
+  const expectedSlides = options.expectedSlides ?? (
+    runDir ? inferExpectedSlidesForRunDir(runDir) : undefined
+  );
   const pptxPath = resolvePptxPath(options);
   const structural = inspectPptxFile(pptxPath);
   const structuralValidation = validatePptxSmokeResult(structural, {
-    expectedSlides: options.expectedSlides
+    expectedSlides
   });
   if (!structuralValidation.ok) {
-    process.stdout.write(`${JSON.stringify({ ...structural, ...structuralValidation }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation }, null, 2)}\n`);
     process.exitCode = 1;
     return;
   }
@@ -148,7 +153,7 @@ const main = async () => {
         powerPointPath: options.powerPointPath,
         slideNumbers: Array.from({ length: structural.slideCount }, (_, index) => index + 1)
       });
-      process.stdout.write(`${JSON.stringify({ ...structural, ...structuralValidation, ...visual }, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation, ...visual }, null, 2)}\n`);
     } catch (error) {
       fail(error.message);
     }
@@ -163,7 +168,7 @@ const main = async () => {
       powerPointPath: options.powerPointPath,
       slideNumber: options.slideNumber
     });
-    process.stdout.write(`${JSON.stringify({ ...structural, ...structuralValidation, ...visual }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation, ...visual }, null, 2)}\n`);
   } catch (error) {
     fail(error.message);
   }

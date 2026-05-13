@@ -294,6 +294,8 @@ diversity to reject near-blank exports. It defaults to slide 1; use
 export and validate one PNG per slide in a single PowerPoint session. It fails
 closed when PowerPoint is unavailable; use `--powerpoint-executable <path>` or
 `DECKGEN_POWERPOINT_PATH` when the executable is not in the default Office path.
+In `--run-dir` mode, omitted slide-count expectations are inferred from the
+same run bundle `deck_contract.json` before PowerPoint is launched.
 Because this path uses the PowerPoint COM automation API, it also requires an
 interactive Windows logon session; detached service-like sessions can fail
 before opening PowerPoint with COM error `80070520`.

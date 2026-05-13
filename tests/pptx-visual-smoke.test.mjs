@@ -169,6 +169,27 @@ test('pptx visual smoke script rejects slide numbers beyond the deck count', () 
   assert.match(run.stderr, /--slide 3 exceeds PPTX slide count 2/);
 });
 
+test('pptx visual smoke script infers expected slide count from a deckgen run contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-run-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  const pptxPath = path.join(exportsDir, 'deck.pptx');
+  mkdirSync(exportsDir, { recursive: true });
+  writeFileSync(pptxPath, createMinimalPptxBytes(2));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), JSON.stringify({
+    target_slide_count: 3,
+    slides: [{ id: 's1' }, { id: 's2' }, { id: 's3' }]
+  }));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 1);
+  assert.match(run.stdout, /slide count 2 does not match expected 3/);
+  assert.doesNotMatch(run.stderr, /PowerPoint executable not found/);
+});
+
 test('pptx visual smoke script rejects all-slides with slide option', () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-cli-'));
   const pptxPath = path.join(dir, 'deck.pptx');

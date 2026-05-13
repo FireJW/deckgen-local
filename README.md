@@ -180,16 +180,18 @@ before opening PowerPoint with COM error `80070520`.
 ```powershell
 npm run smoke:pptx:visual -- `
   --run-dir .tmp\deckgen\<run-id> `
-  --expected-slides 7 `
   --slide 2
 ```
 
 ```powershell
 npm run smoke:pptx:visual -- `
   --run-dir .tmp\deckgen\<run-id> `
-  --expected-slides 7 `
   --all-slides
 ```
+
+In `--run-dir` mode, visual smoke also infers the expected slide count from
+`deck_contract.json` when `--expected-slides` is omitted, then performs that
+structural check before launching PowerPoint.
 
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 
