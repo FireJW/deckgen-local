@@ -410,15 +410,20 @@ const renderBulletsSvg = ({
   fill = defaultPptVisualTheme.tableFill,
   panelRadius = defaultPptVisualTheme.panelRadius
 }) => {
-  const height = Math.max(220, bullets.length * 72 + 64);
   const lineHeight = 44;
-  const points = bullets.slice(0, 8).flatMap((bullet) => wrapText(bullet, 48, 2));
+  const bulletLines = bullets
+    .slice(0, 8)
+    .flatMap((bullet) => wrapText(bullet, 48, 2).map((line, index) => ({
+      line,
+      continuation: index > 0
+    })));
+  const height = Math.max(220, bulletLines.length * lineHeight + 64);
   return [
     '<g class="ppt-bullets">',
     `  <rect x="${x}" y="${y}" width="${width}" height="${height}"${roundedAttrs(panelRadius)} fill="${fill}" stroke="${line}" stroke-width="2"/>`,
     `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
-    ...points.map((lineText, index) =>
-      `<text x="${x + 42}" y="${y + 58 + index * lineHeight}" font-family="Arial, sans-serif" font-size="26" fill="${bodyColor}">&#8226; ${escapeXml(lineText)}</text>`
+    ...bulletLines.map(({ line: lineText, continuation }, index) =>
+      `<text x="${x + (continuation ? 74 : 42)}" y="${y + 58 + index * lineHeight}" font-family="Arial, sans-serif" font-size="26" fill="${bodyColor}">${continuation ? '' : '&#8226; '}${escapeXml(lineText)}</text>`
     ),
     '</g>'
   ].join('\n  ');

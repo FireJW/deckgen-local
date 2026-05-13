@@ -477,6 +477,43 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.doesNotMatch(svg, /!\[Revenue bridge\]/);
 });
 
+test('renderPptMasterDeck renders wrapped bullet continuations without repeating bullet glyphs', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-bullets-ppt-project-${Date.now()}`);
+  const bulletsContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Why this matters',
+        body: '- Demand expanded across regulated and commercial segments while margin discipline held through the quarter.',
+        layout_intent: 'evidence'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: bulletsContract,
+    content: '# Why this matters',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  const bulletGlyphs = svg.match(/&#8226;/g) ?? [];
+  assert.equal(bulletGlyphs.length, 1);
+  assert.match(svg, /Demand expanded across regulated and commercial/);
+  assert.match(svg, /segments while margin discipline held through/);
+});
+
 test('renderPptMasterDeck copies local image assets and writes SVG image elements', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');
