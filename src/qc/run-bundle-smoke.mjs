@@ -285,6 +285,10 @@ export function runDeckRunVisualSmokeGates({
       appendOption(args, '--slide', pptxVisualOptions.slide);
     }
     appendOption(args, '--powerpoint-executable', pptxVisualOptions.powerPointExecutable);
+    if (pptxVisualOptions.expectedTextFromContract) {
+      args.push('--expected-text-from-contract');
+    }
+    appendRepeatedOptions(args, '--expected-text', pptxVisualOptions.expectedText);
     visual.pptx = runVisualSmokeCommand({
       command: nodePath,
       args,

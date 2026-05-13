@@ -247,6 +247,9 @@ exports instead of accepting any syntactically valid image.
 This smoke uses the PowerPoint COM automation API and must run from an
 interactive Windows logon session; service-like or detached sessions can fail
 before opening PowerPoint with COM error `80070520`.
+Add one or more `--expected-text "<text>"` flags when the same visual smoke
+should also fail closed on missing PPTX slide XML text before launching
+PowerPoint:
 
 ```powershell
 npm run smoke:pptx:visual -- `
@@ -261,8 +264,17 @@ npm run smoke:pptx:visual -- `
 ```
 
 In `--run-dir` mode, visual smoke also infers the expected slide count from
-`deck_contract.json` when `--expected-slides` is omitted, then performs that
-structural check before launching PowerPoint.
+`deck_contract.json` when `--expected-slides` is omitted. Add
+`--expected-text-from-contract` to derive expected PPTX text from
+`deck_contract.json.title` plus slide headlines and body text, then perform
+both structural checks before launching PowerPoint.
+
+```powershell
+npm run smoke:pptx:visual -- `
+  --run-dir .tmp\deckgen\<run-id> `
+  --expected-text-from-contract `
+  --slide 2
+```
 
 Editable PPTX export is wired behind a real local `ppt-master` checkout. CLI requests for `--output pptx` or `--output both` still fail closed unless a checkout is configured and `ppt-master` creates an actual `.pptx` under the run bundle.
 

@@ -190,6 +190,72 @@ test('pptx visual smoke script infers expected slide count from a deckgen run co
   assert.doesNotMatch(run.stderr, /PowerPoint executable not found/);
 });
 
+test('pptx visual smoke script validates expected text before launching PowerPoint', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-text-cli-'));
+  const pptxPath = path.join(dir, 'deck.pptx');
+  writeFileSync(pptxPath, createMinimalPptxBytes(2));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--pptx', pptxPath,
+    '--expected-text', 'Deck Generator Briefing'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 1);
+  assert.match(run.stdout, /expected pptx text not found/i);
+  assert.doesNotMatch(run.stderr, /PowerPoint executable not found/);
+});
+
+test('pptx visual smoke script validates expected text inferred from the run contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-text-contract-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  const pptxPath = path.join(exportsDir, 'deck.pptx');
+  mkdirSync(exportsDir, { recursive: true });
+  writeFileSync(pptxPath, createMinimalPptxBytes(2));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), JSON.stringify({
+    schema_version: 'deck-contract/v1',
+    title: 'PPTX Text Deck',
+    audience: 'operators',
+    profile: 'briefing',
+    duration_minutes: 8,
+    target_slide_count: 2,
+    language: 'zh-CN',
+    source_refs: [],
+    hard_constraints: [],
+    theme: { renderer_hint: 'indigo_porcelain' },
+    outputs: ['pptx'],
+    slides: [
+      {
+        id: 's01',
+        role: 'cover',
+        headline: 'PPTX Text Deck',
+        body: 'Body',
+        evidence_refs: [],
+        layout_intent: 'hero_dark'
+      },
+      {
+        id: 's02',
+        role: 'content',
+        headline: 'Key topic',
+        body: 'More body',
+        evidence_refs: [],
+        layout_intent: 'evidence'
+      }
+    ]
+  }));
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--expected-text-from-contract'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 1);
+  assert.match(run.stdout, /expected pptx text not found/i);
+  assert.match(run.stdout, /PPTX Text Deck/i);
+  assert.doesNotMatch(run.stderr, /PowerPoint executable not found/);
+});
+
 test('pptx visual smoke script rejects all-slides with slide option', () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-visual-cli-'));
   const pptxPath = path.join(dir, 'deck.pptx');

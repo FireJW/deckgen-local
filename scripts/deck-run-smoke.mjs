@@ -151,7 +151,9 @@ if (options.includeHtmlVisual || options.includePptxVisual) {
     pptxVisualOptions: {
       slide: options.pptxVisualSlide,
       allSlides: Boolean(options.pptxVisualAllSlides),
-      powerPointExecutable: options.powerPointExecutable
+      powerPointExecutable: options.powerPointExecutable,
+      expectedText: options.pptxExpectedText,
+      expectedTextFromContract: options.pptxExpectedTextFromContract
     }
   });
 }

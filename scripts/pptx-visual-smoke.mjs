@@ -5,6 +5,7 @@ import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
   inferExpectedSlidesForRunDir,
+  inferExpectedTextForRunDir,
   inspectPptxFile,
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
@@ -17,6 +18,7 @@ import {
 const usage = [
   'pptx-visual-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir>',
   '                  [--screenshot-out <path>] [--expected-slides <n>]',
+  '                  [--expected-text <text> ...] [--expected-text-from-contract]',
   '                  [--slide <n> | --all-slides] [--powerpoint-executable <path>]'
 ].join('\n');
 
@@ -33,9 +35,11 @@ const parseArgs = (tokens) => {
     ['--run-dir', 'runDir'],
     ['--screenshot-out', 'screenshotOut'],
     ['--expected-slides', 'expectedSlides'],
+    ['--expected-text', 'expectedText'],
     ['--slide', 'slideNumber'],
     ['--powerpoint-executable', 'powerPointPath']
   ]);
+  const booleanFlags = new Set(['--expected-text-from-contract']);
 
   for (let index = 0; index < tokens.length; index += 1) {
     const flag = tokens[index];
@@ -43,6 +47,11 @@ const parseArgs = (tokens) => {
     if (flag === '--help' || flag === '-h') {
       process.stdout.write(`${usage}\n`);
       process.exit(0);
+    }
+
+    if (booleanFlags.has(flag)) {
+      options.expectedTextFromContract = true;
+      continue;
     }
 
     if (!flag?.startsWith('--')) {
@@ -64,7 +73,11 @@ const parseArgs = (tokens) => {
       fail(`Unsupported option: ${flag}`);
     }
 
-    options[key] = value;
+    if (key === 'expectedText') {
+      options.expectedText = [...(options.expectedText ?? []), value];
+    } else {
+      options[key] = value;
+    }
     index += 1;
   }
 
@@ -104,7 +117,22 @@ const parseArgs = (tokens) => {
     options.slideNumber = 1;
   }
 
+  if (options.expectedTextFromContract && !options.runDir) {
+    fail('--expected-text-from-contract requires --run-dir.');
+  }
+
   return options;
+};
+
+const uniqueExpectedText = (values = []) => {
+  const unique = [];
+  for (const value of Array.isArray(values) ? values : [values]) {
+    if (typeof value !== 'string' || unique.includes(value)) {
+      continue;
+    }
+    unique.push(value);
+  }
+  return unique;
 };
 
 const resolvePptxPath = (options) => {
@@ -131,13 +159,24 @@ const main = async () => {
   const expectedSlides = options.expectedSlides ?? (
     runDir ? inferExpectedSlidesForRunDir(runDir) : undefined
   );
+  const inferredExpectedText = options.expectedTextFromContract
+    ? inferExpectedTextForRunDir(runDir)
+    : undefined;
+  if (options.expectedTextFromContract && (!Array.isArray(inferredExpectedText) || inferredExpectedText.length === 0)) {
+    fail('Could not infer expected text from deck_contract.json.');
+  }
+  const expectedText = uniqueExpectedText([
+    ...(Array.isArray(inferredExpectedText) ? inferredExpectedText : []),
+    ...(Array.isArray(options.expectedText) ? options.expectedText : [])
+  ]);
   const pptxPath = resolvePptxPath(options);
   const structural = inspectPptxFile(pptxPath);
   const structuralValidation = validatePptxSmokeResult(structural, {
-    expectedSlides
+    expectedSlides,
+    expectedText
   });
   if (!structuralValidation.ok) {
-    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, expectedText, ...structuralValidation }, null, 2)}\n`);
     process.exitCode = 1;
     return;
   }
@@ -153,7 +192,7 @@ const main = async () => {
         powerPointPath: options.powerPointPath,
         slideNumbers: Array.from({ length: structural.slideCount }, (_, index) => index + 1)
       });
-      process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation, ...visual }, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, expectedText, ...structuralValidation, ...visual }, null, 2)}\n`);
     } catch (error) {
       fail(error.message);
     }
@@ -168,7 +207,7 @@ const main = async () => {
       powerPointPath: options.powerPointPath,
       slideNumber: options.slideNumber
     });
-    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, ...structuralValidation, ...visual }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, expectedText, ...structuralValidation, ...visual }, null, 2)}\n`);
   } catch (error) {
     fail(error.message);
   }

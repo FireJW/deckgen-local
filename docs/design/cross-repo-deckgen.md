@@ -330,7 +330,11 @@ export and validate one PNG per slide in a single PowerPoint session. It fails
 closed when PowerPoint is unavailable; use `--powerpoint-executable <path>` or
 `DECKGEN_POWERPOINT_PATH` when the executable is not in the default Office path.
 In `--run-dir` mode, omitted slide-count expectations are inferred from the
-same run bundle `deck_contract.json` before PowerPoint is launched.
+same run bundle `deck_contract.json` before PowerPoint is launched. Callers can
+also pass repeated `--expected-text <text>` flags to require key PPTX slide XML
+text during the same visual smoke path, or `--expected-text-from-contract` to
+derive that expected text from `deck_contract.json.title` plus slide headlines
+and body text before the PowerPoint automation step starts.
 Because this path uses the PowerPoint COM automation API, it also requires an
 interactive Windows logon session; detached service-like sessions can fail
 before opening PowerPoint with COM error `80070520`.

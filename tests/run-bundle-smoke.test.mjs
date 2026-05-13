@@ -315,7 +315,9 @@ test('runDeckRunVisualSmokeGates executes requested sibling visual smoke command
     },
     pptxVisualOptions: {
       slide: 2,
-      powerPointExecutable: 'D:/Office/POWERPNT.EXE'
+      powerPointExecutable: 'D:/Office/POWERPNT.EXE',
+      expectedTextFromContract: true,
+      expectedText: ['Run Smoke Deck', 'Verified bundle']
     },
     nodePath: 'node-test',
     rootDir: root,
@@ -342,7 +344,10 @@ test('runDeckRunVisualSmokeGates executes requested sibling visual smoke command
     path.join(root, 'scripts', 'pptx-visual-smoke.mjs'),
     '--run-dir', path.resolve(runDir),
     '--slide', '2',
-    '--powerpoint-executable', 'D:/Office/POWERPNT.EXE'
+    '--powerpoint-executable', 'D:/Office/POWERPNT.EXE',
+    '--expected-text-from-contract',
+    '--expected-text', 'Run Smoke Deck',
+    '--expected-text', 'Verified bundle'
   ]);
 });
 
