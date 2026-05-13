@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import {
   buildBrowserLaunchOptions,
   findHtmlArtifactForRunDir,
+  inferExpectedVisualSmokeOptionsForRunDir,
   parseViewportOption,
   validateVisualSmokeResult
 } from '../src/qc/html-visual-smoke.mjs';
@@ -219,4 +220,18 @@ test('findHtmlArtifactForRunDir resolves html/index.html from a deckgen run dire
   writeFileSync(htmlPath, '<!doctype html><title>Deck</title>', 'utf8');
 
   assert.equal(findHtmlArtifactForRunDir(runDir), htmlPath);
+});
+
+test('inferExpectedVisualSmokeOptionsForRunDir reads title and slide count from deck contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-html-contract-'));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
+    title: 'Contract Title',
+    target_slide_count: 3,
+    slides: [{}, {}, {}]
+  }, null, 2)}\n`, 'utf8');
+
+  assert.deepEqual(inferExpectedVisualSmokeOptionsForRunDir(runDir), {
+    expectedTitle: 'Contract Title',
+    expectedSlides: 3
+  });
 });

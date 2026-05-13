@@ -121,7 +121,9 @@ npm run smoke:html -- `
 ```
 
 `--html <path>` still works for a direct `html/index.html` check.
-Omit `--viewport` to use the default desktop smoke size of `1440x900`.
+Omit `--viewport` to use the default desktop smoke size of `1440x900`. When
+`--run-dir` is used and title/slide expectations are omitted, the script reads
+them from `deck_contract.json`.
 
 Before copying any upstream guizang template file, run the local source
 preflight. This validates that a local checkout, extracted archive, or `.zip`

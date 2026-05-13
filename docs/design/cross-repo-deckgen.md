@@ -268,7 +268,8 @@ local Playwright installation, and use `--browser-executable <path>` when the
 Playwright-managed browser cache is unavailable. The default viewport is
 `1440x900`; pass `--viewport <width>x<height>` such as `390x844` when checking
 mobile-sized output. Pass `--run-dir <dir>` to point at a deckgen run bundle, or
-`--html <path>` for a direct `html/index.html` check.
+`--html <path>` for a direct `html/index.html` check. In run-dir mode, omitted
+title and slide-count expectations are inferred from `deck_contract.json`.
 
 ## PPTX Structural QA
 

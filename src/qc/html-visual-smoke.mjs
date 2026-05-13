@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export function validateVisualSmokeResult(summary = {}, options = {}) {
@@ -149,4 +149,27 @@ export function findHtmlArtifactForRunDir(runDir) {
   }
 
   return htmlPath;
+}
+
+export function inferExpectedVisualSmokeOptionsForRunDir(runDir) {
+  const contractPath = path.join(path.resolve(runDir ?? ''), 'deck_contract.json');
+  if (!existsSync(contractPath)) {
+    return {};
+  }
+
+  try {
+    const contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+    const inferred = {};
+    if (typeof contract?.title === 'string' && contract.title.trim()) {
+      inferred.expectedTitle = contract.title.trim();
+    }
+    if (Number.isInteger(contract?.target_slide_count) && contract.target_slide_count > 0) {
+      inferred.expectedSlides = contract.target_slide_count;
+    } else if (Array.isArray(contract?.slides) && contract.slides.length > 0) {
+      inferred.expectedSlides = contract.slides.length;
+    }
+    return inferred;
+  } catch {
+    return {};
+  }
 }

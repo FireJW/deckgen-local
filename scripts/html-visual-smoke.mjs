@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import {
   buildBrowserLaunchOptions,
   findHtmlArtifactForRunDir,
+  inferExpectedVisualSmokeOptionsForRunDir,
   parseViewportOption,
   validateVisualSmokeResult
 } from '../src/qc/html-visual-smoke.mjs';
@@ -209,9 +210,12 @@ const main = async () => {
     const page = await browser.newPage({ viewport: options.viewport });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'load' });
     const summary = await summarizePage(page, htmlPath, screenshotPath);
+    const inferred = options.runDir
+      ? inferExpectedVisualSmokeOptionsForRunDir(path.resolve(options.runDir))
+      : {};
     const validation = validateVisualSmokeResult(summary, {
-      expectedTitle: options.expectedTitle,
-      expectedSlides: options.expectedSlides
+      expectedTitle: options.expectedTitle ?? inferred.expectedTitle,
+      expectedSlides: options.expectedSlides ?? inferred.expectedSlides
     });
 
     process.stdout.write(`${JSON.stringify({ ...summary, ...validation }, null, 2)}\n`);
