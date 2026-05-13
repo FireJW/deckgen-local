@@ -422,9 +422,10 @@ the shared contract without an explicit schema change.
 
 `source_refs[]` items are strict objects with `type`, `path`, `role`, and
 optional `id`. Current adapters emit `type: "local_file"`, `path` must be an
-absolute local path, and `id` / `role` / `path` values must stay unique across
-the source refs so legacy string evidence does not become ambiguous. Optional
-`id` values must be unique when present.
+absolute local path, and `id` / `role` / `path` values must be outer-trimmed,
+single-line strings that stay unique across the source refs so legacy string
+evidence does not become ambiguous. Optional `id` values must be unique when
+present.
 
 `slides[].evidence_refs[]` may still be a non-empty string for legacy adapter
 compatibility, or an object with `id` and optional `source_ref`, `locator`, and
@@ -432,6 +433,7 @@ compatibility, or an object with `id` and optional `source_ref`, `locator`, and
 object-form `source_ref` is present, it must match a declared source ref `id`
 so structured evidence stays keyed to explicit source items. Legacy string
 evidence can still match a source ref `id`, `role`, or `path` when that label
-is unique across the source refs. Optional `locator` and `quote` values must
-be non-empty strings when present. Unknown keys are rejected so downstream
-renderers do not silently accept drifted evidence contracts.
+is unique across the source refs. Evidence object `id`, `source_ref`, `locator`,
+and `quote` values must be outer-trimmed, single-line strings when present.
+Unknown keys are rejected so downstream renderers do not silently accept drifted
+evidence contracts.

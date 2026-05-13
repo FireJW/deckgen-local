@@ -8,7 +8,11 @@ import { isAbsolute } from 'node:path';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
-const isCanonicalString = (value) => typeof value === 'string' && value.trim().length > 0 && value.trim() === value;
+const isCanonicalString = (value) =>
+  typeof value === 'string' &&
+  value.trim().length > 0 &&
+  value.trim() === value &&
+  !/[\r\n]/.test(value);
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);

@@ -46,9 +46,12 @@ const malformedContracts = [
   ['source_refs item type must be local_file', () => ({ ...validContract(), source_refs: [{ type: 'remote_url', path: 'D:/source.md', role: 'primary' }] })],
   ['source_refs item path is empty', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: '', role: 'primary' }] })],
   ['source_refs item path has outer whitespace', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: ' D:/source.md ', role: 'primary' }] })],
+  ['source_refs item path contains a newline', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md\nD:/other.md', role: 'primary' }] })],
   ['source_refs item path must be absolute', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'relative/source.md', role: 'primary' }] })],
   ['source_refs item role is not a string', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 3 }] })],
+  ['source_refs item role contains a newline', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary\nsecondary' }] })],
   ['source_refs item has unexpected key', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', extra: true }] })],
+  ['source_refs item id contains a newline', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'main\nsource' }] })],
   ['source_refs item has duplicate id', () => ({
     ...validContract(),
     source_refs: [
@@ -122,11 +125,18 @@ const malformedContracts = [
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
     slides: [{ ...validSlide(), evidence_refs: [{ id: ' ev1 ', source_ref: 'primary', quote: 'Verified claim.' }] }]
   })],
+  ['slide evidence_refs object item id contains a newline', () => ({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev\n1', source_ref: 'primary', quote: 'Verified claim.' }] }]
+  })],
   ['slide evidence_refs object item has no source locator or quote', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }] }] })],
   ['slide evidence_refs object item has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', extra: true }] }] })],
   ['slide evidence_refs object item has duplicate id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }, { id: 'ev1' }] }] })],
   ['slide evidence_refs object locator is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', locator: ' ' }] }] })],
+  ['slide evidence_refs object locator contains a newline', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', locator: 'p. 2\np. 3' }] }] })],
   ['slide evidence_refs object quote is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', quote: 3 }] }] })],
+  ['slide evidence_refs object quote contains a newline', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', quote: 'Verified claim.\nSecond claim.' }] }] })],
   ['slide evidence_refs object source_ref must be a source_refs id', () => ({
     ...validContract(),
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
