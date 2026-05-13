@@ -24,6 +24,16 @@ const runGenerate = (args, options = {}) => spawnSync(process.execPath, [cli, 'g
 
 const writtenRunDir = (stdout) => stdout.match(/written (.+)$/m)?.[1]?.trim();
 
+const assertPrimarySourceRefMatchesManifest = (contract, manifest) => {
+  assert.ok(Array.isArray(contract.source_refs));
+  assert.deepEqual(contract.source_refs, [{
+    type: 'local_file',
+    path: manifest.primary.path,
+    role: 'primary',
+    id: 'primary'
+  }]);
+};
+
 const createMinimalPptxBytes = (slideCount = 4) => {
   const entries = [
     '[Content_Types].xml',
@@ -199,6 +209,7 @@ test('generate auto-detects article package directory sources', () => {
   assert.equal(manifest.type, 'article-package');
   assert.equal(manifest.manifest.path, path.join(articlePackageSource, 'deckgen.source.json'));
   assert.equal(manifest.primary.path, path.join(articlePackageSource, 'content.md'));
+  assertPrimarySourceRefMatchesManifest(contract, manifest);
   assert.equal(contract.profile, 'article');
   assert.equal(contract.title, 'Detected Article Package');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
@@ -217,6 +228,8 @@ test('generate auto-detects publish-package/v1 directory sources', () => {
   assert.equal(request.profile, 'article');
   assert.equal(manifest.type, 'publish-package');
   assert.equal(manifest.contract_version, 'publish-package/v1');
+  assert.equal(manifest.primary.path, path.join(publishPackageSource, 'publish-package.json'));
+  assertPrimarySourceRefMatchesManifest(contract, manifest);
   assert.equal(contract.title, 'Publish Package Deck');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
@@ -234,6 +247,8 @@ test('generate auto-detects Obsidian reading-lab directory sources', () => {
   assert.equal(request.profile, 'learning');
   assert.equal(manifest.type, 'obsidian-reading-lab');
   assert.equal(manifest.schema, 'agent_reading_lab/v1');
+  assert.equal(manifest.primary.path, path.join(obsidianReadingLabSource, 'index.md'));
+  assertPrimarySourceRefMatchesManifest(contract, manifest);
   assert.equal(contract.title, 'hello-agents - Chapter 4: ReAct');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
@@ -250,6 +265,8 @@ test('generate auto-detects report.md directory sources', () => {
   assert.equal(request.source_type, 'research-report');
   assert.equal(request.profile, 'briefing');
   assert.equal(manifest.type, 'research-report');
+  assert.equal(manifest.primary.path, path.join(reportDirectorySource, 'report.md'));
+  assertPrimarySourceRefMatchesManifest(contract, manifest);
   assert.equal(contract.title, 'Research Report Sample');
   assert.ok(existsSync(path.join(runDir, 'html', 'index.html')));
 });
