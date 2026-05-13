@@ -308,6 +308,11 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
       }
     }
 
+    const expectedQcReportPath = path.join(summary.runDir, 'qc_report.md');
+    if (typeof summary.runResult.data.qcReportPath !== 'string' || path.resolve(summary.runResult.data.qcReportPath) !== expectedQcReportPath) {
+      errors.push(`run_result.json qcReportPath must match ${expectedQcReportPath}`);
+    }
+
     if (summary.expectedOutputs.includes('html')) {
       const expectedHtmlPath = path.join(summary.runDir, 'html', 'index.html');
       if (typeof summary.runResult.data.htmlPath !== 'string' || path.resolve(summary.runResult.data.htmlPath) !== expectedHtmlPath) {

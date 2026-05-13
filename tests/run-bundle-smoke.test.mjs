@@ -97,6 +97,7 @@ const makeRunBundle = ({
   runResult = true,
   runResultOutputs = outputs,
   runResultPptxPaths,
+  runResultQcReportPath,
   sourceManifest = true,
   sourceManifestPrimaryPath = 'D:/source.md'
 } = {}) => {
@@ -123,7 +124,7 @@ const makeRunBundle = ({
       runDir,
       htmlPath: html ? path.join(runDir, 'html', 'index.html') : '',
       pptxPaths: resolvedRunResultPptxPaths ?? (pptx ? [path.join(runDir, 'ppt-master', 'exports', 'deck.pptx')] : []),
-      qcReportPath: path.join(runDir, 'qc_report.md')
+      qcReportPath: runResultQcReportPath ?? path.join(runDir, 'qc_report.md')
     }, null, 2)}\n`, 'utf8');
   }
   if (sourceManifest) {
@@ -210,6 +211,16 @@ test('inspectDeckRunBundle rejects drift in persisted run result files', () => {
 
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /run_result\.json outputs/i);
+});
+
+test('inspectDeckRunBundle rejects qc report path drift in persisted run result files', () => {
+  const runDir = makeRunBundle({
+    runResultQcReportPath: path.join(os.tmpdir(), 'deckgen-run-smoke-stale-qc-report.md')
+  });
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /run_result\.json qcReportPath/i);
 });
 
 test('inspectDeckRunBundle rejects stale pptx paths in persisted run result files', () => {

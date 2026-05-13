@@ -150,7 +150,8 @@ sibling output requested by the contract. It verifies `html/index.html` for HTML
 output and runs structural PPTX validation for PPTX output. For PPTX runs, the
 persisted `run_result.json.pptxPaths` entries must exist under
 `ppt-master/exports/`, and the structurally validated artifact must be one of
-those recorded paths:
+those recorded paths. The persisted `run_result.json.qcReportPath` must also
+point back to the run bundle's `qc_report.md`:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>

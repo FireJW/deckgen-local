@@ -119,7 +119,8 @@ contract-driven gate. It reads `request.json`, `source_manifest.json`, and
 `ppt-master/exports/*.pptx` with structural PPTX validation for PPTX. For PPTX
 runs, persisted `run_result.json.pptxPaths` must point to real files under that
 exports directory, and the structurally validated artifact must be included in
-the persisted path list.
+the persisted path list. `run_result.json.qcReportPath` must point to the same
+run bundle `qc_report.md` that the gate validates.
 The gate can optionally run sibling visual checks with `--include-html-visual`
 and `--include-pptx-visual`. Those flags shell out to the existing visual smoke
 scripts with the same `--run-dir`, keeping browser and PowerPoint dependencies
