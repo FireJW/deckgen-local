@@ -181,3 +181,39 @@ test('pptx structural smoke script accepts a deckgen run directory', () => {
   assert.equal(result.slideCount, 6);
   assert.match(result.path, /run-latest\.pptx$/);
 });
+
+test('pptx structural smoke script infers expected slide count from a deckgen run contract', () => {
+  const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-run-contract-'));
+  const exportsDir = path.join(runDir, 'ppt-master', 'exports');
+  mkdirSync(exportsDir, { recursive: true });
+  writePptxInDirectory(exportsDir, 'run-latest.pptx', 5, new Date('2026-05-10T00:03:00Z'));
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify({
+    schema_version: 'deck-contract/v1',
+    title: 'Mismatch deck',
+    audience: 'operators',
+    profile: 'briefing',
+    duration_minutes: 8,
+    target_slide_count: 6,
+    language: 'zh-CN',
+    source_refs: [],
+    hard_constraints: [],
+    theme: { renderer_hint: 'indigo_porcelain' },
+    outputs: ['pptx'],
+    slides: Array.from({ length: 6 }, (_, index) => ({
+      id: `s${String(index + 1).padStart(2, '0')}`,
+      role: index === 0 ? 'cover' : 'content',
+      headline: `Slide ${index + 1}`,
+      body: 'Body',
+      evidence_refs: [],
+      layout_intent: index === 0 ? 'hero_dark' : 'evidence'
+    }))
+  }, null, 2)}\n`, 'utf8');
+
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 1);
+  assert.match(run.stdout, /slide count 5 does not match expected 6/);
+});

@@ -279,7 +279,9 @@ PowerPoint package entries exist and that `ppt/slides/slide*.xml` count matches
 run bundle, `--exports-dir <dir>` to discover the newest `.pptx` under
 `ppt-master/exports/`, or `--pptx <path>` for a direct file check. This is not a
 visual screenshot check, but it gives a reusable command-line gate for real PPTX
-artifacts outside the generate bundle writer.
+artifacts outside the generate bundle writer. When `--run-dir` is supplied and
+`--expected-slides` is omitted, the script infers the expected count from the
+run bundle's `deck_contract.json`.
 
 Visual smoke for PPTX output lives in `scripts/pptx-visual-smoke.mjs`. On
 Windows machines with Microsoft PowerPoint available, it reuses the structural

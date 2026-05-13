@@ -121,6 +121,27 @@ export function findLatestPptxArtifactForRunDir(runDir) {
   return findLatestPptxArtifact(path.join(resolvedRunDir, 'ppt-master', 'exports'));
 }
 
+export function inferExpectedSlidesForRunDir(runDir) {
+  const contractPath = path.join(path.resolve(runDir ?? ''), 'deck_contract.json');
+  if (!existsSync(contractPath)) {
+    return undefined;
+  }
+
+  try {
+    const contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+    if (Number.isInteger(contract?.target_slide_count) && contract.target_slide_count > 0) {
+      return contract.target_slide_count;
+    }
+    if (Array.isArray(contract?.slides) && contract.slides.length > 0) {
+      return contract.slides.length;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
 export function validatePptxSmokeResult(summary = {}, options = {}) {
   const errors = [];
   if (!summary.ok) {

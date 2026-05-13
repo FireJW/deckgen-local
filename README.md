@@ -161,7 +161,9 @@ npm run smoke:pptx -- `
 ```
 
 `--exports-dir <path>` checks the newest `.pptx` under an exports directory,
-and `--pptx <path>` still works for a direct file check.
+and `--pptx <path>` still works for a direct file check. When `--run-dir` is
+used and `--expected-slides` is omitted, the script reads
+`deck_contract.json.target_slide_count` from the run bundle.
 
 On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
 smoke to export a slide as a PNG and verify a real screenshot artifact exists.

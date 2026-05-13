@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
+  inferExpectedSlidesForRunDir,
   inspectPptxFile,
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
@@ -90,11 +91,14 @@ if (options.pptxPath) {
 }
 
 const summary = inspectPptxFile(pptxPath);
+const expectedSlides = options.expectedSlides ?? (
+  options.runDir ? inferExpectedSlidesForRunDir(path.resolve(options.runDir)) : undefined
+);
 const validation = validatePptxSmokeResult(summary, {
-  expectedSlides: options.expectedSlides
+  expectedSlides
 });
 
-process.stdout.write(`${JSON.stringify({ ...summary, ...validation }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ ...summary, expectedSlides, ...validation }, null, 2)}\n`);
 if (!validation.ok) {
   process.exitCode = 1;
 }
