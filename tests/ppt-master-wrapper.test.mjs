@@ -558,8 +558,47 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(svg, /class="ppt-image"/);
   assert.match(svg, /<image\b/);
   assert.match(svg, /href="assets\/images\/[^"]+\.png"/);
+  assert.match(svg, />Source: local asset copy</);
+  assert.doesNotMatch(svg, /font-size="18" fill="[^"]*">assets\/images\//);
   assert.doesNotMatch(svg, /assets\/revenue%20bridge\.png/);
   assert.doesNotMatch(svg, /Image asset placeholder/);
+});
+
+test('renderPptMasterDeck truncates long remote image source labels', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-image-remote-ppt-project-${Date.now()}`);
+  const remoteUrl = 'https://charts.example.com/research/quarterly/revenue/2026/q2/revenue-bridge-chart-for-quarterly-briefing.png';
+  const imageContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Image: Revenue bridge',
+        body: `![Revenue bridge](${remoteUrl})`,
+        layout_intent: 'image'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: imageContract,
+    content: '# Image',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, />Source: charts\.example\.com\/research\/quarterly\//);
+  assert.match(svg, /\.{3}</);
+  assert.doesNotMatch(svg, new RegExp(remoteUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
 test('renderPptMasterDeck carries evidence references into svg and notes', () => {

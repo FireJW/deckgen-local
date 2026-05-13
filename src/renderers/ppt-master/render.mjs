@@ -318,6 +318,38 @@ const renderTextSplitSvg = ({
   ].join('\n  ');
 };
 
+const formatImageSourceLabel = (src, isMaterializedAsset) => {
+  const normalizedSrc = String(src ?? '').replaceAll('\\', '/').trim();
+  if (!normalizedSrc) {
+    return 'Source: image path unavailable';
+  }
+
+  if (isMaterializedAsset) {
+    return 'Source: local asset copy';
+  }
+
+  if (normalizedSrc.startsWith('data:')) {
+    return 'Source: embedded image data';
+  }
+
+  let label = normalizedSrc;
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(normalizedSrc)) {
+    try {
+      const parsed = new URL(normalizedSrc);
+      label = `${parsed.host}${parsed.pathname}`;
+    } catch {
+      label = normalizedSrc;
+    }
+  }
+
+  const prefixed = `Source: ${label}`;
+  if (prefixed.length <= 64) {
+    return prefixed;
+  }
+
+  return `${prefixed.slice(0, 61).trimEnd()}...`;
+};
+
 const renderImageSvg = ({
   image,
   x,
@@ -332,6 +364,7 @@ const renderImageSvg = ({
   const height = 390;
   const caption = image.alt || image.src;
   const isMaterializedAsset = String(image.src ?? '').replaceAll('\\', '/').startsWith('assets/images/');
+  const sourceLabel = formatImageSourceLabel(image.src, isMaterializedAsset);
   const imageElement = isMaterializedAsset
     ? `  <image href="${escapeXml(image.src)}" x="${x + 42}" y="${y + 112}" width="${width - 84}" height="${height - 166}" preserveAspectRatio="xMidYMid meet"/>`
     : '';
@@ -344,7 +377,7 @@ const renderImageSvg = ({
     `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
     `  <text x="${x + 42}" y="${y + 68}" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="${bodyColor}">${escapeXml(caption)}</text>`,
     imageElement,
-    `  <text x="${x + 42}" y="${y + height - 24}" font-family="Arial, sans-serif" font-size="18" fill="${bodyColor}">${escapeXml(image.src)}</text>`,
+    `  <text x="${x + 42}" y="${y + height - 24}" font-family="Arial, sans-serif" font-size="18" fill="${bodyColor}">${escapeXml(sourceLabel)}</text>`,
     placeholderText,
     '</g>'
   ].join('\n  ');
