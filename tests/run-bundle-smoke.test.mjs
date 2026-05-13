@@ -56,7 +56,9 @@ const createMinimalPptxBytes = (slideCount = 2) => {
   return Buffer.concat([...localParts, centralDir, eocd]);
 };
 
-const validContract = (outputs = ['html', 'pptx']) => ({
+const validContract = (outputs = ['html', 'pptx'], sourceRefs = [
+  { type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }
+]) => ({
   schema_version: 'deck-contract/v1',
   title: 'Run Smoke Deck',
   audience: 'operators',
@@ -64,7 +66,7 @@ const validContract = (outputs = ['html', 'pptx']) => ({
   duration_minutes: 8,
   target_slide_count: 2,
   language: 'zh-CN',
-  source_refs: [],
+  source_refs: sourceRefs,
   hard_constraints: [],
   theme: { renderer_hint: 'indigo_porcelain' },
   slides: [
@@ -100,7 +102,10 @@ const makeRunBundle = ({
   runResultQcReportPath,
   runResultOverrides = {},
   sourceManifest = true,
-  sourceManifestPrimaryPath = 'D:/source.md'
+  sourceManifestPrimaryPath = 'D:/source.md',
+  contractSourceRefs = [
+    { type: 'local_file', path: sourceManifestPrimaryPath, role: 'primary', id: 'primary' }
+  ]
 } = {}) => {
   const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-run-smoke-'));
   const resolvedRunResultPptxPaths = typeof runResultPptxPaths === 'function'
@@ -145,7 +150,7 @@ const makeRunBundle = ({
   }
   writeFileSync(path.join(runDir, 'content.md'), '# Run Smoke Deck\n\nVerified bundle.', 'utf8');
   writeFileSync(path.join(runDir, 'qc_report.md'), '# QC\n\nvalidation: PASS', 'utf8');
-  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify(validContract(outputs), null, 2)}\n`, 'utf8');
+  writeFileSync(path.join(runDir, 'deck_contract.json'), `${JSON.stringify(validContract(outputs, contractSourceRefs), null, 2)}\n`, 'utf8');
 
   if (html) {
     mkdirSync(path.join(runDir, 'html'), { recursive: true });
@@ -209,6 +214,20 @@ test('inspectDeckRunBundle rejects traceability drift in request and source mani
 
   assert.equal(sourcePathMissing.ok, false);
   assert.match(sourcePathMissing.errors.join('\n'), /source_manifest\.json primary\.path/i);
+});
+
+test('inspectDeckRunBundle rejects source manifest primary path drift from contract source refs', () => {
+  const runDir = makeRunBundle({
+    sourceManifestPrimaryPath: 'D:/source.md',
+    contractSourceRefs: [
+      { type: 'local_file', path: 'D:/other-source.md', role: 'primary', id: 'primary' }
+    ]
+  });
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /deck_contract\.json source_refs/i);
+  assert.match(validation.errors.join('\n'), /source_manifest\.json primary\.path/i);
 });
 
 test('inspectDeckRunBundle rejects drift in persisted run result files', () => {

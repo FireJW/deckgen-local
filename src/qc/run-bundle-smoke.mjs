@@ -11,6 +11,10 @@ import {
 } from './pptx-structural-smoke.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const comparablePath = (candidatePath) => {
+  const resolvedPath = path.resolve(candidatePath);
+  return process.platform === 'win32' ? resolvedPath.toLowerCase() : resolvedPath;
+};
 const isPathInside = (parentDir, candidatePath) => {
   const relativePath = path.relative(path.resolve(parentDir), path.resolve(candidatePath));
   return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
@@ -79,6 +83,7 @@ const parseContract = (contractPath) => {
       validation: validation.ok ? { ok: true, errors: [] } : { ok: false, errors: [validation.error] },
       title: typeof contract.title === 'string' ? contract.title : undefined,
       outputs: Array.isArray(contract.outputs) ? contract.outputs : [],
+      sourceRefs: Array.isArray(contract.source_refs) ? contract.source_refs : [],
       targetSlideCount: Number.isInteger(contract.target_slide_count) ? contract.target_slide_count : undefined,
       slideCount: Array.isArray(contract.slides) ? contract.slides.length : undefined
     };
@@ -164,6 +169,14 @@ const appendOption = (args, flag, value) => {
     args.push(flag, String(value));
   }
 };
+
+const includesSourceManifestPrimaryPath = (sourceRefs = [], primaryPath) => sourceRefs.some((sourceRef) =>
+  isObject(sourceRef) &&
+  sourceRef.type === 'local_file' &&
+  typeof sourceRef.path === 'string' &&
+  sourceRef.path.trim() !== '' &&
+  comparablePath(sourceRef.path) === comparablePath(primaryPath)
+);
 
 const parseVisualSmokeStdout = (stdout) => {
   const text = String(stdout ?? '').trim();
@@ -363,6 +376,11 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
     errors.push(`source_manifest.json is missing or invalid: ${(summary.sourceManifest?.validation?.errors ?? [summary.sourceManifest?.error ?? 'unknown error']).join('; ')}`);
   } else if (!isObject(summary.sourceManifest.data.primary) || typeof summary.sourceManifest.data.primary.path !== 'string' || summary.sourceManifest.data.primary.path.trim() === '') {
     errors.push('source_manifest.json primary.path must be a non-empty string');
+  } else if (
+    summary.contract?.validation?.ok &&
+    !includesSourceManifestPrimaryPath(summary.contract.sourceRefs, summary.sourceManifest.data.primary.path)
+  ) {
+    errors.push(`deck_contract.json source_refs must include source_manifest.json primary.path ${summary.sourceManifest.data.primary.path}`);
   }
 
   if (!summary.content?.ok) {

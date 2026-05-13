@@ -153,7 +153,9 @@ persisted `run_result.json.pptxPaths` entries must exist under
 those recorded paths. The persisted `run_result.json.qcReportPath` must also
 point back to the run bundle's `qc_report.md`. Core request metadata in
 `run_result.json` (`command`, `source_type`, `profile`, and `output`) must match
-`request.json`:
+`request.json`. The contract must also carry a `source_refs[]` entry whose local
+file path matches `source_manifest.json.primary.path`, so bundle smoke catches a
+deck contract that has drifted away from the source material:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>
