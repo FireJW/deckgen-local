@@ -365,6 +365,27 @@ test('validateDeckRunBundleSmokeResult rejects failed requested visual smoke gat
   assert.match(validation.errors.join('\n'), /text overflow/i);
 });
 
+test('validateDeckRunBundleSmokeResult rejects visual smoke stdout that is not valid ok json', () => {
+  const runDir = makeRunBundle();
+  const summary = inspectDeckRunBundle({ runDir });
+  summary.visual = runDeckRunVisualSmokeGates({
+    runDir,
+    expectedOutputs: ['html', 'pptx'],
+    includeHtmlVisual: true,
+    rootDir: root,
+    spawn: (command, args) => ({
+      status: 0,
+      stdout: 'visual smoke succeeded',
+      stderr: ''
+    })
+  });
+  const validation = validateDeckRunBundleSmokeResult(summary);
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /html visual smoke/i);
+  assert.match(validation.errors.join('\n'), /invalid json/i);
+});
+
 test('deck-run-smoke script emits json and exits non-zero on invalid bundles', () => {
   const runDir = makeRunBundle({ pptx: false });
   const run = spawnSync(process.execPath, [script, '--run-dir', runDir], {

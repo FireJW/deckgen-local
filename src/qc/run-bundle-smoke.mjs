@@ -181,29 +181,30 @@ const includesSourceManifestPrimaryPath = (sourceRefs = [], primaryPath) => sour
 const parseVisualSmokeStdout = (stdout) => {
   const text = String(stdout ?? '').trim();
   if (!text) {
-    return undefined;
+    return { data: undefined, error: 'visual smoke stdout is empty' };
   }
 
   try {
-    return JSON.parse(text);
+    return { data: JSON.parse(text), error: undefined };
   } catch {
-    return undefined;
+    return { data: undefined, error: 'invalid json in visual smoke stdout' };
   }
 };
 
 const runVisualSmokeCommand = ({ command, args, cwd, spawn }) => {
   const run = spawn(command, args, { encoding: 'utf8', cwd });
-  const data = parseVisualSmokeStdout(run.stdout);
+  const parsed = parseVisualSmokeStdout(run.stdout);
+  const data = parsed.data;
   const errors = Array.isArray(data?.errors)
     ? data.errors
     : [];
   const error = run.error?.message ?? (run.status === 0
-    ? undefined
+    ? parsed.error ?? (data?.ok === true ? undefined : 'visual smoke stdout did not report ok: true')
     : String(run.stderr || run.stdout || '').trim());
 
   return {
     required: true,
-    ok: run.status === 0 && data?.ok !== false,
+    ok: run.status === 0 && data?.ok === true,
     command,
     args,
     status: run.status,
