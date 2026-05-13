@@ -120,6 +120,14 @@ contract-driven gate. It reads `request.json`, `source_manifest.json`, and
 runs, persisted `run_result.json.pptxPaths` must point to real files under that
 exports directory, and the structurally validated artifact must be included in
 the persisted path list.
+The gate can optionally run sibling visual checks with `--include-html-visual`
+and `--include-pptx-visual`. Those flags shell out to the existing visual smoke
+scripts with the same `--run-dir`, keeping browser and PowerPoint dependencies
+off the default structural path while still allowing a single command to fail
+closed on visual QA when a machine is configured for it. The HTML browser flags
+and PPTX visual flags also imply their respective visual gate, so callers can
+enable the check by passing the same options they would pass to the dedicated
+smoke command.
 
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
 real local `ppt-master` checkout is configured and produces a `.pptx`:

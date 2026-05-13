@@ -1,5 +1,7 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { validateDeckContract } from '../contract/validate.mjs';
 import { findHtmlArtifactForRunDir } from './html-visual-smoke.mjs';
 import {
@@ -13,6 +15,7 @@ const isPathInside = (parentDir, candidatePath) => {
   const relativePath = path.relative(path.resolve(parentDir), path.resolve(candidatePath));
   return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
 };
+const defaultRootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const fileSummary = (filePath) => {
   const resolvedPath = path.resolve(filePath);
@@ -156,6 +159,119 @@ export function inspectDeckRunBundle({ runDir } = {}) {
   };
 }
 
+const appendOption = (args, flag, value) => {
+  if (value !== undefined && value !== null && String(value).trim() !== '') {
+    args.push(flag, String(value));
+  }
+};
+
+const parseVisualSmokeStdout = (stdout) => {
+  const text = String(stdout ?? '').trim();
+  if (!text) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
+
+const runVisualSmokeCommand = ({ command, args, cwd, spawn }) => {
+  const run = spawn(command, args, { encoding: 'utf8', cwd });
+  const data = parseVisualSmokeStdout(run.stdout);
+  const errors = Array.isArray(data?.errors)
+    ? data.errors
+    : [];
+  const error = run.error?.message ?? (run.status === 0
+    ? undefined
+    : String(run.stderr || run.stdout || '').trim());
+
+  return {
+    required: true,
+    ok: run.status === 0 && data?.ok !== false,
+    command,
+    args,
+    status: run.status,
+    stdout: run.stdout ?? '',
+    stderr: run.stderr ?? '',
+    data,
+    errors,
+    error
+  };
+};
+
+export function runDeckRunVisualSmokeGates({
+  runDir,
+  expectedOutputs = [],
+  includeHtmlVisual = false,
+  includePptxVisual = false,
+  htmlVisualOptions = {},
+  pptxVisualOptions = {},
+  nodePath = process.execPath,
+  rootDir = defaultRootDir,
+  cwd = rootDir,
+  spawn = spawnSync
+} = {}) {
+  const resolvedRunDir = path.resolve(runDir ?? '');
+  const htmlRequired = includeHtmlVisual && expectedOutputs.includes('html');
+  const pptxRequired = includePptxVisual && expectedOutputs.includes('pptx');
+  const visual = {
+    html: {
+      required: htmlRequired,
+      ok: true,
+      skipped: !htmlRequired,
+      reason: htmlRequired ? undefined : 'html visual smoke was not requested or html output is not required'
+    },
+    pptx: {
+      required: pptxRequired,
+      ok: true,
+      skipped: !pptxRequired,
+      reason: pptxRequired ? undefined : 'pptx visual smoke was not requested or pptx output is not required'
+    }
+  };
+
+  if (htmlRequired) {
+    const args = [
+      path.join(path.resolve(rootDir), 'scripts', 'html-visual-smoke.mjs'),
+      '--run-dir',
+      resolvedRunDir
+    ];
+    appendOption(args, '--module-dir', htmlVisualOptions.moduleDir);
+    appendOption(args, '--browser-executable', htmlVisualOptions.browserExecutable);
+    appendOption(args, '--viewport', htmlVisualOptions.viewport);
+    visual.html = runVisualSmokeCommand({
+      command: nodePath,
+      args,
+      cwd,
+      spawn
+    });
+  }
+
+  if (pptxRequired) {
+    const args = [
+      path.join(path.resolve(rootDir), 'scripts', 'pptx-visual-smoke.mjs'),
+      '--run-dir',
+      resolvedRunDir
+    ];
+    if (pptxVisualOptions.allSlides) {
+      args.push('--all-slides');
+    } else {
+      appendOption(args, '--slide', pptxVisualOptions.slide);
+    }
+    appendOption(args, '--powerpoint-executable', pptxVisualOptions.powerPointExecutable);
+    visual.pptx = runVisualSmokeCommand({
+      command: nodePath,
+      args,
+      cwd,
+      spawn
+    });
+  }
+
+  return visual;
+}
+
 export function validateDeckRunBundleSmokeResult(summary = {}) {
   const errors = [];
 
@@ -253,6 +369,20 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
       ? summary.pptx.validation.errors.join('; ')
       : summary.pptx.error ?? 'unknown error';
     errors.push(`pptx output is missing or invalid: ${pptxErrors}`);
+  }
+
+  if (summary.visual?.html?.required && !summary.visual.html.ok) {
+    const detail = summary.visual.html.errors?.length
+      ? summary.visual.html.errors.join('; ')
+      : summary.visual.html.error || `status ${summary.visual.html.status ?? 'unknown'}`;
+    errors.push(`html visual smoke failed: ${detail}`);
+  }
+
+  if (summary.visual?.pptx?.required && !summary.visual.pptx.ok) {
+    const detail = summary.visual.pptx.errors?.length
+      ? summary.visual.pptx.errors.join('; ')
+      : summary.visual.pptx.error || `status ${summary.visual.pptx.status ?? 'unknown'}`;
+    errors.push(`pptx visual smoke failed: ${detail}`);
   }
 
   return { ok: errors.length === 0, errors };

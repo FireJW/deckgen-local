@@ -156,6 +156,27 @@ those recorded paths:
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>
 ```
 
+For a slower one-command QA gate, opt into sibling visual checks from the same
+run bundle. HTML visual smoke reuses the browser options from `smoke:html`;
+PPTX visual smoke reuses the PowerPoint options from `smoke:pptx:visual`.
+These checks are off by default so CI and quick local validation do not require
+Playwright or an interactive PowerPoint session:
+Supplying HTML browser flags automatically enables the HTML visual gate, and
+supplying PPTX visual flags automatically enables the PPTX visual gate.
+
+```powershell
+npm run smoke:run -- --run-dir .tmp\deckgen\<run-id> `
+  --include-html-visual `
+  --module-dir C:\path\to\node_modules `
+  --browser-executable "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+```
+
+```powershell
+npm run smoke:run -- --run-dir .tmp\deckgen\<run-id> `
+  --include-pptx-visual `
+  --pptx-slide 2
+```
+
 Run the structural PPTX smoke against a generated `.pptx` when checking editable
 export artifacts without opening PowerPoint:
 

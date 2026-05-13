@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import {
   inspectDeckRunBundle,
+  runDeckRunVisualSmokeGates,
   validateDeckRunBundleSmokeResult
 } from '../src/qc/run-bundle-smoke.mjs';
 
@@ -238,6 +239,73 @@ test('inspectDeckRunBundle rejects run result pptx paths that omit the validated
   assert.match(validation.errors.join('\n'), /validated pptx artifact/i);
 });
 
+test('runDeckRunVisualSmokeGates executes requested sibling visual smoke commands', () => {
+  const runDir = makeRunBundle();
+  const calls = [];
+  const visual = runDeckRunVisualSmokeGates({
+    runDir,
+    expectedOutputs: ['html', 'pptx'],
+    includeHtmlVisual: true,
+    includePptxVisual: true,
+    htmlVisualOptions: {
+      moduleDir: 'D:/node_modules',
+      browserExecutable: 'D:/Browser/msedge.exe',
+      viewport: '390x844'
+    },
+    pptxVisualOptions: {
+      slide: 2,
+      powerPointExecutable: 'D:/Office/POWERPNT.EXE'
+    },
+    nodePath: 'node-test',
+    rootDir: root,
+    spawn: (command, args) => {
+      calls.push({ command, args });
+      return { status: 0, stdout: '{"ok":true}', stderr: '' };
+    }
+  });
+
+  assert.equal(visual.html.ok, true);
+  assert.equal(visual.pptx.ok, true);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0].args, [
+    path.join(root, 'scripts', 'html-visual-smoke.mjs'),
+    '--run-dir', path.resolve(runDir),
+    '--module-dir', 'D:/node_modules',
+    '--browser-executable', 'D:/Browser/msedge.exe',
+    '--viewport', '390x844'
+  ]);
+  assert.deepEqual(calls[1].args, [
+    path.join(root, 'scripts', 'pptx-visual-smoke.mjs'),
+    '--run-dir', path.resolve(runDir),
+    '--slide', '2',
+    '--powerpoint-executable', 'D:/Office/POWERPNT.EXE'
+  ]);
+});
+
+test('validateDeckRunBundleSmokeResult rejects failed requested visual smoke gates', () => {
+  const runDir = makeRunBundle();
+  const summary = inspectDeckRunBundle({ runDir });
+  summary.visual = runDeckRunVisualSmokeGates({
+    runDir,
+    expectedOutputs: ['html', 'pptx'],
+    includeHtmlVisual: true,
+    includePptxVisual: true,
+    rootDir: root,
+    spawn: (command, args) => ({
+      status: args[0].endsWith('html-visual-smoke.mjs') ? 1 : 0,
+      stdout: args[0].endsWith('html-visual-smoke.mjs')
+        ? '{"ok":false,"errors":["text overflow"]}'
+        : '{"ok":true}',
+      stderr: ''
+    })
+  });
+  const validation = validateDeckRunBundleSmokeResult(summary);
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /html visual smoke/i);
+  assert.match(validation.errors.join('\n'), /text overflow/i);
+});
+
 test('deck-run-smoke script emits json and exits non-zero on invalid bundles', () => {
   const runDir = makeRunBundle({ pptx: false });
   const run = spawnSync(process.execPath, [script, '--run-dir', runDir], {
@@ -250,4 +318,47 @@ test('deck-run-smoke script emits json and exits non-zero on invalid bundles', (
   assert.equal(result.ok, false);
   assert.match(result.errors.join('\n'), /pptx/i);
   assert.match(readFileSync(path.join(runDir, 'deck_contract.json'), 'utf8'), /"outputs":/);
+});
+
+test('deck-run-smoke script accepts optional visual gate flags without changing default output requirements', () => {
+  const runDir = makeRunBundle({ outputs: ['pptx'], html: false, pptx: true });
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--include-html-visual'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.equal(result.visual.html.required, false);
+  assert.equal(result.visual.html.skipped, true);
+});
+
+test('deck-run-smoke script auto-enables html visual smoke when browser options are provided', () => {
+  const generate = spawnSync(process.execPath, [
+    path.join(root, 'src', 'cli', 'deckgen.mjs'),
+    'generate',
+    '--source', path.join(root, 'fixtures', 'generic-markdown', 'briefing.md'),
+    '--profile', 'briefing',
+    '--output', 'html',
+    '--json'
+  ], { encoding: 'utf8' });
+
+  assert.equal(generate.status, 0, generate.stderr);
+  const generated = JSON.parse(generate.stdout);
+  assert.equal(generated.ok, true, generated.errors?.join?.('\n') ?? '');
+  const runDir = generated.runDir;
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--module-dir', 'C:\\Users\\rickylu\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules',
+    '--browser-executable', 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.equal(result.visual.html.required, true);
+  assert.equal(result.visual.html.ok, true);
 });
