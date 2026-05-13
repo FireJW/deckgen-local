@@ -45,6 +45,7 @@ const malformedContracts = [
   ['source_refs item type is empty', () => ({ ...validContract(), source_refs: [{ type: ' ', path: 'D:/source.md', role: 'primary' }] })],
   ['source_refs item type must be local_file', () => ({ ...validContract(), source_refs: [{ type: 'remote_url', path: 'D:/source.md', role: 'primary' }] })],
   ['source_refs item path is empty', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: '', role: 'primary' }] })],
+  ['source_refs item path has outer whitespace', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: ' D:/source.md ', role: 'primary' }] })],
   ['source_refs item path must be absolute', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'relative/source.md', role: 'primary' }] })],
   ['source_refs item role is not a string', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 3 }] })],
   ['source_refs item has unexpected key', () => ({ ...validContract(), source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', extra: true }] })],
@@ -110,7 +111,17 @@ const malformedContracts = [
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'main' }],
     slides: [{ ...validSlide(), evidence_refs: ['missing-source'] }]
   })],
+  ['slide evidence_refs string item has outer whitespace', () => ({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{ ...validSlide(), evidence_refs: [' primary '] }]
+  })],
   ['slide evidence_refs object item is missing id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ source_ref: 'primary' }] }] })],
+  ['slide evidence_refs object item id has outer whitespace', () => ({
+    ...validContract(),
+    source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary', id: 'primary' }],
+    slides: [{ ...validSlide(), evidence_refs: [{ id: ' ev1 ', source_ref: 'primary', quote: 'Verified claim.' }] }]
+  })],
   ['slide evidence_refs object item has no source locator or quote', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }] }] })],
   ['slide evidence_refs object item has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1', extra: true }] }] })],
   ['slide evidence_refs object item has duplicate id', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [{ id: 'ev1' }, { id: 'ev1' }] }] })],

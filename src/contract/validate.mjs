@@ -8,6 +8,7 @@ import { isAbsolute } from 'node:path';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
+const isCanonicalString = (value) => typeof value === 'string' && value.trim().length > 0 && value.trim() === value;
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
@@ -222,16 +223,16 @@ function validateSourceRefs(sourceRefs) {
     }
 
     for (const key of ['type', 'path', 'role']) {
-      if (!isNonEmptyString(sourceRef[key])) {
+      if (!isCanonicalString(sourceRef[key])) {
         return fail(`${prefix}.${key} must be a non-empty string`);
       }
     }
 
-    if (!allowedSourceRefTypes.has(sourceRef.type.trim())) {
+    if (!allowedSourceRefTypes.has(sourceRef.type)) {
       return fail(`${prefix}.type must be local_file`);
     }
 
-    const path = sourceRef.path.trim();
+    const path = sourceRef.path;
     if (!isAbsolute(path)) {
       return fail(`${prefix}.path must be an absolute path`);
     }
@@ -247,7 +248,7 @@ function validateSourceRefs(sourceRefs) {
       return pathValidation;
     }
 
-    if (Object.hasOwn(sourceRef, 'id') && !isNonEmptyString(sourceRef.id)) {
+    if (Object.hasOwn(sourceRef, 'id') && !isCanonicalString(sourceRef.id)) {
       return fail(`${prefix}.id must be a non-empty string when present`);
     }
 
@@ -257,7 +258,7 @@ function validateSourceRefs(sourceRefs) {
         index,
         prefix,
         field: 'id',
-        value: sourceRef.id.trim()
+        value: sourceRef.id
       });
       if (idValidation) {
         return idValidation;
@@ -269,7 +270,7 @@ function validateSourceRefs(sourceRefs) {
       index,
       prefix,
       field: 'role',
-      value: sourceRef.role.trim()
+      value: sourceRef.role
     });
     if (roleValidation) {
       return roleValidation;
@@ -452,10 +453,10 @@ function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownS
     const itemPrefix = `${prefix}[${index}]`;
 
     if (typeof evidenceRef === 'string') {
-      if (!isNonEmptyString(evidenceRef)) {
+      if (!isCanonicalString(evidenceRef)) {
         return fail(`${itemPrefix} must be a non-empty string`);
       }
-      if (!knownSourceRefKeys.has(evidenceRef.trim())) {
+      if (!knownSourceRefKeys.has(evidenceRef)) {
         return fail(`${itemPrefix} must match a source_refs id, role, or path`);
       }
       continue;
@@ -471,11 +472,11 @@ function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownS
       }
     }
 
-    if (!isNonEmptyString(evidenceRef.id)) {
+    if (!isCanonicalString(evidenceRef.id)) {
       return fail(`${itemPrefix}.id must be a non-empty string`);
     }
 
-    const id = evidenceRef.id.trim();
+    const id = evidenceRef.id;
     if (seenObjectIds.has(id)) {
       return fail(`${itemPrefix}.id must be unique within the slide`);
     }
@@ -485,21 +486,21 @@ function validateEvidenceRefs({ evidenceRefs, prefix, knownSourceRefKeys, knownS
       return fail(`${itemPrefix} must include source_ref, locator, or quote`);
     }
 
-    if (Object.hasOwn(evidenceRef, 'source_ref') && !isNonEmptyString(evidenceRef.source_ref)) {
+    if (Object.hasOwn(evidenceRef, 'source_ref') && !isCanonicalString(evidenceRef.source_ref)) {
       return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
     }
 
     for (const key of ['locator', 'quote']) {
-      if (Object.hasOwn(evidenceRef, key) && !isNonEmptyString(evidenceRef[key])) {
+      if (Object.hasOwn(evidenceRef, key) && !isCanonicalString(evidenceRef[key])) {
         return fail(`${itemPrefix}.${key} must be a non-empty string when present`);
       }
     }
 
     if (Object.hasOwn(evidenceRef, 'source_ref')) {
-      if (!isNonEmptyString(evidenceRef.source_ref)) {
+      if (!isCanonicalString(evidenceRef.source_ref)) {
         return fail(`${itemPrefix}.source_ref must be a non-empty string when present`);
       }
-      if (!knownSourceRefIds.has(evidenceRef.source_ref.trim())) {
+      if (!knownSourceRefIds.has(evidenceRef.source_ref)) {
         return fail(`${itemPrefix}.source_ref must match a source_refs id`);
       }
     }
