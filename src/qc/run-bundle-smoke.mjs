@@ -300,6 +300,14 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
       errors.push(`run_result.json runDir must match ${summary.runDir}`);
     }
 
+    if (summary.request?.ok && summary.request?.validation?.ok) {
+      for (const key of ['command', 'source_type', 'profile', 'output']) {
+        if (summary.runResult.data[key] !== summary.request.data[key]) {
+          errors.push(`run_result.json ${key} must match request.json ${key}`);
+        }
+      }
+    }
+
     if (Array.isArray(summary.runResult.data.outputs) && Array.isArray(summary.expectedOutputs)) {
       const resultOutputs = [...summary.runResult.data.outputs].sort();
       const contractOutputs = [...summary.expectedOutputs].sort();

@@ -151,7 +151,9 @@ output and runs structural PPTX validation for PPTX output. For PPTX runs, the
 persisted `run_result.json.pptxPaths` entries must exist under
 `ppt-master/exports/`, and the structurally validated artifact must be one of
 those recorded paths. The persisted `run_result.json.qcReportPath` must also
-point back to the run bundle's `qc_report.md`:
+point back to the run bundle's `qc_report.md`. Core request metadata in
+`run_result.json` (`command`, `source_type`, `profile`, and `output`) must match
+`request.json`:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>

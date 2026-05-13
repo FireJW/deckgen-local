@@ -98,6 +98,7 @@ const makeRunBundle = ({
   runResultOutputs = outputs,
   runResultPptxPaths,
   runResultQcReportPath,
+  runResultOverrides = {},
   sourceManifest = true,
   sourceManifestPrimaryPath = 'D:/source.md'
 } = {}) => {
@@ -105,13 +106,14 @@ const makeRunBundle = ({
   const resolvedRunResultPptxPaths = typeof runResultPptxPaths === 'function'
     ? runResultPptxPaths(runDir)
     : runResultPptxPaths;
+  const output = outputs.length === 2 ? 'both' : outputs[0];
   if (request) {
     writeFileSync(path.join(runDir, 'request.json'), `${JSON.stringify({
       command: 'generate',
       source: 'fixtures/generic-markdown/briefing.md',
       source_type: 'generic-markdown',
       profile: 'briefing',
-      output: outputs.length === 2 ? 'both' : outputs[0],
+      output,
       outputs: requestOutputs,
       workdir: path.dirname(runDir)
     }, null, 2)}\n`, 'utf8');
@@ -120,11 +122,15 @@ const makeRunBundle = ({
     writeFileSync(path.join(runDir, 'run_result.json'), `${JSON.stringify({
       ok: true,
       command: 'generate',
+      source_type: 'generic-markdown',
+      profile: 'briefing',
+      output,
       outputs: runResultOutputs,
       runDir,
       htmlPath: html ? path.join(runDir, 'html', 'index.html') : '',
       pptxPaths: resolvedRunResultPptxPaths ?? (pptx ? [path.join(runDir, 'ppt-master', 'exports', 'deck.pptx')] : []),
-      qcReportPath: runResultQcReportPath ?? path.join(runDir, 'qc_report.md')
+      qcReportPath: runResultQcReportPath ?? path.join(runDir, 'qc_report.md'),
+      ...runResultOverrides
     }, null, 2)}\n`, 'utf8');
   }
   if (sourceManifest) {
@@ -211,6 +217,18 @@ test('inspectDeckRunBundle rejects drift in persisted run result files', () => {
 
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /run_result\.json outputs/i);
+});
+
+test('inspectDeckRunBundle rejects request metadata drift in persisted run result files', () => {
+  const runDir = makeRunBundle({
+    runResultOverrides: {
+      profile: 'learning'
+    }
+  });
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /run_result\.json profile/i);
 });
 
 test('inspectDeckRunBundle rejects qc report path drift in persisted run result files', () => {
