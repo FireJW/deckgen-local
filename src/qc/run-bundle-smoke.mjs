@@ -9,6 +9,10 @@ import {
 } from './pptx-structural-smoke.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isPathInside = (parentDir, candidatePath) => {
+  const relativePath = path.relative(path.resolve(parentDir), path.resolve(candidatePath));
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+};
 
 const fileSummary = (filePath) => {
   const resolvedPath = path.resolve(filePath);
@@ -199,8 +203,29 @@ export function validateDeckRunBundleSmokeResult(summary = {}) {
       const expectedPptxDir = path.join(summary.runDir, 'ppt-master', 'exports');
       if (!Array.isArray(summary.runResult.data.pptxPaths) || summary.runResult.data.pptxPaths.length === 0) {
         errors.push('run_result.json pptxPaths must contain at least one artifact path');
-      } else if (!summary.runResult.data.pptxPaths.every((pptxPath) => path.resolve(pptxPath).startsWith(path.resolve(expectedPptxDir)))) {
-        errors.push(`run_result.json pptxPaths must point inside ${expectedPptxDir}`);
+      } else {
+        const resolvedRunResultPptxPaths = summary.runResult.data.pptxPaths.map((pptxPath) => path.resolve(pptxPath));
+        for (const pptxPath of summary.runResult.data.pptxPaths) {
+          const resolvedPptxPath = path.resolve(pptxPath);
+          if (!isPathInside(expectedPptxDir, resolvedPptxPath)) {
+            errors.push(`run_result.json pptxPaths must point inside ${expectedPptxDir}`);
+            break;
+          }
+
+          const pptxFile = fileSummary(resolvedPptxPath);
+          if (!pptxFile.ok) {
+            errors.push(`run_result.json pptxPaths contains invalid artifact ${resolvedPptxPath}: ${pptxFile.error ?? 'unknown error'}`);
+            break;
+          }
+        }
+
+        if (
+          summary.pptx?.ok &&
+          typeof summary.pptx.path === 'string' &&
+          !resolvedRunResultPptxPaths.includes(path.resolve(summary.pptx.path))
+        ) {
+          errors.push(`run_result.json pptxPaths must include validated pptx artifact ${summary.pptx.path}`);
+        }
       }
     }
   }

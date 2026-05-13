@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -95,10 +95,14 @@ const makeRunBundle = ({
   requestOutputs = outputs,
   runResult = true,
   runResultOutputs = outputs,
+  runResultPptxPaths,
   sourceManifest = true,
   sourceManifestPrimaryPath = 'D:/source.md'
 } = {}) => {
   const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-run-smoke-'));
+  const resolvedRunResultPptxPaths = typeof runResultPptxPaths === 'function'
+    ? runResultPptxPaths(runDir)
+    : runResultPptxPaths;
   if (request) {
     writeFileSync(path.join(runDir, 'request.json'), `${JSON.stringify({
       command: 'generate',
@@ -117,7 +121,7 @@ const makeRunBundle = ({
       outputs: runResultOutputs,
       runDir,
       htmlPath: html ? path.join(runDir, 'html', 'index.html') : '',
-      pptxPaths: pptx ? [path.join(runDir, 'ppt-master', 'exports', 'deck.pptx')] : [],
+      pptxPaths: resolvedRunResultPptxPaths ?? (pptx ? [path.join(runDir, 'ppt-master', 'exports', 'deck.pptx')] : []),
       qcReportPath: path.join(runDir, 'qc_report.md')
     }, null, 2)}\n`, 'utf8');
   }
@@ -205,6 +209,33 @@ test('inspectDeckRunBundle rejects drift in persisted run result files', () => {
 
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /run_result\.json outputs/i);
+});
+
+test('inspectDeckRunBundle rejects stale pptx paths in persisted run result files', () => {
+  const runDir = makeRunBundle({
+    runResultPptxPaths: (bundleDir) => [
+      path.join(bundleDir, 'ppt-master', 'exports', 'stale.pptx')
+    ]
+  });
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /run_result\.json pptxPaths/i);
+});
+
+test('inspectDeckRunBundle rejects run result pptx paths that omit the validated artifact', () => {
+  const runDir = makeRunBundle({
+    runResultPptxPaths: (bundleDir) => [
+      path.join(bundleDir, 'ppt-master', 'exports', 'old.pptx')
+    ]
+  });
+  const oldPptxPath = path.join(runDir, 'ppt-master', 'exports', 'old.pptx');
+  writeFileSync(oldPptxPath, createMinimalPptxBytes(2));
+  utimesSync(oldPptxPath, new Date(0), new Date(0));
+  const validation = validateDeckRunBundleSmokeResult(inspectDeckRunBundle({ runDir }));
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /validated pptx artifact/i);
 });
 
 test('deck-run-smoke script emits json and exits non-zero on invalid bundles', () => {

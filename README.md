@@ -147,7 +147,10 @@ Run the combined run-bundle smoke when you want one local gate that checks the
 traceability files (`request.json`, `source_manifest.json`), generated
 `run_result.json`, `deck_contract.json`, `content.md`, `qc_report.md`, and every
 sibling output requested by the contract. It verifies `html/index.html` for HTML
-output and runs structural PPTX validation for PPTX output:
+output and runs structural PPTX validation for PPTX output. For PPTX runs, the
+persisted `run_result.json.pptxPaths` entries must exist under
+`ppt-master/exports/`, and the structurally validated artifact must be one of
+those recorded paths:
 
 ```powershell
 npm run smoke:run -- --run-dir .tmp\deckgen\<run-id>

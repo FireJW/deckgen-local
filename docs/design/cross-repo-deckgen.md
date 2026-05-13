@@ -116,7 +116,10 @@ contract-driven gate. It reads `request.json`, `source_manifest.json`, and
 `source_manifest.primary.path`, checks `content.md`, `run_result.json`, and
 `qc_report.md`, then verifies each sibling output named by `contract.outputs`:
 `html/index.html` for HTML and the newest
-`ppt-master/exports/*.pptx` with structural PPTX validation for PPTX.
+`ppt-master/exports/*.pptx` with structural PPTX validation for PPTX. For PPTX
+runs, persisted `run_result.json.pptxPaths` must point to real files under that
+exports directory, and the structurally validated artifact must be included in
+the persisted path list.
 
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
 real local `ppt-master` checkout is configured and produces a `.pptx`:
