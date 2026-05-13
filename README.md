@@ -194,7 +194,16 @@ npm run smoke:pptx -- `
 `--exports-dir <path>` checks the newest `.pptx` under an exports directory,
 and `--pptx <path>` still works for a direct file check. When `--run-dir` is
 used and `--expected-slides` is omitted, the script reads
-`deck_contract.json.target_slide_count` from the run bundle.
+`deck_contract.json.target_slide_count` from the run bundle. Add one or more
+`--expected-text "<text>"` flags when you need a content-level gate that checks
+slide XML for key title or body text without launching PowerPoint:
+
+```powershell
+npm run smoke:pptx -- `
+  --run-dir .tmp\deckgen\<run-id> `
+  --expected-text "Deck Generator Briefing" `
+  --expected-text "HTML preview and PPTX export"
+```
 
 On Windows machines with Microsoft PowerPoint installed, run the visual PPTX
 smoke to export a slide as a PNG and verify a real screenshot artifact exists.

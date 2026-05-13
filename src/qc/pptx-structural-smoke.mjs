@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { inflateRawSync } from 'node:zlib';
 
 const findEndOfCentralDirectory = (buffer) => {
   const earliestOffset = Math.max(0, buffer.length - 22 - 0xffff);
@@ -11,6 +12,65 @@ const findEndOfCentralDirectory = (buffer) => {
 
   return -1;
 };
+
+const slideEntryPattern = /^ppt\/slides\/slide(\d+)\.xml$/i;
+
+const decodeXmlText = (text) => text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (match, entity) => {
+  const normalized = entity.toLowerCase();
+  if (normalized === 'amp') return '&';
+  if (normalized === 'lt') return '<';
+  if (normalized === 'gt') return '>';
+  if (normalized === 'quot') return '"';
+  if (normalized === 'apos') return "'";
+  if (normalized.startsWith('#x')) {
+    return String.fromCodePoint(Number.parseInt(normalized.slice(2), 16));
+  }
+  if (normalized.startsWith('#')) {
+    return String.fromCodePoint(Number.parseInt(normalized.slice(1), 10));
+  }
+  return match;
+});
+
+const normalizeText = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
+
+const readZipEntryData = (buffer, entry) => {
+  const localHeaderOffset = entry.localHeaderOffset;
+  if (localHeaderOffset + 30 > buffer.length || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+    return undefined;
+  }
+
+  const nameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+  const extraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+  const dataStart = localHeaderOffset + 30 + nameLength + extraLength;
+  const dataEnd = dataStart + entry.compressedSize;
+  if (dataEnd > buffer.length) {
+    return undefined;
+  }
+
+  const rawData = buffer.subarray(dataStart, dataEnd);
+  if (entry.compressionMethod === 0) {
+    return rawData;
+  }
+  if (entry.compressionMethod === 8) {
+    return inflateRawSync(rawData);
+  }
+  return undefined;
+};
+
+const extractTextFromSlideXml = (xml) => [...String(xml ?? '').matchAll(/<a:t\b[^>]*>([\s\S]*?)<\/a:t>/gi)]
+  .map((match) => decodeXmlText(match[1]))
+  .map(normalizeText)
+  .filter(Boolean)
+  .join(' ');
+
+const extractSlideTexts = (buffer, entries) => entries
+  .map((entry) => ({ ...entry, slideNumber: Number(entry.name.match(slideEntryPattern)?.[1]) }))
+  .filter((entry) => Number.isInteger(entry.slideNumber))
+  .sort((left, right) => left.slideNumber - right.slideNumber)
+  .map((entry) => {
+    const data = readZipEntryData(buffer, entry);
+    return data ? extractTextFromSlideXml(data.toString('utf8')) : '';
+  });
 
 export function inspectPptxFile(filePath) {
   const resolvedPath = path.resolve(filePath ?? '');
@@ -32,7 +92,7 @@ export function inspectPptxFile(filePath) {
 
     const entryCount = buffer.readUInt16LE(eocdOffset + 10);
     let cursor = buffer.readUInt32LE(eocdOffset + 16);
-    const names = [];
+    const entries = [];
 
     for (let index = 0; index < entryCount; index += 1) {
       if (cursor + 46 > buffer.length || buffer.readUInt32LE(cursor) !== 0x02014b50) {
@@ -42,18 +102,28 @@ export function inspectPptxFile(filePath) {
       const nameLength = buffer.readUInt16LE(cursor + 28);
       const extraLength = buffer.readUInt16LE(cursor + 30);
       const commentLength = buffer.readUInt16LE(cursor + 32);
+      const compressionMethod = buffer.readUInt16LE(cursor + 10);
+      const compressedSize = buffer.readUInt32LE(cursor + 20);
+      const localHeaderOffset = buffer.readUInt32LE(cursor + 42);
       const nameStart = cursor + 46;
       const nameEnd = nameStart + nameLength;
       if (nameEnd > buffer.length) {
         return { ok: false, path: resolvedPath, error: 'invalid central directory name' };
       }
 
-      names.push(buffer.toString('utf8', nameStart, nameEnd).replaceAll('\\', '/'));
+      entries.push({
+        name: buffer.toString('utf8', nameStart, nameEnd).replaceAll('\\', '/'),
+        compressionMethod,
+        compressedSize,
+        localHeaderOffset
+      });
       cursor = nameEnd + extraLength + commentLength;
     }
 
+    const names = entries.map((entry) => entry.name);
     const hasContentTypes = names.includes('[Content_Types].xml');
     const hasPresentation = names.includes('ppt/presentation.xml');
+    const slideEntries = entries.filter((entry) => slideEntryPattern.test(entry.name));
     if (!hasContentTypes || !hasPresentation) {
       return {
         ok: false,
@@ -61,7 +131,7 @@ export function inspectPptxFile(filePath) {
         error: 'missing required presentation entries',
         hasContentTypes,
         hasPresentation,
-        slideCount: names.filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name)).length
+        slideCount: slideEntries.length
       };
     }
 
@@ -72,7 +142,8 @@ export function inspectPptxFile(filePath) {
       entryCount,
       hasContentTypes,
       hasPresentation,
-      slideCount: names.filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name)).length
+      slideCount: slideEntries.length,
+      slideTexts: extractSlideTexts(buffer, slideEntries)
     };
   } catch (error) {
     return { ok: false, path: resolvedPath, error: error.message };
@@ -159,6 +230,19 @@ export function validatePptxSmokeResult(summary = {}, options = {}) {
 
   if (summary.ok && summary.bytes === 0) {
     errors.push('pptx file is empty');
+  }
+
+  const expectedText = Array.isArray(options.expectedText)
+    ? options.expectedText
+    : options.expectedText === undefined
+      ? []
+      : [options.expectedText];
+  const combinedText = normalizeText(Array.isArray(summary.slideTexts) ? summary.slideTexts.join(' ') : '');
+  for (const text of expectedText) {
+    const normalizedExpectedText = normalizeText(text);
+    if (normalizedExpectedText && !combinedText.includes(normalizedExpectedText)) {
+      errors.push(`expected pptx text not found: ${normalizedExpectedText}`);
+    }
   }
 
   return { ok: errors.length === 0, errors };

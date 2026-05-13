@@ -10,7 +10,7 @@ import {
 } from '../src/qc/pptx-structural-smoke.mjs';
 
 const usage = [
-  'pptx-structural-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir> [--expected-slides <n>]'
+  'pptx-structural-smoke --pptx <path> | --exports-dir <dir> | --run-dir <dir> [--expected-slides <n>] [--expected-text <text> ...]'
 ].join('\n');
 
 const fail = (message) => {
@@ -24,7 +24,8 @@ const parseArgs = (tokens) => {
     ['--pptx', 'pptxPath'],
     ['--exports-dir', 'exportsDir'],
     ['--run-dir', 'runDir'],
-    ['--expected-slides', 'expectedSlides']
+    ['--expected-slides', 'expectedSlides'],
+    ['--expected-text', 'expectedText']
   ]);
 
   for (let index = 0; index < tokens.length; index += 2) {
@@ -49,7 +50,11 @@ const parseArgs = (tokens) => {
       fail(`Unsupported option: ${flag}`);
     }
 
-    options[key] = value;
+    if (key === 'expectedText') {
+      options.expectedText = [...(options.expectedText ?? []), value];
+    } else {
+      options[key] = value;
+    }
   }
 
   const targetCount = [options.pptxPath, options.exportsDir, options.runDir]
@@ -95,10 +100,11 @@ const expectedSlides = options.expectedSlides ?? (
   options.runDir ? inferExpectedSlidesForRunDir(path.resolve(options.runDir)) : undefined
 );
 const validation = validatePptxSmokeResult(summary, {
-  expectedSlides
+  expectedSlides,
+  expectedText: options.expectedText
 });
 
-process.stdout.write(`${JSON.stringify({ ...summary, expectedSlides, ...validation }, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ ...summary, expectedSlides, expectedText: options.expectedText, ...validation }, null, 2)}\n`);
 if (!validation.ok) {
   process.exitCode = 1;
 }

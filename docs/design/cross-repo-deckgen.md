@@ -291,15 +291,17 @@ title and slide-count expectations are inferred from `deck_contract.json`.
 ## PPTX Structural QA
 
 Structural smoke for PPTX output lives in `scripts/pptx-structural-smoke.mjs`.
-It reads a generated `.pptx` as a ZIP package and validates that the required
-PowerPoint package entries exist and that `ppt/slides/slide*.xml` count matches
-`--expected-slides` when supplied. Pass `--run-dir <dir>` to point at a deckgen
-run bundle, `--exports-dir <dir>` to discover the newest `.pptx` under
-`ppt-master/exports/`, or `--pptx <path>` for a direct file check. This is not a
-visual screenshot check, but it gives a reusable command-line gate for real PPTX
-artifacts outside the generate bundle writer. When `--run-dir` is supplied and
-`--expected-slides` is omitted, the script infers the expected count from the
-run bundle's `deck_contract.json`.
+It reads a generated `.pptx` as a ZIP package, validates that the required
+PowerPoint package entries exist, extracts text from `ppt/slides/slide*.xml`,
+and checks that the slide count matches `--expected-slides` when supplied.
+Pass `--run-dir <dir>` to point at a deckgen run bundle, `--exports-dir <dir>`
+to discover the newest `.pptx` under `ppt-master/exports/`, or `--pptx <path>`
+for a direct file check. This is not a visual screenshot check, but it gives a
+reusable command-line gate for real PPTX artifacts outside the generate bundle
+writer. When `--run-dir` is supplied and `--expected-slides` is omitted, the
+script infers the expected count from the run bundle's `deck_contract.json`.
+Callers can add repeated `--expected-text <text>` flags to fail closed when key
+title or body text is missing from the PPTX slide XML.
 
 Visual smoke for PPTX output lives in `scripts/pptx-visual-smoke.mjs`. On
 Windows machines with Microsoft PowerPoint available, it reuses the structural
@@ -363,6 +365,7 @@ PPTX verification is structural and fail-closed:
 - the artifact must be a readable PPTX/ZIP package
 - `[Content_Types].xml` and `ppt/presentation.xml` must exist
 - `ppt/slides/slide*.xml` count must match `deck_contract.json.slides.length`
+- callers can require selected text strings to appear in extracted slide XML
 
 The QC report records `pptx_slide_count: PASS actual/expected` for generated
 PPTX artifacts.

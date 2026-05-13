@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { deflateRawSync } from 'node:zlib';
 import {
   findLatestPptxArtifact,
   findLatestPptxArtifactForRunDir,
@@ -15,31 +16,44 @@ import test from 'node:test';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const script = path.join(root, 'scripts', 'pptx-structural-smoke.mjs');
 
-const createMinimalPptxBytes = (slideCount = 3) => {
+const createMinimalPptxBytes = (slideCount = 3, options = {}) => {
+  const textBySlide = options.textBySlide ?? [];
   const entries = [
-    '[Content_Types].xml',
-    'ppt/presentation.xml',
-    ...Array.from({ length: slideCount }, (_, index) => `ppt/slides/slide${index + 1}.xml`)
+    { name: '[Content_Types].xml', data: '' },
+    { name: 'ppt/presentation.xml', data: '' },
+    ...Array.from({ length: slideCount }, (_, index) => ({
+      name: `ppt/slides/slide${index + 1}.xml`,
+      data: textBySlide[index] ? `<p:sld><a:t>${textBySlide[index]}</a:t></p:sld>` : ''
+    }))
   ];
   const localParts = [];
   const centralParts = [];
   let offset = 0;
 
-  for (const entryName of entries) {
+  for (const entry of entries) {
+    const entryName = entry.name;
     const name = Buffer.from(entryName, 'utf8');
-    const local = Buffer.alloc(30 + name.length);
+    const data = Buffer.from(entry.data, 'utf8');
+    const compressedData = options.compress && data.length > 0 ? deflateRawSync(data) : data;
+    const compressionMethod = compressedData.length === data.length ? 0 : 8;
+    const local = Buffer.alloc(30 + name.length + compressedData.length);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
-    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(compressionMethod, 8);
+    local.writeUInt32LE(compressedData.length, 18);
+    local.writeUInt32LE(data.length, 22);
     local.writeUInt16LE(name.length, 26);
     name.copy(local, 30);
+    compressedData.copy(local, 30 + name.length);
     localParts.push(local);
 
     const central = Buffer.alloc(46 + name.length);
     central.writeUInt32LE(0x02014b50, 0);
     central.writeUInt16LE(20, 4);
     central.writeUInt16LE(20, 6);
-    central.writeUInt16LE(0, 10);
+    central.writeUInt16LE(compressionMethod, 10);
+    central.writeUInt32LE(compressedData.length, 20);
+    central.writeUInt32LE(data.length, 24);
     central.writeUInt16LE(name.length, 28);
     central.writeUInt32LE(offset, 42);
     name.copy(central, 46);
@@ -57,11 +71,11 @@ const createMinimalPptxBytes = (slideCount = 3) => {
   return Buffer.concat([...localParts, centralDir, eocd]);
 };
 
-const writePptxFixture = (slideCount = 3) => {
+const writePptxFixture = (slideCount = 3, options = {}) => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-pptx-smoke-'));
   mkdirSync(dir, { recursive: true });
   const pptxPath = path.join(dir, 'sample.pptx');
-  writeFileSync(pptxPath, createMinimalPptxBytes(slideCount));
+  writeFileSync(pptxPath, createMinimalPptxBytes(slideCount, options));
   return pptxPath;
 };
 
@@ -83,6 +97,17 @@ test('inspectPptxFile reads slide count from a valid pptx package', () => {
   assert.equal(summary.hasPresentation, true);
 });
 
+test('inspectPptxFile extracts text from pptx slide xml entries', () => {
+  const pptxPath = writePptxFixture(2, {
+    textBySlide: ['Quarterly &amp; Outlook', 'Revenue bridge'],
+    compress: true
+  });
+  const summary = inspectPptxFile(pptxPath);
+
+  assert.equal(summary.ok, true);
+  assert.deepEqual(summary.slideTexts, ['Quarterly & Outlook', 'Revenue bridge']);
+});
+
 test('validatePptxSmokeResult rejects invalid packages and slide mismatches', () => {
   const mismatch = validatePptxSmokeResult({
     ok: true,
@@ -101,6 +126,21 @@ test('validatePptxSmokeResult rejects invalid packages and slide mismatches', ()
   }, { expectedSlides: 3 });
   assert.equal(invalid.ok, false);
   assert.match(invalid.errors.join('\n'), /invalid pptx/i);
+});
+
+test('validatePptxSmokeResult rejects missing expected pptx text', () => {
+  const validation = validatePptxSmokeResult({
+    ok: true,
+    path: 'sample.pptx',
+    bytes: 10,
+    slideCount: 2,
+    slideTexts: ['Deck Generator Briefing', 'Revenue bridge']
+  }, {
+    expectedText: ['Deck Generator Briefing', 'Missing thesis']
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /Missing thesis/);
 });
 
 test('findLatestPptxArtifact discovers the newest pptx in an exports directory', () => {
@@ -144,6 +184,34 @@ test('pptx structural smoke script validates expected slide count', () => {
 
   assert.equal(mismatch.status, 1);
   assert.match(mismatch.stdout, /slide count 4 does not match expected 3/);
+});
+
+test('pptx structural smoke script validates expected text content', () => {
+  const pptxPath = writePptxFixture(2, {
+    textBySlide: ['Deck Generator Briefing', 'Revenue bridge'],
+    compress: true
+  });
+  const run = spawnSync(process.execPath, [
+    script,
+    '--pptx', pptxPath,
+    '--expected-text', 'Deck Generator Briefing',
+    '--expected-text', 'Revenue bridge'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.expectedText, ['Deck Generator Briefing', 'Revenue bridge']);
+  assert.deepEqual(result.errors, []);
+
+  const mismatch = spawnSync(process.execPath, [
+    script,
+    '--pptx', pptxPath,
+    '--expected-text', 'Missing thesis'
+  ], { encoding: 'utf8' });
+
+  assert.equal(mismatch.status, 1);
+  assert.match(mismatch.stdout, /Missing thesis/);
 });
 
 test('pptx structural smoke script accepts an exports directory', () => {
