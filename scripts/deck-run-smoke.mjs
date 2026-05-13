@@ -9,6 +9,7 @@ import {
 const usage = [
   'deck-run-smoke --run-dir <deckgen-run-dir>',
   '               [--include-html-visual] [--include-pptx-visual]',
+  '               [--pptx-expected-text <text> ...]',
   '               [--module-dir <node_modules>] [--browser-executable <path>] [--viewport <width>x<height>]',
   '               [--pptx-slide <n> | --pptx-visual-all-slides] [--powerpoint-executable <path>]'
 ].join('\n');
@@ -27,6 +28,7 @@ const parseArgs = (tokens) => {
     ['--browser-executable', 'browserExecutable'],
     ['--viewport', 'viewport'],
     ['--pptx-slide', 'pptxVisualSlide'],
+    ['--pptx-expected-text', 'pptxExpectedText'],
     ['--powerpoint-executable', 'powerPointExecutable']
   ]);
 
@@ -63,7 +65,11 @@ const parseArgs = (tokens) => {
       fail(`Missing value for ${flag}.`);
     }
 
-    options[key] = value;
+    if (key === 'pptxExpectedText') {
+      options.pptxExpectedText = [...(options.pptxExpectedText ?? []), value];
+    } else {
+      options[key] = value;
+    }
     index += 1;
   }
 
@@ -95,7 +101,10 @@ const parseArgs = (tokens) => {
 };
 
 const options = parseArgs(process.argv.slice(2));
-const summary = inspectDeckRunBundle({ runDir: path.resolve(options.runDir) });
+const summary = inspectDeckRunBundle({
+  runDir: path.resolve(options.runDir),
+  pptxExpectedText: options.pptxExpectedText
+});
 if (options.includeHtmlVisual || options.includePptxVisual) {
   summary.visual = runDeckRunVisualSmokeGates({
     runDir: path.resolve(options.runDir),

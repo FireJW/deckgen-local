@@ -14,24 +14,32 @@ import {
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const script = path.join(root, 'scripts', 'deck-run-smoke.mjs');
 
-const createMinimalPptxBytes = (slideCount = 2) => {
+const createMinimalPptxBytes = (slideCount = 2, textBySlide = []) => {
   const entries = [
-    '[Content_Types].xml',
-    'ppt/presentation.xml',
-    ...Array.from({ length: slideCount }, (_, index) => `ppt/slides/slide${index + 1}.xml`)
+    { name: '[Content_Types].xml', data: '' },
+    { name: 'ppt/presentation.xml', data: '' },
+    ...Array.from({ length: slideCount }, (_, index) => ({
+      name: `ppt/slides/slide${index + 1}.xml`,
+      data: textBySlide[index] ? `<p:sld><a:t>${textBySlide[index]}</a:t></p:sld>` : ''
+    }))
   ];
   const localParts = [];
   const centralParts = [];
   let offset = 0;
 
-  for (const entryName of entries) {
+  for (const entry of entries) {
+    const entryName = entry.name;
     const name = Buffer.from(entryName, 'utf8');
-    const local = Buffer.alloc(30 + name.length);
+    const data = Buffer.from(entry.data, 'utf8');
+    const local = Buffer.alloc(30 + name.length + data.length);
     local.writeUInt32LE(0x04034b50, 0);
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(0, 8);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
     local.writeUInt16LE(name.length, 26);
     name.copy(local, 30);
+    data.copy(local, 30 + name.length);
     localParts.push(local);
 
     const central = Buffer.alloc(46 + name.length);
@@ -39,6 +47,8 @@ const createMinimalPptxBytes = (slideCount = 2) => {
     central.writeUInt16LE(20, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(0, 10);
+    central.writeUInt32LE(data.length, 20);
+    central.writeUInt32LE(data.length, 24);
     central.writeUInt16LE(name.length, 28);
     central.writeUInt32LE(offset, 42);
     name.copy(central, 46);
@@ -105,7 +115,8 @@ const makeRunBundle = ({
   sourceManifestPrimaryPath = 'D:/source.md',
   contractSourceRefs = [
     { type: 'local_file', path: sourceManifestPrimaryPath, role: 'primary', id: 'primary' }
-  ]
+  ],
+  pptxTextBySlide = []
 } = {}) => {
   const runDir = mkdtempSync(path.join(os.tmpdir(), 'deckgen-run-smoke-'));
   const resolvedRunResultPptxPaths = typeof runResultPptxPaths === 'function'
@@ -160,7 +171,7 @@ const makeRunBundle = ({
   if (pptx) {
     const exportsDir = path.join(runDir, 'ppt-master', 'exports');
     mkdirSync(exportsDir, { recursive: true });
-    writeFileSync(path.join(exportsDir, 'deck.pptx'), createMinimalPptxBytes(2));
+    writeFileSync(path.join(exportsDir, 'deck.pptx'), createMinimalPptxBytes(2, pptxTextBySlide));
   }
 
   return runDir;
@@ -381,6 +392,34 @@ test('deck-run-smoke script accepts optional visual gate flags without changing 
   assert.equal(result.ok, true, result.errors.join('\n'));
   assert.equal(result.visual.html.required, false);
   assert.equal(result.visual.html.skipped, true);
+});
+
+test('deck-run-smoke script validates optional pptx expected text', () => {
+  const runDir = makeRunBundle({
+    outputs: ['pptx'],
+    html: false,
+    pptx: true,
+    pptxTextBySlide: ['Run Smoke Deck', 'Verified bundle']
+  });
+  const run = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--pptx-expected-text', 'Verified bundle'
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.ok, true, result.errors.join('\n'));
+  assert.deepEqual(result.pptx.slideTexts, ['Run Smoke Deck', 'Verified bundle']);
+
+  const mismatch = spawnSync(process.execPath, [
+    script,
+    '--run-dir', runDir,
+    '--pptx-expected-text', 'Missing thesis'
+  ], { encoding: 'utf8' });
+
+  assert.equal(mismatch.status, 1);
+  assert.match(mismatch.stdout, /Missing thesis/);
 });
 
 test('deck-run-smoke script auto-enables html visual smoke when browser options are provided', () => {

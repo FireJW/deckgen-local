@@ -133,7 +133,8 @@ off the default structural path while still allowing a single command to fail
 closed on visual QA when a machine is configured for it. The HTML browser flags
 and PPTX visual flags also imply their respective visual gate, so callers can
 enable the check by passing the same options they would pass to the dedicated
-smoke command.
+smoke command. `--pptx-expected-text <text>` can be repeated to require key
+slide text in the extracted PPTX XML during the same run-bundle validation.
 
 Editable PowerPoint exports add a sibling `ppt-master/` subtree only when a
 real local `ppt-master` checkout is configured and produces a `.pptx`:

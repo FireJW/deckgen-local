@@ -165,7 +165,9 @@ For a slower one-command QA gate, opt into sibling visual checks from the same
 run bundle. HTML visual smoke reuses the browser options from `smoke:html`;
 PPTX visual smoke reuses the PowerPoint options from `smoke:pptx:visual`.
 These checks are off by default so CI and quick local validation do not require
-Playwright or an interactive PowerPoint session:
+Playwright or an interactive PowerPoint session. Pass repeated
+`--pptx-expected-text "<text>"` flags when the same run-bundle smoke should also
+check PPTX slide XML for key text:
 Supplying HTML browser flags automatically enables the HTML visual gate, and
 supplying PPTX visual flags automatically enables the PPTX visual gate.
 

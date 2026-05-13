@@ -114,7 +114,7 @@ const inspectHtmlOutput = (runDir, required) => {
   }
 };
 
-const inspectPptxOutput = (runDir, required, expectedSlides) => {
+const inspectPptxOutput = (runDir, required, expectedSlides, expectedText) => {
   if (!required) {
     return { required, ok: true };
   }
@@ -122,7 +122,7 @@ const inspectPptxOutput = (runDir, required, expectedSlides) => {
   try {
     const pptxPath = findLatestPptxArtifactForRunDir(runDir);
     const pptx = inspectPptxFile(pptxPath);
-    const validation = validatePptxSmokeResult(pptx, { expectedSlides });
+    const validation = validatePptxSmokeResult(pptx, { expectedSlides, expectedText });
     return {
       required,
       ...pptx,
@@ -140,7 +140,7 @@ const inspectPptxOutput = (runDir, required, expectedSlides) => {
   }
 };
 
-export function inspectDeckRunBundle({ runDir } = {}) {
+export function inspectDeckRunBundle({ runDir, pptxExpectedText = [] } = {}) {
   const resolvedRunDir = path.resolve(runDir ?? '');
   const runDirExists = existsSync(resolvedRunDir);
   const runDirOk = runDirExists && statSync(resolvedRunDir).isDirectory();
@@ -160,7 +160,7 @@ export function inspectDeckRunBundle({ runDir } = {}) {
     content: fileSummary(path.join(resolvedRunDir, 'content.md')),
     qcReport: fileSummary(path.join(resolvedRunDir, 'qc_report.md')),
     html: inspectHtmlOutput(resolvedRunDir, expectedOutputs.includes('html')),
-    pptx: inspectPptxOutput(resolvedRunDir, expectedOutputs.includes('pptx'), expectedSlides)
+    pptx: inspectPptxOutput(resolvedRunDir, expectedOutputs.includes('pptx'), expectedSlides, pptxExpectedText)
   };
 }
 
