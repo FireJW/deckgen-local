@@ -177,6 +177,51 @@ const makeRunBundle = ({
   return runDir;
 };
 
+const makeFakePlaywrightModuleRoot = () => {
+  const moduleRoot = mkdtempSync(path.join(os.tmpdir(), 'deckgen-fake-playwright-'));
+  const playwrightDir = path.join(moduleRoot, 'node_modules', 'playwright');
+  mkdirSync(playwrightDir, { recursive: true });
+  writeFileSync(path.join(playwrightDir, 'package.json'), JSON.stringify({
+    name: 'playwright',
+    version: '0.0.0-test',
+    main: 'index.js'
+  }, null, 2), 'utf8');
+  writeFileSync(path.join(playwrightDir, 'index.js'), `
+const fs = require('node:fs');
+
+module.exports = {
+  chromium: {
+    launch: async () => ({
+      newPage: async () => ({
+        goto: async () => {},
+        evaluate: async () => ({
+          title: 'Deck Generator Briefing',
+          renderer: 'html-guizang',
+          deckElementPresent: true,
+          navElementPresent: true,
+          backgroundCanvasCount: 2,
+          hasSwissLayouts: false,
+          externalScriptSrcs: [],
+          slideCount: 4,
+          pageText: 'Deck Generator Briefing internal briefing Why this matters - Shared deck generation should not live inside a business repo. HTML preview and PPTX export should share one content contract.',
+          textLength: 176,
+          imageCount: 0,
+          brokenImageItems: [],
+          overflowItems: []
+        }),
+        screenshot: async ({ path }) => {
+          fs.mkdirSync(require('node:path').dirname(path), { recursive: true });
+          fs.writeFileSync(path, 'fake screenshot bytes');
+        }
+      }),
+      close: async () => {}
+    })
+  }
+};
+`, 'utf8');
+  return moduleRoot;
+};
+
 test('inspectDeckRunBundle validates sibling html and pptx artifacts from the contract outputs', () => {
   const runDir = makeRunBundle();
   const summary = inspectDeckRunBundle({ runDir });
@@ -474,6 +519,7 @@ test('deck-run-smoke script validates pptx text inferred from the contract', () 
 });
 
 test('deck-run-smoke script auto-enables html visual smoke when browser options are provided', () => {
+  const fakePlaywrightModuleRoot = makeFakePlaywrightModuleRoot();
   const generate = spawnSync(process.execPath, [
     path.join(root, 'src', 'cli', 'deckgen.mjs'),
     'generate',
@@ -490,7 +536,7 @@ test('deck-run-smoke script auto-enables html visual smoke when browser options 
   const run = spawnSync(process.execPath, [
     script,
     '--run-dir', runDir,
-    '--module-dir', 'C:\\Users\\rickylu\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules',
+    '--module-dir', fakePlaywrightModuleRoot,
     '--browser-executable', 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     '--html-expected-text-from-contract'
   ], { encoding: 'utf8' });

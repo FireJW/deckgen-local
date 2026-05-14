@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createRequire } from 'node:module';
-import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -113,6 +113,24 @@ const resolvePlaywright = (moduleDir) => {
   try {
     return resolver('playwright');
   } catch (error) {
+    if (explicitModuleDir) {
+      const pnpmDir = path.join(path.resolve(explicitModuleDir), '.pnpm');
+      if (existsSync(pnpmDir)) {
+        const candidates = readdirSync(pnpmDir)
+          .filter((entry) => entry.startsWith('playwright@'))
+          .map((entry) => path.join(pnpmDir, entry, 'node_modules', 'playwright', 'index.js'))
+          .filter((entryPath) => existsSync(entryPath));
+        for (const candidate of candidates) {
+          try {
+            const candidateRequire = createRequire(candidate);
+            return candidateRequire(candidate);
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+
     throw new Error(`Playwright is required for visual smoke. Install it or pass --module-dir / set DECKGEN_PLAYWRIGHT_MODULE_DIR. ${error.message}`);
   }
 };
