@@ -250,7 +250,24 @@ const splitTextSplitBody = (body) => {
     .filter(Boolean);
 
   if (paragraphs.length >= 2) {
-    return [paragraphs[0], paragraphs.slice(1).join(' ')];
+    let bestSplitIndex = 1;
+    let bestDelta = Number.POSITIVE_INFINITY;
+
+    for (let index = 1; index < paragraphs.length; index += 1) {
+      const left = paragraphs.slice(0, index).join(' ');
+      const right = paragraphs.slice(index).join(' ');
+      const delta = Math.abs(left.length - right.length);
+
+      if (delta < bestDelta || (delta === bestDelta && index > bestSplitIndex)) {
+        bestSplitIndex = index;
+        bestDelta = delta;
+      }
+    }
+
+    return [
+      paragraphs.slice(0, bestSplitIndex).join(' '),
+      paragraphs.slice(bestSplitIndex).join(' ')
+    ];
   }
 
   const lines = normalized

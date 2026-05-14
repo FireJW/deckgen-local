@@ -403,6 +403,47 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.match(svg, /implementation context\./);
 });
 
+test('renderPptMasterDeck balances multi-paragraph text_split content across columns', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-text-split-balance-ppt-project-${Date.now()}`);
+  const textSplitContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Concept vs Explanation',
+        body: [
+          'Intro frame.',
+          '',
+          'Key setup.',
+          '',
+          'Detailed explanation with enough implementation context to belong in the right column.'
+        ].join('\n'),
+        layout_intent: 'text_split'
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: textSplitContract,
+    content: '# Concept vs Explanation',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /x="154"[^>]*>Intro frame\. Key setup\./);
+  assert.match(svg, /x="698"[^>]*>Detailed explanation/);
+});
+
 test('renderPptMasterDeck marks truncated text_split columns with ellipsis', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');
