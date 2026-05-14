@@ -110,7 +110,7 @@ export const writeGenerateBundle = ({
         outputDir: htmlDir
       });
       htmlPath = path.join(htmlDir, 'index.html');
-      writeFileSync(htmlPath, renderHtmlDeck(htmlAssets.contract), 'utf8');
+      writeFileSync(htmlPath, renderHtmlDeck(htmlAssets.contract, { imageAssets: htmlAssets.assets }), 'utf8');
       for (const asset of getHtmlGuizangAssetFiles()) {
         const assetPath = path.join(htmlDir, asset.relativePath);
         mkdirSync(path.dirname(assetPath), { recursive: true });

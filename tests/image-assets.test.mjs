@@ -10,6 +10,13 @@ const tinyPng = Buffer.from(
   'base64'
 );
 
+const pngWithSize = (width, height) => {
+  const png = Buffer.from(tinyPng);
+  png.writeUInt32BE(width, 16);
+  png.writeUInt32BE(height, 20);
+  return png;
+};
+
 test('materializeLocalImageAssets rewrites image items when body is absent', () => {
   const sourceRoot = path.join(os.tmpdir(), `deckgen-item-image-source-${Date.now()}`);
   const assetsDir = path.join(sourceRoot, 'assets');
@@ -50,4 +57,37 @@ test('materializeLocalImageAssets rewrites image items when body is absent', () 
   assert.deepEqual(readFileSync(copied.destinationPath), tinyPng);
   assert.match(result.contract.slides[0].items[0].src, /^assets\/images\/[^/]+\.png$/);
   assert.doesNotMatch(result.contract.slides[0].items[0].src, /revenue%20bridge\.png/);
+});
+
+test('materializeLocalImageAssets records copied local image dimensions', () => {
+  const sourceRoot = path.join(os.tmpdir(), `deckgen-image-metadata-source-${Date.now()}`);
+  const assetsDir = path.join(sourceRoot, 'assets');
+  mkdirSync(assetsDir, { recursive: true });
+  writeFileSync(path.join(assetsDir, 'wide-chart.png'), pngWithSize(1200, 600));
+
+  const sourcePath = path.join(sourceRoot, 'briefing.md');
+  writeFileSync(sourcePath, '# Image metadata deck', 'utf8');
+  const outputDir = path.join(os.tmpdir(), `deckgen-image-metadata-output-${Date.now()}`);
+  mkdirSync(outputDir, { recursive: true });
+
+  const result = materializeLocalImageAssets({
+    contract: {
+      title: 'Image Metadata Deck',
+      slides: [{
+        id: 's01',
+        role: 'content',
+        headline: 'Wide chart',
+        body: '![Wide chart](assets/wide-chart.png)',
+        evidence_refs: [],
+        layout_intent: 'image'
+      }]
+    },
+    sourcePath,
+    outputDir
+  });
+
+  assert.equal(result.assets[0].width, 1200);
+  assert.equal(result.assets[0].height, 600);
+  assert.equal(result.assets[0].aspectRatio, 2);
+  assert.equal(result.assets[0].orientation, 'landscape');
 });

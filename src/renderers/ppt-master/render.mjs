@@ -327,6 +327,46 @@ const parseMarkdownImageBody = (body) => {
 
 const roundedAttrs = (radius) => radius > 0 ? ` rx="${radius}"` : '';
 
+const normalizeAssetKey = (value) =>
+  String(value ?? '').replaceAll('\\', '/').replace(/^\.?\//, '');
+
+const createImageAssetMap = (imageAssets) => {
+  const map = new Map();
+  for (const asset of Array.isArray(imageAssets) ? imageAssets : []) {
+    const key = normalizeAssetKey(asset?.relativePath);
+    if (key) {
+      map.set(key, asset);
+    }
+  }
+  return map;
+};
+
+const imageAssetForSrc = (src, imageAssetsByPath) =>
+  imageAssetsByPath.get(normalizeAssetKey(src));
+
+const formatNumber = (value) =>
+  Number(Number(value).toFixed(4)).toString();
+
+const fitImageBox = ({ frameX, frameY, frameWidth, frameHeight, aspectRatio }) => {
+  if (!aspectRatio || aspectRatio <= 0) {
+    return {
+      x: frameX,
+      y: frameY,
+      width: frameWidth,
+      height: frameHeight
+    };
+  }
+
+  const width = Math.min(frameWidth, frameHeight * aspectRatio);
+  const height = Math.min(frameHeight, frameWidth / aspectRatio);
+  return {
+    x: frameX + (frameWidth - width) / 2,
+    y: frameY + (frameHeight - height) / 2,
+    width,
+    height
+  };
+};
+
 const renderQuoteSvg = ({
   quoteLines,
   x,
@@ -477,18 +517,33 @@ const renderImageSvg = ({
   x,
   y,
   width,
+  imageMeta,
   bodyColor,
   accent,
   line = defaultPptVisualTheme.line,
   fill = defaultPptVisualTheme.tableFill,
   panelRadius = defaultPptVisualTheme.panelRadius
 }) => {
-  const height = 390;
+  const hasMetadata = Boolean(imageMeta?.width && imageMeta?.height && imageMeta?.aspectRatio);
+  const height = hasMetadata ? 470 : 390;
   const caption = image.alt || image.src;
   const isMaterializedAsset = String(image.src ?? '').replaceAll('\\', '/').startsWith('assets/images/');
   const sourceLabel = formatImageSourceLabel(image.src, isMaterializedAsset);
+  const frameX = x + 42;
+  const frameY = y + 112;
+  const frameWidth = width - 84;
+  const frameHeight = height - 176;
+  const imageBox = isMaterializedAsset
+    ? fitImageBox({
+      frameX,
+      frameY,
+      frameWidth,
+      frameHeight,
+      aspectRatio: imageMeta?.aspectRatio
+    })
+    : null;
   const imageElement = isMaterializedAsset
-    ? `  <image href="${escapeXml(image.src)}" x="${x + 42}" y="${y + 112}" width="${width - 84}" height="${height - 166}" preserveAspectRatio="xMidYMid meet"/>`
+    ? `  <image href="${escapeXml(image.src)}" x="${formatNumber(imageBox.x)}" y="${formatNumber(imageBox.y)}" width="${formatNumber(imageBox.width)}" height="${formatNumber(imageBox.height)}" preserveAspectRatio="xMidYMid meet" data-image-orientation="${escapeXml(imageMeta?.orientation ?? 'unknown')}" data-image-aspect="${escapeXml(imageMeta?.aspectRatio ? formatNumber(imageMeta.aspectRatio) : '0')}"/>`
     : '';
   const placeholderSvg = isMaterializedAsset
     ? ''
@@ -624,7 +679,7 @@ const renderSlideNotes = (slide) => {
   return `${notes.join('\n')}\n`;
 };
 
-const renderSlideSvg = (slide, index, visualTheme) => {
+const renderSlideSvg = (slide, index, visualTheme, imageAssetsByPath) => {
   const isCover = index === 0 || slide?.role === 'cover';
   const body = slideMarkdownBody(slide);
   const background = isCover ? visualTheme.coverBackground : visualTheme.background;
@@ -643,6 +698,7 @@ const renderSlideSvg = (slide, index, visualTheme) => {
   const image = !isCover && slide?.layout_intent === 'image' && !table && !quote
     ? parseMarkdownImageBody(body)
     : null;
+  const imageMeta = image ? imageAssetForSrc(image.src, imageAssetsByPath) : null;
   const textSplit = !isCover && slide?.layout_intent === 'text_split' && !table && !quote && !image && !bullets;
   const bodyLines = table || textSplit || quote || image || bullets ? [] : wrapText(body, 52, isCover ? 4 : 7);
   const headlineStartY = isCover ? 280 : 150;
@@ -680,6 +736,7 @@ const renderSlideSvg = (slide, index, visualTheme) => {
       x: 120,
       y: bodyStartY,
       width: 1040,
+      imageMeta,
       bodyColor,
       accent,
       line: visualTheme.line,
@@ -739,7 +796,7 @@ const writeJson = (filePath, value) => {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 };
 
-const writePptMasterProject = ({ contract, content = '', projectDir }) => {
+const writePptMasterProject = ({ contract, content = '', projectDir, imageAssets }) => {
   const notesDir = path.join(projectDir, 'notes');
   const svgOutputDir = path.join(projectDir, 'svg_output');
   const svgFinalDir = path.join(projectDir, 'svg_final');
@@ -763,9 +820,10 @@ const writePptMasterProject = ({ contract, content = '', projectDir }) => {
     ''
   ].join('\n'), 'utf8');
 
+  const imageAssetsByPath = createImageAssetMap(imageAssets);
   contract.slides.forEach((slide, index) => {
     const stem = slideStem(slide, index);
-    const svg = renderSlideSvg(slide, index, visualTheme);
+    const svg = renderSlideSvg(slide, index, visualTheme, imageAssetsByPath);
     writeFileSync(path.join(svgOutputDir, `${stem}.svg`), svg, 'utf8');
     writeFileSync(path.join(svgFinalDir, `${stem}.svg`), svg, 'utf8');
     writeFileSync(path.join(notesDir, `${stem}.md`), renderSlideNotes(slide), 'utf8');
@@ -832,7 +890,12 @@ export const renderPptMasterDeck = ({ contract, content = '', config = {}, outpu
     sourcePath: config.sourcePath,
     outputDir: projectDir
   });
-  const { exportsDir } = writePptMasterProject({ contract: materialized.contract, content, projectDir });
+  const { exportsDir } = writePptMasterProject({
+    contract: materialized.contract,
+    content,
+    projectDir,
+    imageAssets: materialized.assets
+  });
   const pythonPath = resolvePptMasterPythonPath({
     pptMasterPath,
     pythonPath: config.pythonPath

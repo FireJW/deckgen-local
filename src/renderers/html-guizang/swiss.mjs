@@ -110,6 +110,44 @@ const parseMarkdownImageLine = (line) => {
   return { alt, src };
 };
 
+const normalizeAssetKey = (value) =>
+  String(value ?? '').replaceAll('\\', '/').replace(/^\.?\//, '');
+
+const createImageAssetMap = (imageAssets) => {
+  const map = new Map();
+  for (const asset of Array.isArray(imageAssets) ? imageAssets : []) {
+    const key = normalizeAssetKey(asset?.relativePath);
+    if (key) {
+      map.set(key, asset);
+    }
+  }
+  return map;
+};
+
+const imageAssetForSrc = (src, imageAssetsByPath) =>
+  imageAssetsByPath.get(normalizeAssetKey(src));
+
+const formatNumber = (value) =>
+  Number(Number(value).toFixed(4)).toString();
+
+const htmlImageMetadata = (image, imageAssetsByPath) => {
+  const asset = imageAssetForSrc(image.src, imageAssetsByPath);
+  if (!asset || !asset.width || !asset.height || !asset.aspectRatio) {
+    return {
+      figureClass: 'deckgen-swiss-figure',
+      figureAttrs: '',
+      imageAttrs: ''
+    };
+  }
+
+  const orientation = stableClassPart(asset.orientation, 'landscape');
+  return {
+    figureClass: `deckgen-swiss-figure image-${orientation}`,
+    figureAttrs: ` data-image-orientation="${escapeHtml(orientation)}" style="--image-aspect:${escapeHtml(formatNumber(asset.aspectRatio))}"`,
+    imageAttrs: ` width="${escapeHtml(String(asset.width))}" height="${escapeHtml(String(asset.height))}"`
+  };
+};
+
 const renderBlockquote = (lines) => {
   const quote = lines
     .map((line) => line.replace(/^>\s?/, '').trim())
@@ -119,11 +157,12 @@ const renderBlockquote = (lines) => {
   return `<blockquote>${quote}</blockquote>`;
 };
 
-const renderMarkdownImage = (image) => {
+const renderMarkdownImage = (image, imageAssetsByPath) => {
   const caption = image.alt || image.src;
+  const metadata = htmlImageMetadata(image, imageAssetsByPath);
   return [
-    '<figure class="deckgen-swiss-figure">',
-    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy">`,
+    `<figure class="${metadata.figureClass}"${metadata.figureAttrs}>`,
+    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy"${metadata.imageAttrs}>`,
     caption ? `  <figcaption>${escapeHtml(caption)}</figcaption>` : '',
     '</figure>'
   ].filter(Boolean).join('\n');
@@ -136,7 +175,7 @@ const bodyContainsTable = (slide) =>
     .split(/\n{2,}/)
     .some((paragraph) => isMarkdownTableBlock(paragraph.split('\n').map((line) => line.trim()).filter(Boolean)));
 
-const renderBody = (slide) => {
+const renderBody = (slide, imageAssetsByPath) => {
   const body = slideMarkdownBody(slide);
   if (typeof body !== 'string' || body.length === 0) {
     return '';
@@ -150,7 +189,7 @@ const renderBody = (slide) => {
       const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
       const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
       if (image) {
-        return renderMarkdownImage(image);
+        return renderMarkdownImage(image, imageAssetsByPath);
       }
       if (isMarkdownTableBlock(lines)) {
         return renderMarkdownTable(lines);
@@ -193,7 +232,7 @@ const renderEvidence = (evidenceRefs) => {
   ].join('\n');
 };
 
-const renderSlide = (slide, index, total, title) => {
+const renderSlide = (slide, index, total, title, imageAssetsByPath) => {
   const layout = swissLayoutForSlide(slide);
   const role = stableClassPart(slide?.role, 'content');
   const label = String(index + 1).padStart(2, '0');
@@ -217,7 +256,7 @@ const renderSlide = (slide, index, total, title) => {
     `    <div class="${copyClass}" data-anim="body">`,
     `      <div class="t-meta">${escapeHtml(role)}</div>`,
     `      <h2 class="${headingClass}">${escapeHtml(slide?.headline ?? '')}</h2>`,
-    renderBody(slide),
+    renderBody(slide, imageAssetsByPath),
     renderEvidence(collectSlideEvidenceRefs(slide)),
     '    </div>',
     '  </div>',
@@ -245,6 +284,9 @@ const renderDeckgenSwissOverrides = (theme) => `
   #deck[data-renderer="html-guizang-swiss"] blockquote{margin:0;padding:0 0 0 24px;border-left:4px solid var(--accent);font-size:clamp(1.7rem,3.8vw,4.8rem);font-weight:300;line-height:1.12;color:var(--ink)}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure{margin:0;display:grid;gap:10px;max-width:100%}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure img{display:block;width:100%;max-height:58vh;object-fit:contain;border:1px solid var(--grey-2);background:var(--grey-1)}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure.image-landscape img{max-height:62vh}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure.image-portrait{justify-items:center}
+  #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure.image-portrait img{width:auto;max-width:100%;max-height:64vh}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-figure figcaption{font-family:var(--mono);font-size:12px;line-height:1.4;color:var(--grey-3)}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-list{margin:0;padding-left:1.2rem;display:grid;gap:10px;max-width:74ch}
   #deck[data-renderer="html-guizang-swiss"] .deckgen-swiss-list li{margin:0;line-height:1.5}
@@ -255,11 +297,12 @@ const renderDeckgenSwissOverrides = (theme) => `
   #deck[data-renderer="html-guizang-swiss"] th{background:var(--grey-1);font-weight:600}
 `;
 
-export function renderSwissHtmlDeck(contract) {
+export function renderSwissHtmlDeck(contract, options = {}) {
   const title = contract?.title ?? 'Deck';
   const theme = resolveSwissTheme(contract?.theme?.renderer_hint);
   const slides = Array.isArray(contract?.slides) ? contract.slides : [];
-  const slideHtml = slides.map((slide, index) => renderSlide(slide, index, slides.length, title)).join('\n');
+  const imageAssetsByPath = createImageAssetMap(options.imageAssets);
+  const slideHtml = slides.map((slide, index) => renderSlide(slide, index, slides.length, title, imageAssetsByPath)).join('\n');
   const deckHtml = `<div id="deck" data-renderer="html-guizang-swiss" data-swiss-theme="${escapeHtml(theme.key)}">\n${slideHtml}\n</div>\n\n<div id="nav"></div>`;
 
   return readFileSync(templatePath, 'utf8')

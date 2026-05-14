@@ -150,6 +150,9 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .deckgen-list { margin: 0; padding-left: 1.3rem; display: grid; gap: 10px; max-width: 820px; }
   #deck[data-renderer] .deckgen-list li { margin: 0; line-height: 1.55; }
   #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
+  #deck[data-renderer] .deckgen-figure.image-landscape img{max-height:min(58vh,560px)}
+  #deck[data-renderer] .deckgen-figure.image-portrait{justify-items:center}
+  #deck[data-renderer] .deckgen-figure.image-portrait img{width:auto;max-width:100%;max-height:min(60vh,600px)}
   #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
   #deck[data-renderer] table { width: 100%; border-collapse: collapse; font-size: 0.98rem; line-height: 1.35; }
   #deck[data-renderer] th, #deck[data-renderer] td { padding: 10px 12px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.14); text-align: left; vertical-align: top; }
@@ -236,6 +239,44 @@ const parseMarkdownImageLine = (line) => {
   return { alt, src };
 };
 
+const normalizeAssetKey = (value) =>
+  String(value ?? '').replaceAll('\\', '/').replace(/^\.?\//, '');
+
+const createImageAssetMap = (imageAssets) => {
+  const map = new Map();
+  for (const asset of Array.isArray(imageAssets) ? imageAssets : []) {
+    const key = normalizeAssetKey(asset?.relativePath);
+    if (key) {
+      map.set(key, asset);
+    }
+  }
+  return map;
+};
+
+const imageAssetForSrc = (src, imageAssetsByPath) =>
+  imageAssetsByPath.get(normalizeAssetKey(src));
+
+const formatNumber = (value) =>
+  Number(Number(value).toFixed(4)).toString();
+
+const htmlImageMetadata = (image, imageAssetsByPath) => {
+  const asset = imageAssetForSrc(image.src, imageAssetsByPath);
+  if (!asset || !asset.width || !asset.height || !asset.aspectRatio) {
+    return {
+      figureClass: 'deckgen-figure',
+      figureAttrs: '',
+      imageAttrs: ''
+    };
+  }
+
+  const orientation = stableClassPart(asset.orientation, 'landscape');
+  return {
+    figureClass: `deckgen-figure image-${orientation}`,
+    figureAttrs: ` data-image-orientation="${escapeHtml(orientation)}" style="--image-aspect:${escapeHtml(formatNumber(asset.aspectRatio))}"`,
+    imageAttrs: ` width="${escapeHtml(String(asset.width))}" height="${escapeHtml(String(asset.height))}"`
+  };
+};
+
 const renderBlockquote = (lines) => {
   const quote = lines
     .map((line) => line.replace(/^>\s?/, '').trim())
@@ -245,11 +286,12 @@ const renderBlockquote = (lines) => {
   return `<blockquote>${quote}</blockquote>`;
 };
 
-const renderMarkdownImage = (image) => {
+const renderMarkdownImage = (image, imageAssetsByPath) => {
   const caption = image.alt || image.src;
+  const metadata = htmlImageMetadata(image, imageAssetsByPath);
   return [
-    '<figure class="deckgen-figure">',
-    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy">`,
+    `<figure class="${metadata.figureClass}"${metadata.figureAttrs}>`,
+    `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy"${metadata.imageAttrs}>`,
     caption ? `  <figcaption>${escapeHtml(caption)}</figcaption>` : '',
     '</figure>'
   ].filter(Boolean).join('\n');
@@ -297,14 +339,14 @@ const splitTextSplitParagraphs = (body) => {
   return [[paragraphs[0] ?? lines[0] ?? ''].filter(Boolean), []];
 };
 
-const renderBodyBlock = (paragraph) => {
+const renderBodyBlock = (paragraph, imageAssetsByPath) => {
   const lines = String(paragraph ?? '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
   const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
   if (image) {
-    return renderMarkdownImage(image);
+    return renderMarkdownImage(image, imageAssetsByPath);
   }
   if (isMarkdownTableBlock(lines)) {
     return renderMarkdownTable(lines);
@@ -319,9 +361,9 @@ const renderBodyBlock = (paragraph) => {
   return `<p>${renderInline(String(paragraph ?? '').trim()).replaceAll('\n', '<br>')}</p>`;
 };
 
-const renderBodyContainer = (paragraphs, className = 'slide-body body-zh') => {
+const renderBodyContainer = (paragraphs, className = 'slide-body body-zh', imageAssetsByPath = new Map()) => {
   const blocks = paragraphs
-    .map((paragraph) => renderBodyBlock(paragraph))
+    .map((paragraph) => renderBodyBlock(paragraph, imageAssetsByPath))
     .filter(Boolean)
     .join('\n');
 
@@ -332,7 +374,7 @@ const renderBodyContainer = (paragraphs, className = 'slide-body body-zh') => {
   return `<div class="${className}" data-anim>\n${blocks}\n</div>`;
 };
 
-const renderBody = (slide) => {
+const renderBody = (slide, imageAssetsByPath) => {
   const body = slideMarkdownBody(slide);
   if (typeof body !== 'string' || body.length === 0) {
     return '';
@@ -344,7 +386,9 @@ const renderBody = (slide) => {
       .replace(/\r/g, '\n')
       .split(/\n{2,}/)
       .map((paragraph) => paragraph.trim())
-      .filter(Boolean)
+      .filter(Boolean),
+    'slide-body body-zh',
+    imageAssetsByPath
   );
 };
 
@@ -369,7 +413,7 @@ const slideAnimation = (role, layout) => {
   return 'cascade';
 };
 
-const renderSlide = (slide, index, totalSlides, title) => {
+const renderSlide = (slide, index, totalSlides, title, imageAssetsByPath) => {
   const id = stableClassPart(slide.id, `slide-${index + 1}`);
   const role = stableClassPart(slide.role, 'content');
   const layout = stableClassPart(slide.layout_intent, 'default');
@@ -403,12 +447,12 @@ const renderSlide = (slide, index, totalSlides, title) => {
       ? [
         '    <div class="text-split-lead">',
         `      <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
-        renderBodyContainer(textSplitBodies?.[0] ?? [], 'slide-body body-zh slide-body-left'),
+        renderBodyContainer(textSplitBodies?.[0] ?? [], 'slide-body body-zh slide-body-left', imageAssetsByPath),
         '    </div>',
-        renderBodyContainer(textSplitBodies?.[1] ?? [], 'slide-body body-zh slide-body-right')
+        renderBodyContainer(textSplitBodies?.[1] ?? [], 'slide-body body-zh slide-body-right', imageAssetsByPath)
       ].filter(Boolean).join('\n')
       : `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
-    layout === 'text-split' ? '' : renderBody(slide),
+    layout === 'text-split' ? '' : renderBody(slide, imageAssetsByPath),
     renderEvidenceRefs(collectSlideEvidenceRefs(slide)),
     '  </div>',
     '  <div class="foot">',
@@ -419,16 +463,17 @@ const renderSlide = (slide, index, totalSlides, title) => {
   ].filter(Boolean).join('\n');
 };
 
-export function renderHtmlDeck(contract) {
+export function renderHtmlDeck(contract, options = {}) {
   if (isSwissRendererHint(contract?.theme?.renderer_hint)) {
-    return renderSwissHtmlDeck(contract);
+    return renderSwissHtmlDeck(contract, options);
   }
 
   const title = contract?.title ?? 'Deck';
   const theme = resolveTheme(contract?.theme?.renderer_hint);
   const slides = Array.isArray(contract?.slides) ? contract.slides : [];
+  const imageAssetsByPath = createImageAssetMap(options.imageAssets);
   const slideHtml = slides
-    .map((slide, index) => renderSlide(slide, index, slides.length, title))
+    .map((slide, index) => renderSlide(slide, index, slides.length, title, imageAssetsByPath))
     .join('\n');
 
   return loadVendoredTemplate()

@@ -84,6 +84,13 @@ const tinyPng = Buffer.from(
   'base64'
 );
 
+const pngWithSize = (width, height) => {
+  const png = Buffer.from(tinyPng);
+  png.writeUInt32BE(width, 16);
+  png.writeUInt32BE(height, 20);
+  return png;
+};
+
 test('renderPptMasterDeck requires pptMasterPath', () => {
   assert.throws(
     () => renderPptMasterDeck({ contract: { title: 'x', slides: [] }, config: {} }),
@@ -610,8 +617,9 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
 `);
   const sourceRoot = path.join(os.tmpdir(), `deckgen-image-source-${Date.now()}`);
   const sourceAssetsDir = path.join(sourceRoot, 'assets');
+  const widePng = pngWithSize(1200, 600);
   mkdirSync(sourceAssetsDir, { recursive: true });
-  writeFileSync(path.join(sourceAssetsDir, 'revenue bridge.png'), tinyPng);
+  writeFileSync(path.join(sourceAssetsDir, 'revenue bridge.png'), widePng);
   const sourcePath = path.join(sourceRoot, 'briefing.md');
   writeFileSync(sourcePath, '![Revenue bridge](assets/revenue%20bridge.png)', 'utf8');
   const outputDir = path.join(os.tmpdir(), `deckgen-image-copy-ppt-project-${Date.now()}`);
@@ -637,12 +645,13 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
 
   const copiedAssets = readdirSync(path.join(outputDir, 'assets', 'images'));
   assert.equal(copiedAssets.length, 1);
-  assert.deepEqual(readFileSync(path.join(outputDir, 'assets', 'images', copiedAssets[0])), tinyPng);
+  assert.deepEqual(readFileSync(path.join(outputDir, 'assets', 'images', copiedAssets[0])), widePng);
 
   const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
   assert.match(svg, /class="ppt-image"/);
-  assert.match(svg, /<image\b/);
+  assert.match(svg, /<image\b[^>]*data-image-orientation="landscape"/);
   assert.match(svg, /href="assets\/images\/[^"]+\.png"/);
+  assert.match(svg, /width="588" height="294"/);
   assert.match(svg, />Source: local asset copy</);
   assert.doesNotMatch(svg, /font-size="18" fill="[^"]*">assets\/images\//);
   assert.doesNotMatch(svg, /assets\/revenue%20bridge\.png/);

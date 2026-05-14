@@ -161,6 +161,42 @@ test('renderHtmlDeck renders image slides as figures in Style A and Swiss', () =
   assert.match(swiss, /<img src="assets\/revenue-bridge\.png" alt="Revenue bridge"/);
 });
 
+test('renderHtmlDeck annotates copied local image dimensions for stable framing', () => {
+  const slide = {
+    id: 's01',
+    role: 'content',
+    headline: 'Image: Revenue bridge',
+    body: '![Revenue bridge](assets/images/revenue-bridge.png)',
+    evidence_refs: [],
+    layout_intent: 'image'
+  };
+  const imageAssets = [{
+    relativePath: 'assets/images/revenue-bridge.png',
+    width: 1200,
+    height: 600,
+    aspectRatio: 2,
+    orientation: 'landscape'
+  }];
+  const styleA = renderHtmlDeck({
+    title: 'Image Deck',
+    theme: { renderer_hint: 'indigo_porcelain' },
+    slides: [slide]
+  }, { imageAssets });
+  const swiss = renderHtmlDeck({
+    title: 'Image Deck',
+    theme: { renderer_hint: 'swiss-ikb' },
+    slides: [slide]
+  }, { imageAssets });
+
+  assert.match(styleA, /<figure class="deckgen-figure image-landscape" data-image-orientation="landscape" style="--image-aspect:2">/);
+  assert.match(styleA, /<img src="assets\/images\/revenue-bridge\.png" alt="Revenue bridge" loading="lazy" width="1200" height="600">/);
+  assert.match(styleA, /\.deckgen-figure\.image-landscape img\{[^}]*max-height:min\(58vh,560px\)/);
+
+  assert.match(swiss, /<figure class="deckgen-swiss-figure image-landscape" data-image-orientation="landscape" style="--image-aspect:2">/);
+  assert.match(swiss, /<img src="assets\/images\/revenue-bridge\.png" alt="Revenue bridge" loading="lazy" width="1200" height="600">/);
+  assert.match(swiss, /\.deckgen-swiss-figure\.image-landscape img\{[^}]*max-height:62vh/);
+});
+
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',

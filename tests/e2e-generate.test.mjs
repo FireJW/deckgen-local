@@ -421,6 +421,7 @@ test('generate copies local markdown image assets into sibling html and pptx out
 
   const html = readFileSync(path.join(runDir, 'html', 'index.html'), 'utf8');
   assert.match(html, /src="assets\/images\/[^"]+\.png"/);
+  assert.match(html, /width="1" height="1"/);
   assert.doesNotMatch(html, /assets\/revenue%20bridge\.png/);
 
   const svg = readFileSync(path.join(runDir, 'ppt-master', 'svg_final', '02_s02.svg'), 'utf8');
