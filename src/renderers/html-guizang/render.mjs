@@ -163,16 +163,17 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .slide-content:not(.layout-text-split) h2, #deck[data-renderer] .slide-evidence h2 { font-size: clamp(2rem, 5vw, 4.6rem); line-height: 1.08; }
   #deck[data-renderer] .layout-text-split .slide-copy { max-width: 1180px; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr); align-items: start; column-gap: min(6vw, 84px); }
   #deck[data-renderer] .layout-text-split .slide-kicker { grid-column: 1 / -1; }
-  #deck[data-renderer] .layout-text-split h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
-  #deck[data-renderer] .layout-text-split h2 { grid-column: 1; align-self: start; }
-  #deck[data-renderer] .layout-text-split .slide-body { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }
-  #deck[data-renderer] .layout-text-split .slide-body { grid-column: 2; align-self: start; }
+  #deck[data-renderer] .layout-text-split .text-split-lead { grid-column: 1; display: grid; gap: 18px; align-self: start; }
+  #deck[data-renderer] .layout-text-split .text-split-lead h2 { max-width: none; font-size: clamp(2rem, 4.2vw, 4rem); line-height: 1.08; }
+  #deck[data-renderer] .layout-text-split .slide-body-left { max-width: none; }
+  #deck[data-renderer] .layout-text-split .slide-body-right { max-width: none; padding-left: min(4vw, 48px); border-left: 1px solid rgba(var(--ink-rgb), 0.24); }
+  #deck[data-renderer] .layout-text-split .slide-body-right { grid-column: 2; align-self: start; }
   #deck[data-renderer] .layout-text-split .slide-evidence-refs { grid-column: 2; align-self: start; }
   @media (max-width: 720px) {
     #deck[data-renderer] .slide-copy { max-width: none; }
     #deck[data-renderer] .layout-text-split .slide-copy { grid-template-columns: minmax(0, 1fr); }
-    #deck[data-renderer] .layout-text-split .slide-kicker, #deck[data-renderer] .layout-text-split h2, #deck[data-renderer] .layout-text-split .slide-body, #deck[data-renderer] .layout-text-split .slide-evidence-refs { grid-column: 1; }
-    #deck[data-renderer] .layout-text-split .slide-body { padding-left: 0; border-left: 0; }
+    #deck[data-renderer] .layout-text-split .slide-kicker, #deck[data-renderer] .layout-text-split .text-split-lead, #deck[data-renderer] .layout-text-split .slide-body-right, #deck[data-renderer] .layout-text-split .slide-evidence-refs { grid-column: 1; }
+    #deck[data-renderer] .layout-text-split .slide-body-right { padding-left: 0; border-left: 0; }
   }
 `;
 
@@ -254,37 +255,97 @@ const renderMarkdownImage = (image) => {
   ].filter(Boolean).join('\n');
 };
 
+const splitTextSplitParagraphs = (body) => {
+  const normalized = String(body ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  if (paragraphs.length >= 2) {
+    let bestSplitIndex = 1;
+    let bestDelta = Number.POSITIVE_INFINITY;
+
+    for (let index = 1; index < paragraphs.length; index += 1) {
+      const left = paragraphs.slice(0, index).join(' ');
+      const right = paragraphs.slice(index).join(' ');
+      const delta = Math.abs(left.length - right.length);
+
+      if (delta < bestDelta || (delta === bestDelta && index > bestSplitIndex)) {
+        bestSplitIndex = index;
+        bestDelta = delta;
+      }
+    }
+
+    return [
+      paragraphs.slice(0, bestSplitIndex),
+      paragraphs.slice(bestSplitIndex)
+    ];
+  }
+
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length >= 2) {
+    return [[lines[0]], [lines.slice(1).join(' ')]];
+  }
+
+  return [[paragraphs[0] ?? lines[0] ?? ''].filter(Boolean), []];
+};
+
+const renderBodyBlock = (paragraph) => {
+  const lines = String(paragraph ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
+  if (image) {
+    return renderMarkdownImage(image);
+  }
+  if (isMarkdownTableBlock(lines)) {
+    return renderMarkdownTable(lines);
+  }
+  if (lines.length > 0 && lines.every(isBulletLine)) {
+    return renderMarkdownList(lines);
+  }
+  if (isBlockquoteBlock(lines)) {
+    return renderBlockquote(lines);
+  }
+
+  return `<p>${renderInline(String(paragraph ?? '').trim()).replaceAll('\n', '<br>')}</p>`;
+};
+
+const renderBodyContainer = (paragraphs, className = 'slide-body body-zh') => {
+  const blocks = paragraphs
+    .map((paragraph) => renderBodyBlock(paragraph))
+    .filter(Boolean)
+    .join('\n');
+
+  if (!blocks) {
+    return '';
+  }
+
+  return `<div class="${className}" data-anim>\n${blocks}\n</div>`;
+};
+
 const renderBody = (slide) => {
   const body = slideMarkdownBody(slide);
   if (typeof body !== 'string' || body.length === 0) {
     return '';
   }
 
-  const paragraphs = body
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .split(/\n{2,}/)
-    .map((paragraph) => {
-      const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
-      const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
-      if (image) {
-        return renderMarkdownImage(image);
-      }
-      if (isMarkdownTableBlock(lines)) {
-        return renderMarkdownTable(lines);
-      }
-      if (lines.length > 0 && lines.every(isBulletLine)) {
-        return renderMarkdownList(lines);
-      }
-      if (isBlockquoteBlock(lines)) {
-        return renderBlockquote(lines);
-      }
-
-      return `<p>${renderInline(paragraph.trim()).replaceAll('\n', '<br>')}</p>`;
-    })
-    .join('\n');
-
-  return `<div class="slide-body body-zh" data-anim>\n${paragraphs}\n</div>`;
+  return renderBodyContainer(
+    body
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+  );
 };
 
 const renderEvidenceRefs = (evidenceRefs) => {
@@ -318,6 +379,10 @@ const renderSlide = (slide, index, totalSlides, title) => {
   const label = String(index + 1).padStart(2, '0');
   const headingTag = role === 'cover' || layout === 'hero-dark' ? 'h1' : 'h2';
   const headingClass = headingTag === 'h1' ? 'h-hero' : 'h-xl';
+  const body = slideMarkdownBody(slide);
+  const textSplitBodies = layout === 'text-split'
+    ? splitTextSplitParagraphs(body)
+    : null;
   const slideClasses = [
     'slide',
     role === 'cover' || layout === 'hero-dark' ? 'hero' : '',
@@ -334,8 +399,16 @@ const renderSlide = (slide, index, totalSlides, title) => {
     '  </div>',
     '  <div class="slide-copy">',
     `    <div class="kicker slide-kicker" data-anim>${escapeHtml(label)} / ${escapeHtml(role)}</div>`,
-    `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
-    renderBody(slide),
+    layout === 'text-split'
+      ? [
+        '    <div class="text-split-lead">',
+        `      <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
+        renderBodyContainer(textSplitBodies?.[0] ?? [], 'slide-body body-zh slide-body-left'),
+        '    </div>',
+        renderBodyContainer(textSplitBodies?.[1] ?? [], 'slide-body body-zh slide-body-right')
+      ].filter(Boolean).join('\n')
+      : `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
+    layout === 'text-split' ? '' : renderBody(slide),
     renderEvidenceRefs(collectSlideEvidenceRefs(slide)),
     '  </div>',
     '  <div class="foot">',

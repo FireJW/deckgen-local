@@ -225,15 +225,39 @@ test('renderHtmlDeck gives text_split a distinct local layout', () => {
   assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-copy/);
   assert.match(html, /grid-template-columns: minmax\(0, 0\.78fr\) minmax\(0, 1fr\)/);
   assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-kicker \{[^}]*grid-column: 1 \/ -1/);
-  assert.match(html, /#deck\[data-renderer\] \.layout-text-split h2 \{[^}]*font-size: clamp\(2rem, 4\.2vw, 4rem\)/);
-  assert.match(html, /#deck\[data-renderer\] \.layout-text-split h2 \{[^}]*grid-column: 1/);
-  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-body \{[^}]*grid-column: 2/);
+  assert.match(html, /class="text-split-lead"/);
+  assert.match(html, /class="slide-body body-zh slide-body-left"/);
+  assert.match(html, /class="slide-body body-zh slide-body-right"/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.text-split-lead \{[^}]*grid-column: 1/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-body-right \{[^}]*grid-column: 2/);
   assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-evidence-refs \{[^}]*grid-column: 2/);
   assert.match(html, /#deck\[data-renderer\] \.slide-kicker \{[^}]*display: inline-block/);
   assert.match(html, /overflow-wrap: anywhere/);
   assert.doesNotMatch(html, /template\.html/);
   assert.match(html, /import\('\.\/assets\/motion\.min\.js'\)/);
   assert.doesNotMatch(html, /<script src=/);
+});
+
+test('renderHtmlDeck balances multi-paragraph text_split content across columns', () => {
+  const html = renderHtmlDeck({
+    title: 'Learning Layout',
+    theme: { renderer_hint: 'ink_classic' },
+    slides: [
+      {
+        id: 's01',
+        role: 'content',
+        headline: 'Concept',
+        body: 'Intro frame.\n\nKey setup.\n\nDetailed explanation in a third paragraph.',
+        evidence_refs: [],
+        layout_intent: 'text_split'
+      }
+    ]
+  });
+
+  assert.match(html, /class="text-split-lead"/);
+  assert.match(html, /class="slide-body body-zh slide-body-left" data-anim>[\s\S]*<p>Intro frame\.<\/p>[\s\S]*<p>Key setup\.<\/p>/);
+  assert.match(html, /class="slide-body body-zh slide-body-right" data-anim>[\s\S]*<p>Detailed explanation in a third paragraph\.<\/p>/);
+  assert.doesNotMatch(html, /class="slide-body body-zh slide-body-right" data-anim>[\s\S]*<p>Intro frame\.<\/p>/);
 });
 
 test('renderHtmlDeck bounds long article content layouts', () => {
