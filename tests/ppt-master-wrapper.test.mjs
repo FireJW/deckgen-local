@@ -440,8 +440,10 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   });
 
   const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
-  assert.match(svg, /x="154"[^>]*>Intro frame\. Key setup\./);
-  assert.match(svg, /x="698"[^>]*>Detailed explanation/);
+  assert.match(svg, /<text x="154" y="\d+" font-family="Arial, sans-serif" font-size="27" fill="#475569">Intro frame\.<\/text>/);
+  assert.match(svg, /<text x="154" y="\d+" font-family="Arial, sans-serif" font-size="27" fill="#475569">Key setup\.<\/text>/);
+  assert.match(svg, /<text x="698" y="\d+" font-family="Arial, sans-serif" font-size="27" fill="#475569">Detailed explanation/);
+  assert.doesNotMatch(svg, /Intro frame\. Key setup\./);
 });
 
 test('renderPptMasterDeck marks truncated text_split columns with ellipsis', () => {

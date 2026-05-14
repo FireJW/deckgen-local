@@ -240,7 +240,7 @@ const fitTableCellText = (value, columnWidth) => {
   return `${text.slice(0, maxChars).trimEnd()}...`;
 };
 
-const splitTextSplitBody = (body) => {
+const splitTextSplitParagraphs = (body) => {
   const normalized = String(body ?? '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
@@ -265,8 +265,8 @@ const splitTextSplitBody = (body) => {
     }
 
     return [
-      paragraphs.slice(0, bestSplitIndex).join(' '),
-      paragraphs.slice(bestSplitIndex).join(' ')
+      paragraphs.slice(0, bestSplitIndex),
+      paragraphs.slice(bestSplitIndex)
     ];
   }
 
@@ -276,10 +276,10 @@ const splitTextSplitBody = (body) => {
     .filter(Boolean);
 
   if (lines.length >= 2) {
-    return [lines[0], lines.slice(1).join(' ')];
+    return [[lines[0]], [lines.slice(1).join(' ')]];
   }
 
-  return [paragraphs[0] ?? lines[0] ?? '', ''];
+  return [[paragraphs[0] ?? lines[0] ?? ''].filter(Boolean), []];
 };
 
 const parseBlockquoteBody = (body) => {
@@ -364,21 +364,45 @@ const renderTextSplitSvg = ({
   secondaryStroke = defaultPptVisualTheme.textSplitSecondaryStroke,
   panelRadius = defaultPptVisualTheme.panelRadius
 }) => {
-  const [leftText, rightText] = splitTextSplitBody(body);
+  const [leftParagraphs, rightParagraphs] = splitTextSplitParagraphs(body);
   const gap = 48;
   const columnWidth = (width - gap) / 2;
   const panelHeight = 420;
   const lineHeight = 36;
+  const paragraphGap = 10;
   const textY = y + 66;
-  const renderColumnText = (value, columnX) => {
-    const wrapped = wrapTextWithOverflow(value, 34, 8);
-    const lines = wrapped.truncated
-      ? [...wrapped.lines.slice(0, -1), appendEllipsis(wrapped.lines.at(-1), 34)]
-      : wrapped.lines;
-    return lines.map((line, lineIndex) =>
-      `<text x="${columnX + 34}" y="${textY + lineIndex * lineHeight}" font-family="Arial, sans-serif" font-size="27" fill="${bodyColor}">${escapeXml(line)}</text>`
-    )
-      .join('\n    ');
+  const renderColumnText = (paragraphs, columnX) => {
+    const columnParagraphs = Array.isArray(paragraphs) ? paragraphs.filter(Boolean) : [];
+    let remainingLines = 8;
+    let currentY = textY;
+    const renderedLines = [];
+
+    for (let index = 0; index < columnParagraphs.length && remainingLines > 0; index += 1) {
+      const wrapped = wrapTextWithOverflow(columnParagraphs[index], 34, remainingLines);
+      const hasMoreParagraphs = index < columnParagraphs.length - 1;
+      const mustTruncate = wrapped.truncated || (hasMoreParagraphs && wrapped.lines.length === remainingLines);
+      const lines = mustTruncate
+        ? [...wrapped.lines.slice(0, -1), appendEllipsis(wrapped.lines.at(-1), 34)]
+        : wrapped.lines;
+
+      lines.forEach((line) => {
+        renderedLines.push(
+          `<text x="${columnX + 34}" y="${currentY}" font-family="Arial, sans-serif" font-size="27" fill="${bodyColor}">${escapeXml(line)}</text>`
+        );
+        currentY += lineHeight;
+      });
+      remainingLines -= lines.length;
+
+      if (mustTruncate || remainingLines < 1) {
+        break;
+      }
+
+      if (hasMoreParagraphs) {
+        currentY += paragraphGap;
+      }
+    }
+
+    return renderedLines.join('\n    ');
   };
 
   return [
@@ -386,8 +410,8 @@ const renderTextSplitSvg = ({
     `  <rect x="${x}" y="${y}" width="${columnWidth}" height="${panelHeight}"${roundedAttrs(panelRadius)} fill="${primaryFill}" stroke="${primaryStroke}" stroke-width="2"/>`,
     `  <rect x="${x}" y="${y}" width="8" height="${panelHeight}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
     `  <rect x="${x + columnWidth + gap}" y="${y}" width="${columnWidth}" height="${panelHeight}"${roundedAttrs(panelRadius)} fill="${secondaryFill}" stroke="${secondaryStroke}" stroke-width="2"/>`,
-    `  ${renderColumnText(leftText, x)}`,
-    `  ${renderColumnText(rightText, x + columnWidth + gap)}`,
+    `  ${renderColumnText(leftParagraphs, x)}`,
+    `  ${renderColumnText(rightParagraphs, x + columnWidth + gap)}`,
     '</g>'
   ].join('\n  ');
 };
