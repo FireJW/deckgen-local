@@ -5,6 +5,7 @@ import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 import { splitMarkdownTableRow } from '../../contract/markdown-table.mjs';
 import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { resolveSwissTheme } from '../guizang-swiss/theme.mjs';
+import { renderThemeToneAttribute } from './attributes.mjs';
 
 const rendererDir = path.dirname(fileURLToPath(import.meta.url));
 const vendoredGuizangRoot = path.resolve(rendererDir, '..', '..', '..', 'third_party', 'guizang-ppt-skill');
@@ -310,7 +311,7 @@ export function renderSwissHtmlDeck(contract, options = {}) {
   const slides = Array.isArray(contract?.slides) ? contract.slides : [];
   const imageAssetsByPath = createImageAssetMap(options.imageAssets);
   const slideHtml = slides.map((slide, index) => renderSlide(slide, index, slides.length, title, imageAssetsByPath)).join('\n');
-  const deckHtml = `<div id="deck" data-renderer="html-guizang-swiss" data-swiss-theme="${escapeHtml(theme.key)}">\n${slideHtml}\n</div>\n\n<div id="nav"></div>`;
+  const deckHtml = `<div id="deck" data-renderer="html-guizang-swiss" data-swiss-theme="${escapeHtml(theme.key)}"${renderThemeToneAttribute(contract?.theme?.tone)}>\n${slideHtml}\n</div>\n\n<div id="nav"></div>`;
 
   return readFileSync(templatePath, 'utf8')
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)

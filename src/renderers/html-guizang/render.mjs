@@ -5,6 +5,7 @@ import { formatEvidenceRefs } from '../../contract/evidence.mjs';
 import { splitMarkdownTableRow } from '../../contract/markdown-table.mjs';
 import { collectSlideEvidenceRefs, slideMarkdownBody } from '../../contract/slide-content.mjs';
 import { isSwissRendererHint } from '../guizang-swiss/theme.mjs';
+import { renderThemeToneAttribute } from './attributes.mjs';
 import { renderSwissHtmlDeck } from './swiss.mjs';
 
 const rendererDir = path.dirname(fileURLToPath(import.meta.url));
@@ -490,7 +491,7 @@ export function renderHtmlDeck(contract, options = {}) {
     .replace('</style>', `${renderDeckgenOverrides(theme)}\n</style>`)
     .replace(
       '<div id="deck">',
-      `<div id="deck" class="deck theme-${escapeHtml(theme.key)}" data-renderer="html-guizang" data-guizang-theme="${escapeHtml(theme.key)}">`
+      `<div id="deck" class="deck theme-${escapeHtml(theme.key)}" data-renderer="html-guizang" data-guizang-theme="${escapeHtml(theme.key)}"${renderThemeToneAttribute(contract?.theme?.tone)}>`
     )
     .replace(slidesPlaceholder, slideHtml);
 }

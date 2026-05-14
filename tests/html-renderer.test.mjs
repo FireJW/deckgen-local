@@ -234,7 +234,7 @@ test('renderHtmlDeck applies image cover visual hints in Style A and Swiss', () 
 test('renderHtmlDeck renders a guizang horizontal shell', () => {
   const html = renderHtmlDeck({
     title: 'Guizang Integration',
-    theme: { renderer_hint: 'indigo_porcelain' },
+    theme: { renderer_hint: 'indigo_porcelain', tone: 'analytical / investor' },
     slides: [
       { id: 'cover', role: 'cover', headline: 'Guizang Integration', body: 'Preview', evidence_refs: [], layout_intent: 'hero_dark' },
       { id: 'evidence', role: 'evidence', headline: 'Grounded Output', body: 'HTML and PPTX stay sibling outputs.', evidence_refs: [], layout_intent: 'evidence' }
@@ -243,12 +243,27 @@ test('renderHtmlDeck renders a guizang horizontal shell', () => {
 
   assert.match(html, /data-renderer="html-guizang"/);
   assert.match(html, /data-guizang-theme="indigo-porcelain"/);
+  assert.match(html, /data-theme-tone="analytical \/ investor"/);
   assert.match(html, /<canvas id="bg-dark" class="bg"><\/canvas>/);
-  assert.match(html, /<div id="deck" class="deck theme-indigo-porcelain" data-renderer="html-guizang" data-guizang-theme="indigo-porcelain">/);
+  assert.match(html, /<div id="deck" class="deck theme-indigo-porcelain" data-renderer="html-guizang" data-guizang-theme="indigo-porcelain" data-theme-tone="analytical \/ investor">/);
   assert.match(html, /<div id="nav"><\/div>/);
   assert.match(html, /data-slide-index="1"/);
   assert.match(html, /addEventListener\('keydown'/);
   assert.match(html, /import\('\.\/assets\/motion\.min\.js'\)/);
+});
+
+test('renderHtmlDeck carries theme tone into Swiss deck metadata', () => {
+  const html = renderHtmlDeck({
+    title: 'Swiss Tone',
+    theme: { renderer_hint: 'swiss-ikb', tone: 'board / concise' },
+    slides: [
+      { id: 's01', role: 'cover', headline: 'Swiss Tone', body: 'Preview', evidence_refs: [], layout_intent: 'hero_dark' }
+    ]
+  });
+
+  assert.match(html, /data-renderer="html-guizang-swiss"/);
+  assert.match(html, /data-swiss-theme="swiss-ikb"/);
+  assert.match(html, /data-theme-tone="board \/ concise"/);
 });
 
 test('renderHtmlDeck injects contract slides into the vendored guizang template shell', () => {

@@ -823,15 +823,20 @@ const writePptMasterProject = ({ contract, content = '', projectDir, imageAssets
 
   writeJson(path.join(projectDir, 'deck_contract.json'), contract);
   writeFileSync(path.join(projectDir, 'content.md'), content, 'utf8');
-  writeFileSync(path.join(projectDir, 'design_spec.md'), [
+  const themeTone = String(contract.theme?.tone ?? '').trim();
+  const designSpecLines = [
     `# ${contract.title}`,
     '',
     '- format: ppt169',
     `- audience: ${contract.audience ?? ''}`,
     `- profile: ${contract.profile ?? ''}`,
-    `- theme: ${contract.theme?.renderer_hint ?? ''}`,
-    ''
-  ].join('\n'), 'utf8');
+    `- theme: ${contract.theme?.renderer_hint ?? ''}`
+  ];
+  if (themeTone) {
+    designSpecLines.push(`- tone: ${themeTone}`);
+  }
+  designSpecLines.push('');
+  writeFileSync(path.join(projectDir, 'design_spec.md'), designSpecLines.join('\n'), 'utf8');
 
   const imageAssetsByPath = createImageAssetMap(imageAssets);
   contract.slides.forEach((slide, index) => {

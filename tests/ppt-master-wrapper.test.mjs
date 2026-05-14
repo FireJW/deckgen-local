@@ -149,6 +149,32 @@ fs.writeFileSync(path.join(projectDir, 'exporter-args.json'), JSON.stringify(pro
   assert.match(readFileSync(path.join(outputDir, 'svg_output', '02_s02.svg'), 'utf8'), /Revenue expanded/);
 });
 
+test('renderPptMasterDeck writes theme tone into the ppt-master design spec', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const outputDir = path.join(os.tmpdir(), `deckgen-tone-ppt-project-${Date.now()}`);
+
+  renderPptMasterDeck({
+    contract: {
+      ...sampleContract,
+      theme: { renderer_hint: 'swiss-ikb', tone: 'analytical / investor' }
+    },
+    content: '# Quarterly Briefing',
+    config: { pptMasterPath, pythonPath: process.execPath },
+    outputDir
+  });
+
+  const designSpec = readFileSync(path.join(outputDir, 'design_spec.md'), 'utf8');
+  assert.match(designSpec, /- theme: swiss-ikb/);
+  assert.match(designSpec, /- tone: analytical \/ investor/);
+});
+
 test('renderPptMasterDeck renders markdown table bodies into pptx svg table blocks', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

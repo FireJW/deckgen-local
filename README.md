@@ -46,7 +46,8 @@ theme:
 ---
 ```
 
-`theme.tone` is optional and is carried into the generated deck contract.
+`theme.tone` is optional and is carried into the generated deck contract, HTML
+deck metadata, and the ppt-master `design_spec.md` file.
 
 ```powershell
 node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\swiss-briefing.md --profile briefing --output both --ppt-master-path D:\Users\rickylu\dev\ppt-master
