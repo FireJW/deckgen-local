@@ -43,6 +43,7 @@ test('buildGenericMarkdownPackage carries supported YAML frontmatter into the co
     'title: Swiss Briefing',
     'theme:',
     '  renderer_hint: swiss-ikb',
+    '  tone: analytical / investor',
     '---',
     '',
     '# Swiss Briefing',
@@ -56,6 +57,7 @@ test('buildGenericMarkdownPackage carries supported YAML frontmatter into the co
 
   assert.equal(result.contract.title, 'Swiss Briefing');
   assert.equal(result.contract.theme.renderer_hint, 'swiss-ikb');
+  assert.equal(result.contract.theme.tone, 'analytical / investor');
   assert.equal(result.content.startsWith('# Swiss Briefing'), true);
   assert.doesNotMatch(result.content, /^---/);
   assert.equal(validateDeckContract(result.contract).ok, true);

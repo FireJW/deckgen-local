@@ -25,6 +25,8 @@ const parseFrontmatterScalar = (line) => {
 const parseSupportedFrontmatter = (raw) => {
   const metadata = {};
   const lines = raw.split('\n');
+  let inThemeBlock = false;
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const scalar = parseFrontmatterScalar(line);
@@ -34,10 +36,27 @@ const parseSupportedFrontmatter = (raw) => {
     }
 
     if (line.trim() === 'theme:') {
-      const next = lines[index + 1] ?? '';
-      const renderer = next.match(/^\s{2}renderer_hint:\s*(.*?)\s*$/);
-      if (renderer?.[1]) {
-        metadata.theme = { renderer_hint: renderer[1].replace(/^['"]|['"]$/g, '') };
+      inThemeBlock = true;
+      metadata.theme ??= {};
+      continue;
+    }
+
+    if (inThemeBlock) {
+      const nested = line.match(/^\s{2}([A-Za-z0-9_-]+):\s*(.*?)\s*$/);
+      if (nested) {
+        const key = nested[1];
+        const value = nested[2].replace(/^['"]|['"]$/g, '');
+        if (key === 'renderer_hint' && value) {
+          metadata.theme.renderer_hint = value;
+        }
+        if (key === 'tone' && value) {
+          metadata.theme.tone = value;
+        }
+        continue;
+      }
+
+      if (line.trim() !== '' && !line.startsWith('  ')) {
+        inThemeBlock = false;
       }
     }
   }
@@ -100,6 +119,7 @@ export function buildGenericMarkdownPackage(input) {
     profile,
     sourceText: bodyMarkdown
   });
+  const parsedTheme = parsed.metadata.theme ?? {};
 
   return {
     content: bodyMarkdown,
@@ -109,7 +129,8 @@ export function buildGenericMarkdownPackage(input) {
       hard_constraints: ['Keep the source text grounded', 'Do not invent facts'],
       theme: {
         ...contract.theme,
-        renderer_hint: rendererHint
+        renderer_hint: rendererHint,
+        ...(parsedTheme.tone ? { tone: parsedTheme.tone } : {})
       },
       slides: attachPrimarySourceEvidence(contract.slides),
       outputs: ['html']

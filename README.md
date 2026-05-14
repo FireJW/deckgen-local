@@ -42,8 +42,11 @@ contract is rendered:
 title: Swiss Briefing
 theme:
   renderer_hint: swiss-ikb
+  tone: analytical / investor
 ---
 ```
+
+`theme.tone` is optional and is carried into the generated deck contract.
 
 ```powershell
 node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\swiss-briefing.md --profile briefing --output both --ppt-master-path D:\Users\rickylu\dev\ppt-master
