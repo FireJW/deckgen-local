@@ -224,7 +224,11 @@ test('renderHtmlDeck gives text_split a distinct local layout', () => {
   assert.match(html, /data-layout="text-split"/);
   assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-copy/);
   assert.match(html, /grid-template-columns: minmax\(0, 0\.78fr\) minmax\(0, 1fr\)/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-kicker \{[^}]*grid-column: 1 \/ -1/);
   assert.match(html, /#deck\[data-renderer\] \.layout-text-split h2 \{[^}]*font-size: clamp\(2rem, 4\.2vw, 4rem\)/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split h2 \{[^}]*grid-column: 1/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-body \{[^}]*grid-column: 2/);
+  assert.match(html, /#deck\[data-renderer\] \.layout-text-split \.slide-evidence-refs \{[^}]*grid-column: 2/);
   assert.match(html, /#deck\[data-renderer\] \.slide-kicker \{[^}]*display: inline-block/);
   assert.match(html, /overflow-wrap: anywhere/);
   assert.doesNotMatch(html, /template\.html/);
