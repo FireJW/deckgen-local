@@ -338,6 +338,10 @@ and body text before the PowerPoint automation step starts.
 Because this path uses the PowerPoint COM automation API, it also requires an
 interactive Windows logon session; detached service-like sessions can fail
 before opening PowerPoint with COM error `80070520`.
+Runtime failures after structural PPTX validation are normalized into JSON with
+`ok: false`, `error_code`, `error`, `next_step`, and `errors[]`, so direct
+visual smoke and run-bundle smoke can report actionable environment failures
+without appending usage text.
 
 ## PPTX Boundary
 

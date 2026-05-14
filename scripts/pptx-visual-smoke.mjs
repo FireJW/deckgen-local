@@ -10,6 +10,7 @@ import {
   validatePptxSmokeResult
 } from '../src/qc/pptx-structural-smoke.mjs';
 import {
+  buildPptxVisualSmokeFailure,
   defaultPptxScreenshotPath,
   exportFirstSlideWithPowerPoint,
   exportSlidesWithPowerPoint
@@ -25,6 +26,11 @@ const usage = [
 const fail = (message) => {
   process.stderr.write(`${message}\nUsage: ${usage}\n`);
   process.exit(1);
+};
+
+const writeRuntimeFailure = (error, context = {}) => {
+  process.stdout.write(`${JSON.stringify(buildPptxVisualSmokeFailure(error, context), null, 2)}\n`);
+  process.exitCode = 1;
 };
 
 const parseArgs = (tokens) => {
@@ -187,14 +193,20 @@ const main = async () => {
 
   if (options.allSlides) {
     try {
+      const slideNumbers = Array.from({ length: structural.slideCount }, (_, index) => index + 1);
       const visual = exportSlidesWithPowerPoint({
         pptxPath,
         powerPointPath: options.powerPointPath,
-        slideNumbers: Array.from({ length: structural.slideCount }, (_, index) => index + 1)
+        slideNumbers
       });
       process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, expectedText, ...structuralValidation, ...visual }, null, 2)}\n`);
     } catch (error) {
-      fail(error.message);
+      writeRuntimeFailure(error, {
+        pptxPath,
+        expectedSlides,
+        expectedText,
+        slideNumbers: Array.from({ length: structural.slideCount }, (_, index) => index + 1)
+      });
     }
     return;
   }
@@ -209,7 +221,13 @@ const main = async () => {
     });
     process.stdout.write(`${JSON.stringify({ ...structural, expectedSlides, expectedText, ...structuralValidation, ...visual }, null, 2)}\n`);
   } catch (error) {
-    fail(error.message);
+    writeRuntimeFailure(error, {
+      pptxPath,
+      expectedSlides,
+      expectedText,
+      slideNumbers: [options.slideNumber],
+      screenshotPath
+    });
   }
 };
 

@@ -7,7 +7,9 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import {
+  buildPptxVisualSmokeFailure,
   buildPowerPointExportScript,
+  classifyPptxVisualSmokeError,
   defaultPptxScreenshotPath,
   exportFirstSlideWithPowerPoint,
   exportSlidesWithPowerPoint,
@@ -152,6 +154,31 @@ test('defaultPptxScreenshotPath includes the requested slide number', () => {
   const screenshotPath = defaultPptxScreenshotPath('D:\\Decks\\deck.pptx', 'D:\\workspace', 4);
 
   assert.match(screenshotPath, /deck-.*-slide4\.png$/);
+});
+
+test('classifyPptxVisualSmokeError recognizes interactive logon COM failures', () => {
+  const result = classifyPptxVisualSmokeError(new Error(
+    'PowerPoint visual export failed with status 1: New-Object : Retrieving the COM class factory failed due to the following error: 80070520 A specified logon session does not exist.'
+  ));
+
+  assert.equal(result.error_code, 'interactive_logon_required');
+  assert.match(result.error, /80070520|specified logon session/i);
+  assert.match(result.next_step, /interactive Windows logon/i);
+});
+
+test('buildPptxVisualSmokeFailure emits actionable structured json payloads', () => {
+  const result = buildPptxVisualSmokeFailure(
+    new Error('PowerPoint visual export did not create a screenshot: D:\\tmp\\slide1.png'),
+    { pptxPath: 'D:\\Decks\\deck.pptx', slideNumbers: [1] }
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.renderer, 'powerpoint');
+  assert.equal(result.error_code, 'screenshot_missing');
+  assert.match(result.error, /did not create a screenshot/i);
+  assert.match(result.next_step, /PowerPoint export permissions|open the PPTX/i);
+  assert.deepEqual(result.slideNumbers, [1]);
+  assert.ok(result.errors.some((line) => /screenshot_missing/.test(line)));
 });
 
 test('pptx visual smoke script rejects slide numbers beyond the deck count', () => {

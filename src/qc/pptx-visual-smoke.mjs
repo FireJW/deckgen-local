@@ -8,6 +8,96 @@ const defaultPowerPointPaths = [
   'C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\POWERPNT.EXE'
 ];
 
+const errorMessage = (error) =>
+  String(error?.message ?? error ?? 'Unknown PowerPoint visual smoke failure.');
+
+export function classifyPptxVisualSmokeError(error) {
+  const message = errorMessage(error);
+  const lower = message.toLowerCase();
+
+  if (lower.includes('80070520') || lower.includes('specified logon session')) {
+    return {
+      error_code: 'interactive_logon_required',
+      error: message,
+      next_step: 'Run this visual smoke from an interactive Windows logon session; sandbox or service tokens cannot automate PowerPoint COM.'
+    };
+  }
+
+  if (lower.includes('powerpoint executable not found')) {
+    return {
+      error_code: 'powerpoint_not_found',
+      error: message,
+      next_step: 'Install Microsoft PowerPoint, pass --powerpoint-executable, or set DECKGEN_POWERPOINT_PATH.'
+    };
+  }
+
+  if (lower.includes('failed to start')) {
+    return {
+      error_code: 'export_start_failed',
+      error: message,
+      next_step: 'Confirm powershell.exe is available and PowerPoint automation is allowed in this Windows session.'
+    };
+  }
+
+  if (lower.includes('did not create a screenshot')) {
+    return {
+      error_code: 'screenshot_missing',
+      error: message,
+      next_step: 'Open the PPTX in PowerPoint and confirm PowerPoint export permissions and that the screenshot directory is writable.'
+    };
+  }
+
+  if (lower.includes('created an empty screenshot')) {
+    return {
+      error_code: 'screenshot_empty',
+      error: message,
+      next_step: 'Rerun the visual smoke in an interactive Windows session and inspect the exported slide manually.'
+    };
+  }
+
+  if (lower.includes('not a png')) {
+    return {
+      error_code: 'screenshot_invalid_png',
+      error: message,
+      next_step: 'Remove the stale screenshot artifact and rerun PowerPoint export to produce a PNG screenshot.'
+    };
+  }
+
+  if (lower.includes('nearly blank')) {
+    return {
+      error_code: 'screenshot_blank',
+      error: message,
+      next_step: 'Open the PPTX and exported screenshot manually to verify the selected slide rendered non-empty content.'
+    };
+  }
+
+  if (lower.includes('failed with status')) {
+    return {
+      error_code: 'export_failed',
+      error: message,
+      next_step: 'Check the PowerPoint error details and rerun from an interactive Windows logon session.'
+    };
+  }
+
+  return {
+    error_code: 'powerpoint_visual_failed',
+    error: message,
+    next_step: 'Inspect the PowerPoint visual smoke output and rerun with an interactive Windows logon session if COM automation is involved.'
+  };
+}
+
+export function buildPptxVisualSmokeFailure(error, context = {}) {
+  const classified = classifyPptxVisualSmokeError(error);
+  const detail = `${classified.error_code}: ${classified.error}${classified.next_step ? ` Next: ${classified.next_step}` : ''}`;
+  return {
+    ok: false,
+    renderer: 'powerpoint',
+    ...context,
+    ...classified,
+    errors: [detail]
+  };
+}
+
 const psQuote = (value) => `'${String(value ?? '').replaceAll("'", "''")}'`;
 
 const normalizeSlideNumber = (value) => {

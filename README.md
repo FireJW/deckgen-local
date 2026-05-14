@@ -247,6 +247,9 @@ exports instead of accepting any syntactically valid image.
 This smoke uses the PowerPoint COM automation API and must run from an
 interactive Windows logon session; service-like or detached sessions can fail
 before opening PowerPoint with COM error `80070520`.
+When PowerPoint launch, COM automation, or screenshot export fails after the
+structural checks pass, the script writes a machine-readable JSON failure to
+stdout with `ok: false`, `error_code`, `error`, `next_step`, and `errors[]`.
 Add one or more `--expected-text "<text>"` flags when the same visual smoke
 should also fail closed on missing PPTX slide XML text before launching
 PowerPoint:

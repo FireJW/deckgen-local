@@ -197,16 +197,33 @@ const parseVisualSmokeStdout = (stdout) => {
   }
 };
 
+const structuredVisualSmokeError = (data) => {
+  if (!isObject(data) || typeof data.error !== 'string' || data.error.trim() === '') {
+    return '';
+  }
+
+  const code = typeof data.error_code === 'string' && data.error_code.trim() !== ''
+    ? `${data.error_code.trim()}: `
+    : '';
+  const nextStep = typeof data.next_step === 'string' && data.next_step.trim() !== ''
+    ? ` Next: ${data.next_step.trim()}`
+    : '';
+  return `${code}${data.error.trim()}${nextStep}`;
+};
+
 const runVisualSmokeCommand = ({ command, args, cwd, spawn }) => {
   const run = spawn(command, args, { encoding: 'utf8', cwd });
   const parsed = parseVisualSmokeStdout(run.stdout);
   const data = parsed.data;
+  const structuredError = structuredVisualSmokeError(data);
   const errors = Array.isArray(data?.errors)
     ? data.errors
+    : structuredError
+      ? [structuredError]
     : [];
   const error = run.error?.message ?? (run.status === 0
     ? parsed.error ?? (data?.ok === true ? undefined : 'visual smoke stdout did not report ok: true')
-    : String(run.stderr || run.stdout || '').trim());
+    : structuredError || String(run.stderr || run.stdout || '').trim());
 
   return {
     required: true,

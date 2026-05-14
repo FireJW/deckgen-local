@@ -420,6 +420,40 @@ test('validateDeckRunBundleSmokeResult rejects failed requested visual smoke gat
   assert.match(validation.errors.join('\n'), /text overflow/i);
 });
 
+test('runDeckRunVisualSmokeGates preserves structured pptx visual smoke failures', () => {
+  const runDir = makeRunBundle();
+  const summary = inspectDeckRunBundle({ runDir });
+  summary.visual = runDeckRunVisualSmokeGates({
+    runDir,
+    expectedOutputs: ['pptx'],
+    includePptxVisual: true,
+    rootDir: root,
+    spawn: () => ({
+      status: 1,
+      stdout: JSON.stringify({
+        ok: false,
+        renderer: 'powerpoint',
+        error_code: 'interactive_logon_required',
+        error: 'PowerPoint visual export failed with status 1: 80070520 A specified logon session does not exist.',
+        next_step: 'Run this visual smoke from an interactive Windows logon session.'
+      }),
+      stderr: ''
+    })
+  });
+  const validation = validateDeckRunBundleSmokeResult(summary);
+
+  assert.equal(summary.visual.pptx.ok, false);
+  assert.equal(summary.visual.pptx.data.error_code, 'interactive_logon_required');
+  assert.deepEqual(summary.visual.pptx.errors, [
+    'interactive_logon_required: PowerPoint visual export failed with status 1: 80070520 A specified logon session does not exist. Next: Run this visual smoke from an interactive Windows logon session.'
+  ]);
+  assert.match(summary.visual.pptx.error, /interactive_logon_required/);
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /pptx visual smoke/i);
+  assert.match(validation.errors.join('\n'), /interactive_logon_required/);
+  assert.match(validation.errors.join('\n'), /interactive Windows logon/i);
+});
+
 test('validateDeckRunBundleSmokeResult rejects visual smoke stdout that is not valid ok json', () => {
   const runDir = makeRunBundle();
   const summary = inspectDeckRunBundle({ runDir });
