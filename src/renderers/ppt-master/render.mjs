@@ -392,6 +392,30 @@ const renderTextSplitSvg = ({
   ].join('\n  ');
 };
 
+const renderImagePlaceholderSvg = ({
+  x,
+  y,
+  width,
+  height,
+  bodyColor,
+  line
+}) => {
+  const frameX = x + 42;
+  const frameY = y + 112;
+  const frameWidth = width - 84;
+  const frameHeight = height - 182;
+  const centerX = frameX + frameWidth / 2;
+  const centerY = frameY + frameHeight / 2;
+
+  return [
+    '<g class="ppt-image-placeholder">',
+    `  <rect x="${frameX}" y="${frameY}" width="${frameWidth}" height="${frameHeight}" rx="18" fill="none" stroke="${line}" stroke-width="2" stroke-dasharray="10 10"/>`,
+    `  <text x="${centerX}" y="${centerY - 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="${bodyColor}">Preview unavailable in export</text>`,
+    `  <text x="${centerX}" y="${centerY + 28}" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="${bodyColor}">Keep the source label for manual replacement.</text>`,
+    '</g>'
+  ].join('\n  ');
+};
+
 const formatImageSourceLabel = (src, isMaterializedAsset) => {
   const normalizedSrc = String(src ?? '').replaceAll('\\', '/').trim();
   if (!normalizedSrc) {
@@ -442,17 +466,24 @@ const renderImageSvg = ({
   const imageElement = isMaterializedAsset
     ? `  <image href="${escapeXml(image.src)}" x="${x + 42}" y="${y + 112}" width="${width - 84}" height="${height - 166}" preserveAspectRatio="xMidYMid meet"/>`
     : '';
-  const placeholderText = isMaterializedAsset
+  const placeholderSvg = isMaterializedAsset
     ? ''
-    : `  <text x="${x + 42}" y="${y + height - 44}" font-family="Arial, sans-serif" font-size="20" fill="${bodyColor}">Image asset placeholder: source path is preserved for editing.</text>`;
+    : renderImagePlaceholderSvg({
+      x,
+      y,
+      width,
+      height,
+      bodyColor,
+      line
+    });
   return [
     '<g class="ppt-image">',
     `  <rect x="${x}" y="${y}" width="${width}" height="${height}"${roundedAttrs(panelRadius)} fill="${fill}" stroke="${line}" stroke-width="2"/>`,
     `  <rect x="${x}" y="${y}" width="10" height="${height}"${roundedAttrs(Math.min(4, panelRadius))} fill="${accent}"/>`,
     `  <text x="${x + 42}" y="${y + 68}" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="${bodyColor}">${escapeXml(caption)}</text>`,
     imageElement,
+    placeholderSvg,
     `  <text x="${x + 42}" y="${y + height - 24}" font-family="Arial, sans-serif" font-size="18" fill="${bodyColor}">${escapeXml(sourceLabel)}</text>`,
-    placeholderText,
     '</g>'
   ].join('\n  ');
 };

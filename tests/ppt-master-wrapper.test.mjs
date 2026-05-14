@@ -553,6 +553,8 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
 
   const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
   assert.match(svg, /class="ppt-image"/);
+  assert.match(svg, /class="ppt-image-placeholder"/);
+  assert.match(svg, /Preview unavailable in export/);
   assert.match(svg, /Revenue bridge/);
   assert.match(svg, /assets\/revenue-bridge\.png/);
   assert.doesNotMatch(svg, /!\[Revenue bridge\]/);
@@ -677,6 +679,8 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   });
 
   const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /class="ppt-image-placeholder"/);
+  assert.match(svg, /Preview unavailable in export/);
   assert.match(svg, />Source: charts\.example\.com\/research\/quarterly\//);
   assert.match(svg, /\.{3}</);
   assert.doesNotMatch(svg, new RegExp(remoteUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
