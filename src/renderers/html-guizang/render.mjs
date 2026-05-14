@@ -151,6 +151,7 @@ const renderDeckgenOverrides = (theme) => `
   #deck[data-renderer] .deckgen-list li { margin: 0; line-height: 1.55; }
   #deck[data-renderer] .slide code { font-family: var(--mono); font-size: 0.92em; }
   #deck[data-renderer] .deckgen-figure.image-landscape img{max-height:min(58vh,560px)}
+  #deck[data-renderer] .deckgen-figure.image-fit-cover img{aspect-ratio:var(--image-aspect,16/9);object-fit:cover;max-height:min(58vh,560px)}
   #deck[data-renderer] .deckgen-figure.image-portrait{justify-items:center}
   #deck[data-renderer] .deckgen-figure.image-portrait img{width:auto;max-width:100%;max-height:min(60vh,600px)}
   #deck[data-renderer] .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid rgba(var(--ink-rgb), 0.18); }
@@ -259,20 +260,26 @@ const imageAssetForSrc = (src, imageAssetsByPath) =>
 const formatNumber = (value) =>
   Number(Number(value).toFixed(4)).toString();
 
-const htmlImageMetadata = (image, imageAssetsByPath) => {
+const imageFitHint = (visualHints) =>
+  visualHints?.image_fit === 'cover' ? 'cover' : 'contain';
+
+const htmlImageMetadata = (image, imageAssetsByPath, visualHints) => {
   const asset = imageAssetForSrc(image.src, imageAssetsByPath);
+  const imageFit = imageFitHint(visualHints);
   if (!asset || !asset.width || !asset.height || !asset.aspectRatio) {
     return {
-      figureClass: 'deckgen-figure',
-      figureAttrs: '',
+      figureClass: `deckgen-figure${imageFit === 'cover' ? ' image-fit-cover' : ''}`,
+      figureAttrs: imageFit === 'cover' ? ' data-image-fit="cover"' : '',
       imageAttrs: ''
     };
   }
 
   const orientation = stableClassPart(asset.orientation, 'landscape');
+  const fitClass = imageFit === 'cover' ? ' image-fit-cover' : '';
+  const fitAttr = imageFit === 'cover' ? ' data-image-fit="cover"' : '';
   return {
-    figureClass: `deckgen-figure image-${orientation}`,
-    figureAttrs: ` data-image-orientation="${escapeHtml(orientation)}" style="--image-aspect:${escapeHtml(formatNumber(asset.aspectRatio))}"`,
+    figureClass: `deckgen-figure image-${orientation}${fitClass}`,
+    figureAttrs: ` data-image-orientation="${escapeHtml(orientation)}"${fitAttr} style="--image-aspect:${escapeHtml(formatNumber(asset.aspectRatio))}"`,
     imageAttrs: ` width="${escapeHtml(String(asset.width))}" height="${escapeHtml(String(asset.height))}"`
   };
 };
@@ -286,9 +293,9 @@ const renderBlockquote = (lines) => {
   return `<blockquote>${quote}</blockquote>`;
 };
 
-const renderMarkdownImage = (image, imageAssetsByPath) => {
+const renderMarkdownImage = (image, imageAssetsByPath, visualHints) => {
   const caption = image.alt || image.src;
-  const metadata = htmlImageMetadata(image, imageAssetsByPath);
+  const metadata = htmlImageMetadata(image, imageAssetsByPath, visualHints);
   return [
     `<figure class="${metadata.figureClass}"${metadata.figureAttrs}>`,
     `  <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}" loading="lazy"${metadata.imageAttrs}>`,
@@ -339,14 +346,14 @@ const splitTextSplitParagraphs = (body) => {
   return [[paragraphs[0] ?? lines[0] ?? ''].filter(Boolean), []];
 };
 
-const renderBodyBlock = (paragraph, imageAssetsByPath) => {
+const renderBodyBlock = (paragraph, imageAssetsByPath, visualHints) => {
   const lines = String(paragraph ?? '')
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
   const image = lines.length === 1 ? parseMarkdownImageLine(lines[0]) : null;
   if (image) {
-    return renderMarkdownImage(image, imageAssetsByPath);
+    return renderMarkdownImage(image, imageAssetsByPath, visualHints);
   }
   if (isMarkdownTableBlock(lines)) {
     return renderMarkdownTable(lines);
@@ -361,9 +368,9 @@ const renderBodyBlock = (paragraph, imageAssetsByPath) => {
   return `<p>${renderInline(String(paragraph ?? '').trim()).replaceAll('\n', '<br>')}</p>`;
 };
 
-const renderBodyContainer = (paragraphs, className = 'slide-body body-zh', imageAssetsByPath = new Map()) => {
+const renderBodyContainer = (paragraphs, className = 'slide-body body-zh', imageAssetsByPath = new Map(), visualHints = undefined) => {
   const blocks = paragraphs
-    .map((paragraph) => renderBodyBlock(paragraph, imageAssetsByPath))
+    .map((paragraph) => renderBodyBlock(paragraph, imageAssetsByPath, visualHints))
     .filter(Boolean)
     .join('\n');
 
@@ -388,7 +395,8 @@ const renderBody = (slide, imageAssetsByPath) => {
       .map((paragraph) => paragraph.trim())
       .filter(Boolean),
     'slide-body body-zh',
-    imageAssetsByPath
+    imageAssetsByPath,
+    slide?.visual_hints
   );
 };
 
@@ -447,9 +455,9 @@ const renderSlide = (slide, index, totalSlides, title, imageAssetsByPath) => {
       ? [
         '    <div class="text-split-lead">',
         `      <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
-        renderBodyContainer(textSplitBodies?.[0] ?? [], 'slide-body body-zh slide-body-left', imageAssetsByPath),
+        renderBodyContainer(textSplitBodies?.[0] ?? [], 'slide-body body-zh slide-body-left', imageAssetsByPath, slide?.visual_hints),
         '    </div>',
-        renderBodyContainer(textSplitBodies?.[1] ?? [], 'slide-body body-zh slide-body-right', imageAssetsByPath)
+        renderBodyContainer(textSplitBodies?.[1] ?? [], 'slide-body body-zh slide-body-right', imageAssetsByPath, slide?.visual_hints)
       ].filter(Boolean).join('\n')
       : `    <${headingTag} class="${headingClass}" data-anim>${escapeHtml(slide.headline)}</${headingTag}>`,
     layout === 'text-split' ? '' : renderBody(slide, imageAssetsByPath),

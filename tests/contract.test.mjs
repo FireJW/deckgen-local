@@ -107,6 +107,9 @@ const malformedContracts = [
   ['slide headline is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), headline: ' ' }] })],
   ['slide layout_intent is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), layout_intent: '' }] })],
   ['slide body is not a string', () => ({ ...validContract(), slides: [{ ...validSlide(), body: 7 }] })],
+  ['slide visual_hints is not an object', () => ({ ...validContract(), slides: [{ ...validSlide(), visual_hints: 'cover' }] })],
+  ['slide visual_hints has unexpected key', () => ({ ...validContract(), slides: [{ ...validSlide(), visual_hints: { crop: 'center' } }] })],
+  ['slide visual_hints image_fit is invalid', () => ({ ...validContract(), slides: [{ ...validSlide(), visual_hints: { image_fit: 'stretch' } }] })],
   ['slide evidence_refs is not an array', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: null }] })],
   ['slide evidence_refs item is empty', () => ({ ...validContract(), slides: [{ ...validSlide(), evidence_refs: [' '] }] })],
   ['slide evidence_refs string item is unknown', () => ({
@@ -161,6 +164,7 @@ const invalidPlannerInputs = [
 test('schema exports contract outputs and CLI output modes separately', () => {
   assert.deepEqual(schema.allowedOutputs, ['html', 'pptx']);
   assert.deepEqual(schema.allowedCliOutputModes, ['html', 'pptx', 'both']);
+  assert.deepEqual(schema.allowedImageFitHints, ['contain', 'cover']);
 });
 
 test('validateDeckContract accepts a valid deck contract', () => {
@@ -175,6 +179,10 @@ test('validateDeckContract accepts a valid deck contract', () => {
     ...validContract(),
     source_refs: [{ type: 'local_file', path: 'D:/source.md', role: 'primary' }],
     slides: [{ ...validSlide(), evidence_refs: ['D:/source.md'] }]
+  }), { ok: true });
+  assert.deepEqual(validateDeckContract({
+    ...validContract(),
+    slides: [{ ...validSlide(), visual_hints: { image_fit: 'cover' } }]
   }), { ok: true });
 });
 

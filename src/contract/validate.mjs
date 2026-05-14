@@ -1,4 +1,5 @@
 import {
+  allowedImageFitHints,
   allowedOutputs,
   allowedProfiles,
   deckContractSchemaVersion,
@@ -18,7 +19,8 @@ const fail = (error) => ({ ok: false, error });
 const allowedContractKeys = new Set(requiredContractKeys);
 const allowedSourceRefKeys = new Set(['type', 'path', 'role', 'id']);
 const allowedEvidenceRefKeys = new Set(['id', 'source_ref', 'locator', 'quote']);
-const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent']);
+const allowedSlideKeys = new Set(['id', 'role', 'headline', 'body', 'items', 'evidence_refs', 'layout_intent', 'visual_hints']);
+const allowedSlideVisualHintKeys = new Set(['image_fit']);
 const allowedSlideItemKeys = new Set(['kind', 'text', 'src', 'alt', 'markdown', 'headers', 'rows', 'points', 'evidence_refs']);
 const allowedSlideItemKinds = new Set(['paragraph', 'quote', 'image', 'table', 'bullets']);
 const allowedSlideItemKeysByKind = new Map([
@@ -172,6 +174,13 @@ function validateDeckContractInternal(contract) {
       return fail(`${prefix}.body must be a string when present`);
     }
 
+    if (Object.hasOwn(slide, 'visual_hints')) {
+      const visualHintsValidation = validateSlideVisualHints(slide.visual_hints, `${prefix}.visual_hints`);
+      if (!visualHintsValidation.ok) {
+        return visualHintsValidation;
+      }
+    }
+
     const slideEvidenceIds = new Set();
 
     if (Object.hasOwn(slide, 'items')) {
@@ -279,6 +288,27 @@ function validateSourceRefs(sourceRefs) {
     if (roleValidation) {
       return roleValidation;
     }
+  }
+
+  return { ok: true };
+}
+
+function validateSlideVisualHints(visualHints, prefix) {
+  if (!isObject(visualHints)) {
+    return fail(`${prefix} must be an object when present`);
+  }
+
+  for (const key of Object.keys(visualHints)) {
+    if (!allowedSlideVisualHintKeys.has(key)) {
+      return fail(`${prefix} has unexpected key: ${key}`);
+    }
+  }
+
+  if (
+    Object.hasOwn(visualHints, 'image_fit') &&
+    (!isCanonicalString(visualHints.image_fit) || !allowedImageFitHints.includes(visualHints.image_fit))
+  ) {
+    return fail(`${prefix}.image_fit must be one of ${allowedImageFitHints.join(', ')}`);
   }
 
   return { ok: true };

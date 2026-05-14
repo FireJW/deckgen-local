@@ -658,6 +658,49 @@ fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.joi
   assert.doesNotMatch(svg, /Image asset placeholder/);
 });
 
+test('renderPptMasterDeck applies image cover visual hints to local images', () => {
+  const pptMasterPath = makeFakePptMaster(`
+const fs = require('fs');
+const path = require('path');
+const projectDir = process.argv[2];
+const exportsDir = path.join(projectDir, 'exports');
+fs.mkdirSync(exportsDir, { recursive: true });
+fs.copyFileSync(path.join(__dirname, '..', '..', '..', 'fixture.pptx'), path.join(exportsDir, 'fake.pptx'));
+`);
+  const sourceRoot = path.join(os.tmpdir(), `deckgen-image-cover-source-${Date.now()}`);
+  const sourceAssetsDir = path.join(sourceRoot, 'assets');
+  mkdirSync(sourceAssetsDir, { recursive: true });
+  writeFileSync(path.join(sourceAssetsDir, 'revenue bridge.png'), pngWithSize(1200, 600));
+  const sourcePath = path.join(sourceRoot, 'briefing.md');
+  writeFileSync(sourcePath, '![Revenue bridge](assets/revenue%20bridge.png)', 'utf8');
+  const outputDir = path.join(os.tmpdir(), `deckgen-image-cover-ppt-project-${Date.now()}`);
+  const imageContract = {
+    ...sampleContract,
+    slides: [
+      sampleContract.slides[0],
+      {
+        ...sampleContract.slides[1],
+        headline: 'Image: Revenue bridge',
+        body: '![Revenue bridge](assets/revenue%20bridge.png)',
+        layout_intent: 'image',
+        visual_hints: { image_fit: 'cover' }
+      }
+    ]
+  };
+
+  renderPptMasterDeck({
+    contract: imageContract,
+    content: '# Image',
+    config: { pptMasterPath, pythonPath: process.execPath, sourcePath },
+    outputDir
+  });
+
+  const svg = readFileSync(path.join(outputDir, 'svg_final', '02_s02.svg'), 'utf8');
+  assert.match(svg, /<image\b[^>]*data-image-fit="cover"/);
+  assert.match(svg, /width="956" height="294"/);
+  assert.match(svg, /preserveAspectRatio="xMidYMid slice"/);
+});
+
 test('renderPptMasterDeck truncates long remote image source labels', () => {
   const pptMasterPath = makeFakePptMaster(`
 const fs = require('fs');

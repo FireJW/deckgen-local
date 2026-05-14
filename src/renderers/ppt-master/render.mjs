@@ -367,6 +367,9 @@ const fitImageBox = ({ frameX, frameY, frameWidth, frameHeight, aspectRatio }) =
   };
 };
 
+const imageFitHint = (visualHints) =>
+  visualHints?.image_fit === 'cover' ? 'cover' : 'contain';
+
 const renderQuoteSvg = ({
   quoteLines,
   x,
@@ -518,6 +521,7 @@ const renderImageSvg = ({
   y,
   width,
   imageMeta,
+  visualHints,
   bodyColor,
   accent,
   line = defaultPptVisualTheme.line,
@@ -527,6 +531,7 @@ const renderImageSvg = ({
   const hasMetadata = Boolean(imageMeta?.width && imageMeta?.height && imageMeta?.aspectRatio);
   const height = hasMetadata ? 470 : 390;
   const caption = image.alt || image.src;
+  const imageFit = imageFitHint(visualHints);
   const isMaterializedAsset = String(image.src ?? '').replaceAll('\\', '/').startsWith('assets/images/');
   const sourceLabel = formatImageSourceLabel(image.src, isMaterializedAsset);
   const frameX = x + 42;
@@ -534,7 +539,14 @@ const renderImageSvg = ({
   const frameWidth = width - 84;
   const frameHeight = height - 176;
   const imageBox = isMaterializedAsset
-    ? fitImageBox({
+    ? imageFit === 'cover'
+      ? {
+        x: frameX,
+        y: frameY,
+        width: frameWidth,
+        height: frameHeight
+      }
+      : fitImageBox({
       frameX,
       frameY,
       frameWidth,
@@ -543,7 +555,7 @@ const renderImageSvg = ({
     })
     : null;
   const imageElement = isMaterializedAsset
-    ? `  <image href="${escapeXml(image.src)}" x="${formatNumber(imageBox.x)}" y="${formatNumber(imageBox.y)}" width="${formatNumber(imageBox.width)}" height="${formatNumber(imageBox.height)}" preserveAspectRatio="xMidYMid meet" data-image-orientation="${escapeXml(imageMeta?.orientation ?? 'unknown')}" data-image-aspect="${escapeXml(imageMeta?.aspectRatio ? formatNumber(imageMeta.aspectRatio) : '0')}"/>`
+    ? `  <image href="${escapeXml(image.src)}" x="${formatNumber(imageBox.x)}" y="${formatNumber(imageBox.y)}" width="${formatNumber(imageBox.width)}" height="${formatNumber(imageBox.height)}" preserveAspectRatio="xMidYMid ${imageFit === 'cover' ? 'slice' : 'meet'}" data-image-orientation="${escapeXml(imageMeta?.orientation ?? 'unknown')}" data-image-aspect="${escapeXml(imageMeta?.aspectRatio ? formatNumber(imageMeta.aspectRatio) : '0')}" data-image-fit="${escapeXml(imageFit)}"/>`
     : '';
   const placeholderSvg = isMaterializedAsset
     ? ''
@@ -737,6 +749,7 @@ const renderSlideSvg = (slide, index, visualTheme, imageAssetsByPath) => {
       y: bodyStartY,
       width: 1040,
       imageMeta,
+      visualHints: slide?.visual_hints,
       bodyColor,
       accent,
       line: visualTheme.line,
