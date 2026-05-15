@@ -33,6 +33,17 @@ uses `points`, `image` uses `src` plus optional `alt`, and `table` uses
 node src/cli/deckgen.mjs generate --source fixtures/generic-markdown/briefing.md --profile briefing --output html
 ```
 
+### HTML Anything Template Lab
+
+Compare selected `html-anything` skills against local fixtures and write a
+review report under `.tmp/html-anything-lab/<run-id>/`. Use
+`--template-index <path>` to point at a different checked-in index file, and
+repeat `--source <path>` to add local fixtures.
+
+```powershell
+npm.cmd run lab:html-anything -- --json
+```
+
 Swiss Style B can be selected per source with Markdown frontmatter. It stays
 opt-in and affects both HTML preview and PPTX SVG project output when the same
 contract is rendered:
