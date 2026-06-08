@@ -168,6 +168,28 @@ node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\briefing.md
     </section>
 
     <section>
+      <h2>Demo Run</h2>
+      <div class="grid" aria-label="demo run outputs">
+        <article class="card">
+          <span class="label">Input</span>
+          <h3>Public fixture</h3>
+          <p><code>fixtures/generic-markdown/briefing.md</code></p>
+        </article>
+        <article class="card">
+          <span class="label">Contract</span>
+          <h3>Four-slide briefing</h3>
+          <p>Generates a validated <code>deck_contract.json</code> with source references and HTML output intent.</p>
+        </article>
+        <article class="card">
+          <span class="label">Output</span>
+          <h3>Ignored run bundle</h3>
+          <p><code>.tmp/deckgen/&lt;run-id&gt;/html/index.html</code></p>
+        </article>
+      </div>
+      <p class="note"><a href="demo-run.md">Read the public-safe demo runbook</a> for the sample result shape, bundle map, and smoke command.</p>
+    </section>
+
+    <section>
       <h2>Public Safety</h2>
       <ul>
         <li>No run bundles, generated decks, local source packages, cookies, or credentials are committed.</li>

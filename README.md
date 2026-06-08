@@ -66,6 +66,8 @@ node src\cli\deckgen.mjs generate --source fixtures\generic-markdown\briefing.md
 
 The result includes the run directory, HTML path, requested outputs, and QC report path. The same shape is written to `run_result.json` inside the run bundle.
 
+See [docs/demo-run.md](docs/demo-run.md) for a public-safe sample run shape, run-bundle map, and smoke command.
+
 ## PPTX Output
 
 PPTX export is optional and requires a local `ppt-master` checkout supplied at runtime.
