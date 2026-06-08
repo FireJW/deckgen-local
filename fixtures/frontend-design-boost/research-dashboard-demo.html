@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Signals Desk - Frontend Design Boost Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f3ed;
+      --surface: #fffefb;
+      --surface-soft: #fbfaf5;
+      --surface-muted: #f0eee6;
+      --ink: #111111;
+      --muted: #6f6d66;
+      --soft: #8f8b80;
+      --border: #ded9cc;
+      --border-strong: #151515;
+      --red: #b73b2f;
+      --red-soft: #f4d9d2;
+      --teal: #4f9c90;
+      --teal-soft: #d6e9e5;
+      --blue: #6f8ec9;
+      --gold: #bf9554;
+      --green: #32735f;
+      --shadow: 0 1px 2px rgba(17, 17, 17, 0.05);
+      --radius-panel: 8px;
+      --radius-control: 6px;
+      --content-width: 1304px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      text-rendering: optimizeLegibility;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    .tab {
+      min-width: 24px;
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      letter-spacing: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+    }
+
+    button:hover,
+    .tab:hover {
+      background: #f7f4ec;
+      border-color: #bbb3a4;
+      transform: translateY(-1px);
+    }
+
+    button:active,
+    .tab:active {
+      transform: translateY(0);
+      background: var(--surface-muted);
+    }
+
+    button:focus-visible,
+    .tab:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 3px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      color: var(--soft);
+      background: #efede6;
+      border-color: #d3cec0;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button:disabled:hover {
+      background: #efede6;
+      border-color: #d3cec0;
+      transform: none;
+    }
+
+    .page {
+      width: min(var(--content-width), calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 20px 0 42px;
+    }
+
+    .chrome {
+      display: grid;
+      grid-template-columns: 138px 1fr auto;
+      align-items: center;
+      gap: 22px;
+      padding: 6px 0 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: inline-grid;
+      gap: 4px;
+      width: 100px;
+      color: var(--ink);
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .brand span {
+      display: inline-block;
+      padding: 4px 6px;
+      border: 1px solid var(--ink);
+      background: var(--surface);
+    }
+
+    .brand span:last-child {
+      background: var(--ink);
+      color: var(--surface);
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .nav a {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      border-bottom: 2px solid transparent;
+    }
+
+    .nav a[aria-current="page"] {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+      font-weight: 700;
+    }
+
+    .utilities {
+      display: inline-flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .scope {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 28px 0 18px;
+      border-bottom: 2px solid var(--ink);
+      margin-bottom: 26px;
+    }
+
+    .scope h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .scope p {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    .as-of {
+      color: var(--muted);
+      text-align: right;
+      min-width: 164px;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-panel);
+      background: var(--surface);
+      padding: 14px;
+      min-height: 104px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .metric strong {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-panel);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    .panel h2 {
+      font-size: 28px;
+    }
+
+    .panel h3 {
+      font-size: 21px;
+    }
+
+    .summary {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 78ch;
+    }
+
+    .gauge {
+      width: 116px;
+      min-width: 116px;
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .gauge svg {
+      width: 88px;
+      height: 54px;
+      overflow: visible;
+    }
+
+    .gauge strong {
+      color: var(--ink);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .body-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(240px, 0.85fr);
+      gap: 18px;
+      padding: 18px;
+      align-items: stretch;
+    }
+
+    .chart-viewport {
+      border: 1px solid #e7e1d4;
+      background: linear-gradient(180deg, #fffefa 0%, #f9f6ef 100%);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .chart-viewport svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .callout {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      border-left: 3px solid var(--ink);
+      background: var(--surface-soft);
+      padding: 14px;
+    }
+
+    .callout strong {
+      font-size: 18px;
+    }
+
+    .callout p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .source-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px 18px;
+      color: var(--soft);
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+
+    .actions {
+      display: inline-flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .event-log {
+      padding: 18px;
+    }
+
+    .event-table {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      margin-top: 14px;
+    }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 1fr 1.1fr;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+    }
+
+    .event-row.header {
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 10px 0;
+    }
+
+    .event-row p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .date {
+      font-weight: 800;
+    }
+
+    .marker {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px 18px 0;
+    }
+
+    .tab {
+      width: 100%;
+      box-shadow: none;
+    }
+
+    .tab[aria-selected="true"] {
+      background: var(--ink);
+      color: var(--surface);
+      border-color: var(--ink);
+    }
+
+    .feed-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .feed-list,
+    .state-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .feed-item,
+    .state-item {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-soft);
+      padding: 12px;
+    }
+
+    .feed-item strong,
+    .state-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .feed-item p,
+    .state-item p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .state-item.loading {
+      border-color: var(--blue);
+    }
+
+    .state-item.empty {
+      border-color: var(--green);
+    }
+
+    .state-item.error {
+      border-color: var(--red);
+    }
+
+    .footer-note {
+      margin: 18px 0 0;
+      color: var(--soft);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 960px) {
+      .chrome {
+        grid-template-columns: auto 1fr;
+      }
+
+      .nav {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+      }
+
+      .utilities {
+        justify-self: end;
+      }
+
+      .metric-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .body-grid,
+      .feed-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .event-row {
+        grid-template-columns: 108px 1fr;
+      }
+
+      .event-row.header {
+        display: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        width: calc(100vw - 24px);
+        padding-top: 14px;
+      }
+
+      .chrome {
+        gap: 12px;
+        grid-template-columns: 1fr auto;
+      }
+
+      .utilities {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+      }
+
+      .nav {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+
+      .nav a:nth-child(n+5) {
+        display: none;
+      }
+
+      .utilities button:first-child {
+        display: none;
+      }
+
+      .scope,
+      .panel-head,
+      .source-row {
+        display: grid;
+        align-items: start;
+      }
+
+      .as-of {
+        text-align: left;
+        min-width: 0;
+      }
+
+      .metric-strip,
+      .tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .panel h2 {
+        font-size: 24px;
+      }
+
+      .gauge {
+        width: 100%;
+        min-width: 0;
+        justify-items: start;
+      }
+
+      .event-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .chart-viewport {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="chrome" aria-label="Research dashboard chrome">
+      <a class="brand" href="#" aria-label="Research Signals Desk home">
+        <span>Signal</span>
+        <span>Desk</span>
+      </a>
+      <nav class="nav" aria-label="Sections">
+        <a href="#" aria-current="page">Overview</a>
+        <a href="#">Pressure</a>
+        <a href="#">Approval</a>
+        <a href="#">Events</a>
+        <a href="#">Monitor</a>
+        <a href="#">Source notes</a>
+      </nav>
+      <div class="utilities">
+        <button type="button">Refresh</button>
+        <button type="button">Menu</button>
+      </div>
+    </header>
+
+    <section class="scope" aria-labelledby="page-title">
+      <div>
+        <h1 id="page-title">Research Signals Desk</h1>
+        <p>A synthetic chart-led research dashboard for policy, market, and narrative monitoring.</p>
+      </div>
+      <div class="as-of">As of local demo data<br>Updated 09:30</div>
+    </section>
+
+    <section class="metric-strip" aria-label="Headline research metrics">
+      <article class="metric">
+        <p class="eyebrow">Pressure level</p>
+        <strong>+1.9%</strong>
+        <span>Medium pressure after a 20-day drawdown.</span>
+      </article>
+      <article class="metric">
+        <p class="eyebrow">Support gap</p>
+        <strong>-19.2</strong>
+        <span>Net support remains below the neutral line.</span>
+      </article>
+      <article class="metric">
+        <p class="eyebrow">Event pulse</p>
+        <strong>4</strong>
+        <span>Major events in the current review window.</span>
+      </article>
+      <article class="metric">
+        <p class="eyebrow">Monitor load</p>
+        <strong>Low</strong>
+        <span>Live feed is deferred below the primary charts.</span>
+      </article>
+    </section>
+
+    <main class="stack">
+      <section class="panel" aria-labelledby="pressure-title">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Trump pressure index</p>
+            <h2 id="pressure-title">TACO pressure index</h2>
+            <p class="summary">A local demo of the chart-first pattern: threshold bands carry the interpretation, while the event log explains why the line moved.</p>
+          </div>
+          <div class="gauge" aria-label="Current pressure 1.9 percent">
+            <svg viewBox="0 0 100 60" role="img" aria-label="Gauge showing medium pressure">
+              <path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke="#d9d2c3" stroke-width="10" stroke-linecap="round"></path>
+              <path d="M10 50 A40 40 0 0 1 64 14" fill="none" stroke="#4f9c90" stroke-width="10" stroke-linecap="round"></path>
+              <circle cx="64" cy="14" r="5" fill="#fffefb" stroke="#111111" stroke-width="2"></circle>
+            </svg>
+            <strong>+1.9%</strong>
+            <span>Medium</span>
+          </div>
+        </div>
+
+        <div class="body-grid">
+          <div class="chart-viewport" aria-label="Synthetic pressure chart">
+            <svg viewBox="0 0 920 390" role="img" aria-labelledby="chart-title chart-desc">
+              <title id="chart-title">Synthetic pressure index chart</title>
+              <desc id="chart-desc">A line chart over colored threshold bands with positive and negative pressure bars.</desc>
+              <rect x="0" y="0" width="920" height="120" fill="#f1d5d0"></rect>
+              <rect x="0" y="120" width="920" height="88" fill="#f2dec8"></rect>
+              <rect x="0" y="208" width="920" height="80" fill="#eef0e8"></rect>
+              <rect x="0" y="288" width="920" height="102" fill="#d9ece6"></rect>
+              <g stroke="#d6d0c1" stroke-width="1">
+                <line x1="0" y1="48" x2="920" y2="48"></line>
+                <line x1="0" y1="128" x2="920" y2="128"></line>
+                <line x1="0" y1="208" x2="920" y2="208"></line>
+                <line x1="0" y1="288" x2="920" y2="288"></line>
+              </g>
+              <g opacity="0.8">
+                <rect x="34" y="170" width="10" height="38" fill="#d47468"></rect>
+                <rect x="52" y="154" width="10" height="54" fill="#d47468"></rect>
+                <rect x="70" y="132" width="10" height="76" fill="#d47468"></rect>
+                <rect x="88" y="180" width="10" height="28" fill="#6f8ec9"></rect>
+                <rect x="106" y="208" width="10" height="58" fill="#4f9c90"></rect>
+                <rect x="124" y="208" width="10" height="82" fill="#bf9554"></rect>
+                <rect x="142" y="185" width="10" height="23" fill="#6f8ec9"></rect>
+                <rect x="160" y="142" width="10" height="66" fill="#d47468"></rect>
+                <rect x="178" y="118" width="10" height="90" fill="#d47468"></rect>
+                <rect x="196" y="96" width="10" height="112" fill="#d47468"></rect>
+                <rect x="214" y="92" width="10" height="116" fill="#bf9554"></rect>
+                <rect x="232" y="108" width="10" height="100" fill="#4f9c90"></rect>
+                <rect x="250" y="158" width="10" height="50" fill="#6f8ec9"></rect>
+                <rect x="268" y="208" width="10" height="86" fill="#4f9c90"></rect>
+                <rect x="286" y="208" width="10" height="98" fill="#bf9554"></rect>
+                <rect x="304" y="208" width="10" height="72" fill="#4f9c90"></rect>
+                <rect x="322" y="182" width="10" height="26" fill="#d47468"></rect>
+                <rect x="340" y="160" width="10" height="48" fill="#d47468"></rect>
+                <rect x="358" y="208" width="10" height="44" fill="#4f9c90"></rect>
+                <rect x="376" y="208" width="10" height="38" fill="#bf9554"></rect>
+                <rect x="394" y="188" width="10" height="20" fill="#6f8ec9"></rect>
+                <rect x="412" y="174" width="10" height="34" fill="#d47468"></rect>
+                <rect x="430" y="208" width="10" height="62" fill="#4f9c90"></rect>
+                <rect x="448" y="208" width="10" height="82" fill="#bf9554"></rect>
+                <rect x="466" y="208" width="10" height="54" fill="#4f9c90"></rect>
+                <rect x="484" y="188" width="10" height="20" fill="#6f8ec9"></rect>
+                <rect x="502" y="154" width="10" height="54" fill="#d47468"></rect>
+                <rect x="520" y="138" width="10" height="70" fill="#d47468"></rect>
+                <rect x="538" y="122" width="10" height="86" fill="#bf9554"></rect>
+                <rect x="556" y="146" width="10" height="62" fill="#4f9c90"></rect>
+                <rect x="574" y="208" width="10" height="34" fill="#4f9c90"></rect>
+                <rect x="592" y="208" width="10" height="50" fill="#bf9554"></rect>
+                <rect x="610" y="208" width="10" height="64" fill="#4f9c90"></rect>
+                <rect x="628" y="190" width="10" height="18" fill="#6f8ec9"></rect>
+                <rect x="646" y="166" width="10" height="42" fill="#d47468"></rect>
+                <rect x="664" y="150" width="10" height="58" fill="#d47468"></rect>
+                <rect x="682" y="164" width="10" height="44" fill="#bf9554"></rect>
+                <rect x="700" y="208" width="10" height="42" fill="#4f9c90"></rect>
+                <rect x="718" y="208" width="10" height="82" fill="#4f9c90"></rect>
+                <rect x="736" y="208" width="10" height="96" fill="#bf9554"></rect>
+                <rect x="754" y="208" width="10" height="74" fill="#4f9c90"></rect>
+                <rect x="772" y="184" width="10" height="24" fill="#6f8ec9"></rect>
+                <rect x="790" y="158" width="10" height="50" fill="#d47468"></rect>
+                <rect x="808" y="148" width="10" height="60" fill="#d47468"></rect>
+                <rect x="826" y="176" width="10" height="32" fill="#bf9554"></rect>
+                <rect x="844" y="194" width="10" height="14" fill="#4f9c90"></rect>
+                <rect x="862" y="208" width="10" height="40" fill="#4f9c90"></rect>
+              </g>
+              <polyline points="32,178 58,168 86,190 112,176 142,202 170,118 198,86 224,74 250,122 278,252 306,276 334,236 362,218 390,250 418,206 446,260 474,238 502,178 530,118 558,146 586,232 614,276 642,246 670,186 698,176 726,252 754,304 782,256 810,214 838,186 866,210 890,186" fill="none" stroke="#111111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <g fill="#111111" font-size="18" font-weight="700">
+                <text x="16" y="42">20%</text>
+                <text x="16" y="126">10%</text>
+                <text x="16" y="212">0%</text>
+                <text x="16" y="292">-5%</text>
+                <text x="760" y="42">High pressure</text>
+                <text x="775" y="334">Drawdown zone</text>
+              </g>
+              <g fill="#7c776d" font-size="16">
+                <text x="80" y="366">Mar</text>
+                <text x="285" y="366">Jun</text>
+                <text x="500" y="366">Sep</text>
+                <text x="720" y="366">Dec</text>
+              </g>
+            </svg>
+          </div>
+          <aside class="callout">
+            <strong>First viewport conclusion</strong>
+            <p>The current pressure reading is not extreme, but the last move is still fragile because event risk is concentrated in tariff and platform-language headlines.</p>
+            <p>Use the chart for state, then use the event log for narrative.</p>
+          </aside>
+        </div>
+        <div class="source-row">
+          <span>Synthetic local fixture. No external data or brand assets.</span>
+          <span class="actions">
+            <button type="button">Download PNG</button>
+            <button type="button">Download data</button>
+            <button type="button" disabled>Archive</button>
+          </span>
+        </div>
+      </section>
+
+      <section class="panel event-log" aria-labelledby="event-title">
+        <p class="eyebrow">TACO event log</p>
+        <h3 id="event-title">Threat / Drawdown / Meaning</h3>
+        <p class="summary">This fixture turns chart annotations into a repeatable narrative table for risk, policy, or market dashboards.</p>
+        <div class="event-table" role="table" aria-label="Event log narrative table">
+          <div class="event-row header" role="row">
+            <span>Date</span>
+            <span>Threat</span>
+            <span>Drawdown</span>
+            <span>Meaning</span>
+          </div>
+          <div class="event-row" role="row">
+            <span class="date">Mar 07</span>
+            <p><span class="marker">Tariff threat</span></p>
+            <p>Pressure spikes into the upper band as import language hardens.</p>
+            <p>The chart needs a policy note, not only a price label.</p>
+          </div>
+          <div class="event-row" role="row">
+            <span class="date">Apr 24</span>
+            <p><span class="marker">Partial walkback</span></p>
+            <p>The line breaks lower after exemptions enter the story.</p>
+            <p>Readers need the reversal path beside the threshold chart.</p>
+          </div>
+          <div class="event-row" role="row">
+            <span class="date">Jun 12</span>
+            <p><span class="marker">Platform post</span></p>
+            <p>Short-term attention rises, but the pressure band stays neutral.</p>
+            <p>The monitor is useful only when it explains what changed.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="approval-title">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Approval tracker</p>
+            <h3 id="approval-title">Net support trend</h3>
+            <p class="summary">Tabs stay inside the same analytical surface so the user can compare cuts without losing context.</p>
+          </div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="Approval tracker views">
+          <button class="tab" type="button" role="tab" aria-selected="true">Net support</button>
+          <button class="tab" type="button" role="tab" aria-selected="false">For / against</button>
+          <button class="tab" type="button" role="tab" aria-selected="false">Issue view</button>
+          <button class="tab" type="button" role="tab" aria-selected="false">Groups</button>
+        </div>
+        <div class="body-grid">
+          <div class="chart-viewport">
+            <svg viewBox="0 0 880 300" role="img" aria-label="Synthetic net support line chart">
+              <rect width="880" height="300" fill="#fffefa"></rect>
+              <g stroke="#e3ded2" stroke-width="1">
+                <line x1="40" y1="50" x2="840" y2="50"></line>
+                <line x1="40" y1="115" x2="840" y2="115"></line>
+                <line x1="40" y1="180" x2="840" y2="180"></line>
+                <line x1="40" y1="245" x2="840" y2="245"></line>
+              </g>
+              <path d="M40 98 C90 138 130 154 190 168 C246 184 284 214 330 204 C384 194 426 160 486 176 C540 192 588 214 640 206 C700 198 742 220 800 232 C822 236 834 240 840 244" fill="none" stroke="#b73b2f" stroke-width="5" stroke-linecap="round"></path>
+              <path d="M40 84 C120 142 210 188 300 214 C400 240 520 228 620 236 C720 244 790 238 840 252 L840 282 L40 282 Z" fill="#f4d9d2" opacity="0.48"></path>
+              <g fill="#111111" font-size="16" font-weight="700">
+                <text x="54" y="76">+12</text>
+                <text x="620" y="128">Policy package</text>
+                <text x="770" y="228">-19.2</text>
+              </g>
+              <g fill="#7c776d" font-size="14">
+                <text x="40" y="278">Q2</text>
+                <text x="300" y="278">Q3</text>
+                <text x="560" y="278">Q4</text>
+                <text x="802" y="278">Now</text>
+              </g>
+            </svg>
+          </div>
+          <aside class="callout">
+            <strong>Chart mode rule</strong>
+            <p>Alternate cuts belong in tabs when they are views of one dataset. Separate cards are reserved for new jobs or new evidence layers.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="truths-title">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Truth social monitor</p>
+            <h3 id="truths-title">Truths tracker</h3>
+            <p class="summary">The lower monitor stays supportive. It adds narrative texture without competing with the chart-led first screen.</p>
+          </div>
+          <button type="button">@sampleHandle</button>
+        </div>
+        <div class="feed-grid">
+          <div class="feed-list" aria-label="Synthetic monitor feed">
+            <article class="feed-item">
+              <strong>Policy phrase detected</strong>
+              <p>Language intensity rose, but no new market threshold was crossed.</p>
+            </article>
+            <article class="feed-item">
+              <strong>Attention pulse cooling</strong>
+              <p>Engagement is lower than the last tariff window, so the feed stays below the charts.</p>
+            </article>
+            <article class="feed-item">
+              <strong>Manual review needed</strong>
+              <p>The next design iteration should decide whether monitor items need source cards or a compact list.</p>
+            </article>
+          </div>
+          <div class="state-list" aria-label="Fixture state evidence">
+            <article class="state-item loading">
+              <strong>Loading pressure feed</strong>
+              <p>Used when the chart is waiting for fresh signal data.</p>
+            </article>
+            <article class="state-item empty">
+              <strong>No live events in the selected window</strong>
+              <p>Used when the event log has no entries after filters are applied.</p>
+            </article>
+            <article class="state-item error">
+              <strong>Pressure feed sync failed</strong>
+              <p>Used when a data refresh fails and the last good chart remains visible.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <p class="footer-note">Local fixture for frontend-design-boost. Synthetic content only.</p>
+  </div>
+</body>
+</html>

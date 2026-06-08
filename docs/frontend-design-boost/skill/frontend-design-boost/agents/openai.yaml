@@ -1,0 +1,7 @@
+interface:
+  display_name: "Frontend Design Boost"
+  short_description: "Frontend UI design and visual QA."
+  default_prompt: "Use $frontend-design-boost before building or revising HTML, web, React, or Tailwind UI."
+
+policy:
+  allow_implicit_invocation: true

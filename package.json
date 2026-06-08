@@ -1,0 +1,48 @@
+{
+  "name": "deckgen-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "deckgen": "./src/cli/deckgen.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check:frontend-design-boost-skill": "node scripts/frontend-design-boost-skill-drift.mjs",
+    "readiness:frontend-design-boost-skill": "node scripts/frontend-design-boost-skill-readiness.mjs",
+    "readiness:frontend-design-boost:product-design": "node scripts/frontend-design-boost-product-design-readiness.mjs",
+    "brief:frontend-design-boost:product-design": "node scripts/frontend-design-boost-product-design-brief.mjs",
+    "ideate:frontend-design-boost:product-design": "node scripts/frontend-design-boost-product-design-ideate.mjs",
+    "design-qa:frontend-design-boost:product-design": "node scripts/frontend-design-boost-product-design-qa.mjs",
+    "audit:frontend-design-boost:product-design": "node scripts/frontend-design-boost-product-design-audit.mjs",
+    "sync:frontend-design-boost-skill": "node scripts/frontend-design-boost-skill-sync.mjs",
+    "lab:frontend-design-boost:image": "node scripts/frontend-design-boost-image-assist.mjs",
+    "lab:html-anything": "node scripts/html-anything-lab.mjs",
+    "acceptance:frontend-design-boost:image": "node scripts/frontend-design-boost-image-acceptance.mjs",
+    "decision:frontend-design-boost:image": "node scripts/frontend-design-boost-image-decision.mjs",
+    "evidence:frontend-design-boost:image": "node scripts/frontend-design-boost-image-evidence.mjs",
+    "handoff:frontend-design-boost:image": "node scripts/frontend-design-boost-image-implementation-handoff.mjs",
+    "import:frontend-design-boost:imagegen-assets": "node scripts/frontend-design-boost-imagegen-import.mjs",
+    "acceptance:frontend-design-boost:imagegen-assets": "node scripts/frontend-design-boost-imagegen-acceptance.mjs",
+    "acceptance:frontend-design-boost:ccswitch-assets": "node scripts/frontend-design-boost-ccswitch-acceptance.mjs",
+    "audit:frontend-design-boost:goal": "node scripts/frontend-design-boost-goal-audit.mjs",
+    "run:frontend-design-boost:image-job": "node scripts/frontend-design-boost-image-jobs-run.mjs",
+    "flow:frontend-design-boost:image": "node scripts/frontend-design-boost-image-workflow.mjs",
+    "qa:frontend-design-boost": "node scripts/frontend-design-boost-fixture-qa.mjs",
+    "qa:frontend-design-boost:research": "node scripts/frontend-design-boost-fixture-qa.mjs --html fixtures/frontend-design-boost/research-dashboard-demo.html",
+    "qa:frontend-design-boost:image": "node scripts/frontend-design-boost-image-pack-qa.mjs",
+    "plan:frontend-design-boost:image-jobs": "node scripts/frontend-design-boost-image-jobs-plan.mjs",
+    "smoke:frontend-design-boost:assets": "node scripts/frontend-design-boost-asset-smoke.mjs",
+    "intake:frontend-design-boost:assets": "node scripts/frontend-design-boost-asset-intake.mjs",
+    "preflight:guizang": "node scripts/guizang-source-preflight.mjs",
+    "preflight:ppt-master": "node scripts/ppt-master-preflight.mjs",
+    "smoke:html": "node scripts/html-visual-smoke.mjs",
+    "smoke:run": "node scripts/deck-run-smoke.mjs",
+    "smoke:swiss": "node scripts/guizang-swiss-validate.mjs",
+    "smoke:pptx": "node scripts/pptx-structural-smoke.mjs",
+    "smoke:pptx:visual": "node scripts/pptx-visual-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

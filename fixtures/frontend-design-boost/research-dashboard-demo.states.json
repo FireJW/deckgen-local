@@ -1,0 +1,5 @@
+{
+  "loading": "Loading pressure feed",
+  "empty": "No live events in the selected window",
+  "error": "Pressure feed sync failed"
+}

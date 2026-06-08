@@ -1,0 +1,79 @@
+{
+  "schema": "html_anything_template_index/v1",
+  "source": {
+    "repo": "https://github.com/nexu-io/html-anything",
+    "commit": "a3fac16d31ed75addce4bd2d9c7097ce075bb71d"
+  },
+  "templates": [
+    {
+      "id": "deck-swiss-international",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/deck-swiss-international/example.html",
+      "example_sha256": "77b78c1766fa2d75a9310e01642047aee4da61219de57f2d1f0d0d10270886a5",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "deck-theme",
+      "supported_profiles": ["briefing", "learning", "article"],
+      "contract_fields": ["title", "slides[].headline", "slides[].body"],
+      "decision": "promote"
+    },
+    {
+      "id": "deck-guizang-editorial",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/deck-guizang-editorial/example.html",
+      "example_sha256": "42c1939174ecd9498c69a7c8b2940c9063361c512d8a2dae5f18d1a6c544c755",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "deck-theme",
+      "supported_profiles": ["briefing", "article"],
+      "contract_fields": ["title", "slides[].headline", "slides[].body", "theme.renderer_hint"],
+      "decision": "hold"
+    },
+    {
+      "id": "article-magazine",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/article-magazine/example.html",
+      "example_sha256": "812682183f2173cce7b571a6da96bd73370c029aa7cce88bfe63d1d383f11976",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "article-html",
+      "supported_profiles": ["article"],
+      "contract_fields": ["title", "content", "source_refs[]"],
+      "decision": "promote"
+    },
+    {
+      "id": "card-xiaohongshu",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/card-xiaohongshu/example.html",
+      "example_sha256": "369cf9fec135b30267ad2bece567abc00bbfdbeae0f6498de11198439be1e8a3",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "social-card",
+      "supported_profiles": ["article", "briefing"],
+      "contract_fields": ["title", "content", "evidence_refs[]"],
+      "decision": "hold"
+    },
+    {
+      "id": "social-carousel",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/social-carousel/example.html",
+      "example_sha256": "dc7b2506cc469d1f5b5f4d4b1f1e73b3a600b114faf9e65ea5772afa6994771d",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "social-card",
+      "supported_profiles": ["article"],
+      "contract_fields": ["title", "slides[].headline", "slides[].body"],
+      "decision": "hold"
+    },
+    {
+      "id": "data-report",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/data-report/example.html",
+      "example_sha256": "f006f72762d2a7322175e37d9d568dd5c85610f2b0d768210b09ffa7c617c252",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "briefing-layout",
+      "supported_profiles": ["briefing", "article"],
+      "contract_fields": ["title", "tables[]", "slides[].body"],
+      "decision": "promote"
+    },
+    {
+      "id": "video-hyperframes",
+      "example_url": "https://github.com/nexu-io/html-anything/blob/a3fac16d31ed75addce4bd2d9c7097ce075bb71d/src/lib/templates/skills/video-hyperframes/example.html",
+      "example_sha256": "5bcf19524b5e779eb2e656d0a00f8b8bbffa1b810ec12c064b038f2bb5a7e358",
+      "license_note": "Reference-only metadata; recheck upstream license before vendoring source files.",
+      "destination": "export-adapter",
+      "supported_profiles": ["article", "briefing", "learning"],
+      "contract_fields": ["title", "slides[].headline", "slides[].body"],
+      "decision": "reject"
+    }
+  ]
+}

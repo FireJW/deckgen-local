@@ -1,0 +1,10 @@
+{
+  "schema": "agent_reading_lab/v1",
+  "source": {
+    "title": "hello-agents",
+    "chapter": "Chapter 4: ReAct",
+    "source_url": "https://github.com/datawhalechina/hello-agents"
+  },
+  "learning_goal": "Read ReAct through trace, tool boundary, and checkpoint tasks.",
+  "review_state": "preview"
+}
